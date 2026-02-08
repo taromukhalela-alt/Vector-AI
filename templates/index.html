@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="g-background">
+    <header class="g-topbar">
+        <div class="g-left">
+            <div class="g-logo" aria-hidden="true">
+                <span class="dot blue"></span>
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+                <span class="brand">Vector AI</span>
+            </div>
+        </div>
+        <nav class="g-nav">
+            <a href="/dashboard">Dashboard</a>
+            <a href="#" id="open-chat">Chat</a>
+        </nav>
+    </header>
+
+    <main class="g-center">
+        <div class="g-search-card">
+            <h2 class="g-search-title">Vector AI</h2>
+            <form id="search-form" class="g-search-form" role="search" aria-label="Vector AI search">
+                <input id="search-input" type="search" placeholder="Ask physics questions, e.g. 'Range for v0=50 m/s at 45°'" autocomplete="off" aria-label="Search" aria-describedby="search-examples">
+                <button type="submit" class="g-search-btn" aria-label="Search">Search</button>
+            </form>
+            <div id="search-examples" class="sr-only" aria-hidden="true">Examples: Calculate projectile range; Explain energy conservation</div>
+            <div class="g-actions">
+                <button id="feeling-curious" class="g-action">I'm Feeling Curious</button>
+            </div>
+            <p class="g-sub">Quick examples: <em>"Calculate projectile range"</em> · <em>"Explain energy conservation"</em></p>
+        </div>
+    </main>
+
+    <!-- Keep original auth/chat UI (hidden/shown by existing JS) -->
+
+    <!-- Auth Container -->
+    <div id="auth-container" class="glass-container hidden">
+        <h1 class="title">Vector AI</h1>
+        <div class="auth-forms">
+            <div id="login-form-container">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <input type="text" id="login-username" placeholder="Username" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit">Enter the Field</button>
+                </form>
+                <p>New here? <a href="#" id="show-signup">Sign Up</a></p>
+            </div>
+            <div id="signup-form-container" style="display: none;">
+                <h2>Sign Up</h2>
+                <form id="signup-form">
+                    <input type="text" id="signup-username" placeholder="Username" required>
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                    <button type="submit">Join Vector AI</button>
+                </form>
+                <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Container (kept for compatibility) -->
+    <div id="chat-container" class="chat-container glass-container hidden">
+        <div class="chat-header">
+            <span>Vector AI</span>
+            <div class="header-controls">
+                <button id="view-history-btn">View Chats</button>
+                <button id="dashboard-btn" onclick="window.location.href='/dashboard'">Dashboard</button>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+        <div id="chat-box" class="chat-box">
+            <div class="message bot-message"><p>Hello! I'm Vector AI. Ask me about AI, Physics, Python, or for a joke! 👋</p></div>
+        </div>
+        <form id="chat-form" class="chat-input-form">
+            <input type="text" id="user-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>"},{

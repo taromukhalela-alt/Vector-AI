@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Vector AI — Physics Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Controls Panel -->
+    <aside class="glass-card">
+        <h3>Physics Parameters</h3>
+        
+        <div class="control-group">
+            <label for="v0">Initial Speed v0: <span id="v0-val">50</span> m/s</label>
+            <input type="range" id="v0" min="5" max="120" value="50" aria-label="Initial Speed">
+        </div>
+
+        <div class="control-group">
+            <label for="angle">Angle: <span id="angle-val">45</span>°</label>
+            <input type="range" id="angle" min="5" max="85" value="45" aria-label="Launch Angle">
+        </div>
+
+        <div class="control-group">
+            <label for="mass">Mass: <span id="mass-val">1</span> kg</label>
+            <input type="range" id="mass" min="0.1" max="10" step="0.1" value="1" aria-label="Mass">
+        </div>
+
+        <div class="control-group">
+            <label for="drag">Drag Coeff: <span id="drag-val">0.0</span></label>
+            <input type="range" id="drag" min="0" max="0.5" step="0.01" value="0" aria-label="Drag Coefficient">
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 10px;">
+            <button id="run-btn">Run Simulation</button>
+            <button id="train-btn" class="secondary">Retrain Model</button>
+        </div>
+        <div id="status-msg" class="error-text"></div>
+    </aside>
+
+    <!-- Visualization Panel -->
+    <section class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0;">Trajectory Analysis</h3>
+            <div id="metrics" style="font-size:0.9rem; color:var(--text-muted);"></div>
+        </div>
+        
+        <div style="position: relative; height: 400px; width: 100%;">
+            <canvas id="traj-canvas"></canvas>
+        </div>
+
+        <div id="explanation" style="margin-top: 20px; white-space: pre-wrap; line-height: 1.5; background: rgba(255,255,255,0.4); padding: 16px; border-radius: 8px;"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+Flask
+flask-caching
+gunicorn
+torch
+numpy
+pandas
+scikit-learn
+joblib
+python-dotenv
+google-genai
+sympy
+matplotlib
+pytest
+onnx
+onnxruntime

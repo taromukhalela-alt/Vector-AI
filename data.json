@@ -1,0 +1,278 @@
+[
+    {
+        "message": "what is ai",
+        "topic": "ai",
+        "time": "2026-01-29T21:32:36.688383"
+    },
+    {
+        "message": "hello",
+        "topic": "jokes",
+        "time": "2026-01-29T21:33:34.866882"
+    },
+    {
+        "message": "are you crazy",
+        "topic": "jokes",
+        "time": "2026-01-29T21:33:54.166009"
+    },
+    {
+        "message": "tell me about physics",
+        "topic": "ai",
+        "time": "2026-01-29T21:34:18.902356"
+    },
+    {
+        "message": "what is gravity",
+        "topic": "physics",
+        "time": "2026-01-29T21:34:35.110606"
+    },
+    {
+        "message": "nigga",
+        "topic": "jokes",
+        "time": "2026-01-29T21:36:43.152546"
+    },
+    {
+        "message": "t",
+        "topic": "jokes",
+        "time": "2026-01-29T21:36:53.416426"
+    },
+    {
+        "message": "unkown",
+        "topic": "jokes",
+        "time": "2026-01-29T21:37:12.252293"
+    },
+    {
+        "message": "hi",
+        "topic": "greeting",
+        "time": "2026-01-29T21:49:29.358353"
+    },
+    {
+        "message": "explain some of newtons laws",
+        "topic": "physics",
+        "time": "2026-01-29T21:49:51.626471"
+    },
+    {
+        "message": "what the most popular trend of all time",
+        "topic": "trends",
+        "time": "2026-01-29T21:50:27.255897"
+    },
+    {
+        "message": "im interested in tiktok trends",
+        "topic": "trends",
+        "time": "2026-01-29T21:50:45.328920"
+    },
+    {
+        "message": "hi",
+        "topic": "greeting",
+        "time": "2026-01-29T22:29:47.833251",
+        "username": "taro"
+    },
+    {
+        "message": "whats the weather today",
+        "topic": "trends",
+        "time": "2026-01-29T22:30:08.557756",
+        "username": "taro"
+    },
+    {
+        "message": "how are you",
+        "topic": "capabilities",
+        "time": "2026-01-29T22:47:03.646999",
+        "username": "taro"
+    },
+    {
+        "message": "analyze curent trends",
+        "topic": "trends",
+        "time": "2026-01-29T22:47:26.261404",
+        "username": "taro"
+    },
+    {
+        "message": "what kind of trens do you know as of now",
+        "topic": "capabilities",
+        "time": "2026-01-29T22:47:56.745090",
+        "username": "taro"
+    },
+    {
+        "message": "what is ai",
+        "topic": "ai",
+        "time": "2026-01-29T22:48:08.322437",
+        "username": "taro"
+    },
+    {
+        "message": "who created it",
+        "topic": "greeting",
+        "time": "2026-01-29T22:48:16.837391",
+        "username": "taro"
+    },
+    {
+        "message": "who created you",
+        "topic": "capabilities",
+        "time": "2026-01-29T22:48:31.048329",
+        "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "greeting",
+        "time": "2026-01-29T23:27:39.180839",
+        "username": "taro"
+    },
+    {
+        "message": "help me with some python",
+        "topic": "python",
+        "time": "2026-01-29T23:28:09.547552",
+        "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "greeting",
+        "time": "2026-01-29T23:33:01.303747",
+        "username": "taro"
+    },
+    {
+        "message": "whats the latest space news",
+        "topic": "trends",
+        "time": "2026-01-30T17:31:12.594599",
+        "username": "taro"
+    },
+    {
+        "message": "what is velocity in physics",
+        "topic": "physics",
+        "time": "2026-01-30T17:32:21.502330",
+        "username": "taro"
+    },
+    {
+        "message": "What are the most popular trends right now",
+        "topic": "trends",
+        "time": "2026-01-30T17:55:24.525293",
+        "username": "Tashie "
+    },
+    {
+        "message": "Hi",
+        "topic": "greeting",
+        "time": "2026-01-30T17:56:15.454360",
+        "username": "Tashie "
+    },
+    {
+        "message": "What is python",
+        "topic": "trends",
+        "time": "2026-01-30T17:56:25.205184",
+        "username": "Tashie "
+    },
+    {
+        "message": "What does consecutive mean",
+        "topic": "physics",
+        "time": "2026-01-30T17:58:53.261219",
+        "username": "Tashie "
+    },
+    {
+        "message": "whatsup",
+        "topic": "greeting",
+        "time": "2026-01-30T18:09:14.288887",
+        "username": "taro"
+    },
+    {
+        "message": "Do you now parker burton",
+        "topic": "capabilities",
+        "time": "2026-01-30T18:09:48.845124",
+        "username": "taro"
+    },
+    {
+        "message": "what is physics",
+        "topic": "physics",
+        "time": "2026-01-30T18:10:07.367627",
+        "username": "taro"
+    },
+    {
+        "message": "what is gravity",
+        "topic": "physics",
+        "time": "2026-01-30T21:30:28.945896",
+        "username": "taro"
+    },
+    {
+        "message": "whats the formula for calculating velocity",
+        "topic": "physics",
+        "time": "2026-01-30T21:30:59.148149",
+        "username": "taro"
+    },
+    {
+        "message": "what is gravity",
+        "topic": "physics",
+        "time": "2026-01-30T21:33:11.567650",
+        "username": "taro"
+    },
+    {
+        "message": "force",
+        "topic": "physics",
+        "time": "2026-01-30T21:33:21.270542",
+        "username": "taro"
+    },
+    {
+        "message": "velocity",
+        "topic": "physics",
+        "time": "2026-01-30T21:33:31.559405",
+        "username": "taro"
+    },
+    {
+        "message": "what can you do",
+        "topic": "capabilities",
+        "time": "2026-01-30T21:36:32.404600",
+        "username": "taro"
+    },
+    {
+        "message": "what are someof the trends that you can analyze",
+        "topic": "trends",
+        "time": "2026-01-30T21:37:09.109476",
+        "username": "taro"
+    },
+    {
+        "message": "what is force",
+        "topic": "physics",
+        "time": "2026-01-31T03:43:24.710390",
+        "username": "taro"
+    },
+    {
+        "message": "what is newtons second law",
+        "topic": "physics",
+        "time": "2026-01-31T03:43:51.840687",
+        "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "physics",
+        "time": "2026-01-31T03:50:13.827915",
+        "username": "taro"
+    },
+    {
+        "message": "what is constant speed",
+        "topic": "physics",
+        "time": "2026-01-31T03:50:36.303284",
+        "username": "taro"
+    },
+    {
+        "message": "tell me about nasa",
+        "topic": "physics",
+        "time": "2026-01-31T03:50:58.243354",
+        "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "physics",
+        "time": "2026-01-31T10:02:50.915126",
+        "username": "taro"
+    },
+    {
+        "message": "what are some well known physics terms",
+        "topic": "physics",
+        "time": "2026-01-31T10:03:30.653613",
+        "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "greeting",
+        "time": "2026-02-01T12:09:53.324170",
+        "username": "taro"
+    },
+    {
+        "message": "what is physics",
+        "topic": "physics",
+        "time": "2026-02-01T12:10:11.711924",
+        "username": "taro"
+    }
+]

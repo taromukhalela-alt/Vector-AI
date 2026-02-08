@@ -1,0 +1,18 @@
+/* Minimal dashboard-specific styles to complement existing theme */
+#traj-canvas { border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 8px 20px rgba(60,64,67,0.08); background:#fff; }
+button { background: #fff; color: #202124; border: 1px solid rgba(0,0,0,0.06); padding: 8px 12px; border-radius: 6px; cursor:pointer; }
+button:hover { background: #f6f7f8; }
+input[type="range"] { width: 100%; margin: 6px 0 14px; }
+pre { background: #fff; padding: 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); color:#202124; }
+
+/* Dashboard cards & typography */
+h3 { color:#202124; }
+#metrics { font-size:14px; }
+
+@media (max-width: 900px) {
+    #traj-canvas { width:100% !important; height:auto !important; }
+}
+
+/* symbolic panel animations */
+.symbolic { transition: max-height 0.28s ease, opacity 0.28s ease; overflow: hidden; max-height: 400px; opacity: 1; }
+.symbolic.hidden { max-height: 0; opacity: 0; }
