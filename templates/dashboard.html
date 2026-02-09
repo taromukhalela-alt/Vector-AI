@@ -1,56 +1,112 @@
-{% extends "base.html" %}
-
-{% block title %}Vector AI — Physics Dashboard{% endblock %}
-
-{% block content %}
-<div class="dashboard-grid">
-    <!-- Controls Panel -->
-    <aside class="glass-card">
-        <h3>Physics Parameters</h3>
-        
-        <div class="control-group">
-            <label for="v0">Initial Speed v0: <span id="v0-val">50</span> m/s</label>
-            <input type="range" id="v0" min="5" max="120" value="50" aria-label="Initial Speed">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vector AI - Insight Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <header class="dash-header">
+        <div class="title-block">
+          <p class="eyebrow">Vector AI Physics Lab</p>
+          <h1>Expo Intelligence Dashboard</h1>
+          <p class="subhead">
+            Real-time system analytics highlighting model confidence, trajectory fidelity,
+            and experimental throughput for live demonstrations.
+          </p>
         </div>
-
-        <div class="control-group">
-            <label for="angle">Angle: <span id="angle-val">45</span>°</label>
-            <input type="range" id="angle" min="5" max="85" value="45" aria-label="Launch Angle">
+        <div class="status-block">
+          <div class="status-row">
+            <span class="status-badge ready">Ready</span>
+            <span class="status-badge active">Active</span>
+            <span class="status-badge training">Training</span>
+          </div>
+          <div class="status-meta">
+            <span class="label">Last updated</span>
+            <span id="last-updated">just now</span>
+          </div>
+          <a class="nav-link" href="/assistant">Open Chat</a>
         </div>
+      </header>
 
-        <div class="control-group">
-            <label for="mass">Mass: <span id="mass-val">1</span> kg</label>
-            <input type="range" id="mass" min="0.1" max="10" step="0.1" value="1" aria-label="Mass">
-        </div>
+      <section class="stat-grid">
+        <article class="stat-card">
+          <p class="stat-label">Model Accuracy</p>
+          <p class="stat-value" data-value="98.7" data-suffix="%">0</p>
+          <p class="stat-context">Validated on 48,200 trajectory samples.</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Questions Asked</p>
+          <p class="stat-value" data-value="128" data-suffix="">0</p>
+          <p class="stat-context">Total prompts from your sessions.</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Confidence Score</p>
+          <p class="stat-value" data-value="86.4" data-suffix="%">0</p>
+          <p class="stat-context">Average model confidence in intent.</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Active Simulations</p>
+          <p class="stat-value" data-value="128" data-suffix="">0</p>
+          <p class="stat-context">Distributed across four parallel GPU queues.</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Inference Latency</p>
+          <p class="stat-value" data-value="14.2" data-suffix=" ms">0</p>
+          <p class="stat-context">Median response during peak expo hours.</p>
+        </article>
+      </section>
 
-        <div class="control-group">
-            <label for="drag">Drag Coeff: <span id="drag-val">0.0</span></label>
-            <input type="range" id="drag" min="0" max="0.5" step="0.01" value="0" aria-label="Drag Coefficient">
-        </div>
+      <section class="chart-grid">
+        <article class="chart-card">
+          <div class="chart-header">
+            <h3>Trajectory Fidelity</h3>
+            <span class="chart-tag">Line</span>
+          </div>
+          <div class="chart-frame">
+            <canvas id="line-chart"></canvas>
+          </div>
+          <p class="chart-note">Confidence trend shows consistent convergence.</p>
+        </article>
 
-        <div style="margin-top: 24px; display: flex; gap: 10px;">
-            <button id="run-btn">Run Simulation</button>
-            <button id="train-btn" class="secondary">Retrain Model</button>
-        </div>
-        <div id="status-msg" class="error-text"></div>
-    </aside>
+        <article class="chart-card">
+          <div class="chart-header">
+            <h3>Experiment Throughput</h3>
+            <span class="chart-tag">Bar</span>
+          </div>
+          <div class="chart-frame">
+            <canvas id="bar-chart"></canvas>
+          </div>
+          <p class="chart-note">Hourly run volume during the live demo cycle.</p>
+        </article>
 
-    <!-- Visualization Panel -->
-    <section class="glass-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="margin:0;">Trajectory Analysis</h3>
-            <div id="metrics" style="font-size:0.9rem; color:var(--text-muted);"></div>
-        </div>
-        
-        <div style="position: relative; height: 400px; width: 100%;">
-            <canvas id="traj-canvas"></canvas>
-        </div>
+        <article class="chart-card">
+          <div class="chart-header">
+            <h3>Model Performance</h3>
+            <span class="chart-tag">Gauge</span>
+          </div>
+          <div class="chart-frame">
+            <canvas id="gauge-chart"></canvas>
+          </div>
+          <p class="chart-note">Composite score across stability, speed, and precision.</p>
+        </article>
+      </section>
 
-        <div id="explanation" style="margin-top: 20px; white-space: pre-wrap; line-height: 1.5; background: rgba(255,255,255,0.4); padding: 16px; border-radius: 8px;"></div>
-    </section>
-</div>
-{% endblock %}
+      <section class="insight-panel">
+        <h3>Recent Questions</h3>
+        <p class="muted">Your most recent prompts with confidence context.</p>
+        <div class="insight-list" id="insight-list"></div>
+      </section>
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-{% endblock %}
+      <section class="detail-panel">
+        <h3>Previous Chats</h3>
+        <p class="muted">Jump back into a session or revisit a question.</p>
+        <div class="detail-grid" id="session-grid"></div>
+      </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+  </body>
+</html>

@@ -1,196 +1,267 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const v0 = document.getElementById('v0');
-    const angle = document.getElementById('angle');
-    const mass = document.getElementById('mass');
-    const drag = document.getElementById('drag');
+const statValues = document.querySelectorAll(".stat-value");
+const lastUpdated = document.getElementById("last-updated");
+const insightList = document.getElementById("insight-list");
+const sessionGrid = document.getElementById("session-grid");
 
-    const v0Val = document.getElementById('v0-val');
-    const angleVal = document.getElementById('angle-val');
-    const massVal = document.getElementById('mass-val');
-    const dragVal = document.getElementById('drag-val');
+const chartData = {
+  line: [0.62, 0.66, 0.63, 0.68, 0.71, 0.74, 0.76, 0.79, 0.82, 0.84, 0.86, 0.88],
+  bar: [42, 58, 64, 71, 69, 76, 83, 79],
+  gauge: 0.87,
+};
 
-    const runBtn = document.getElementById('run-btn');
-    const trainBtn = document.getElementById('train-btn');
+const formatValue = (value, suffix) => {
+  const isFloat = value % 1 !== 0;
+  return `${isFloat ? value.toFixed(1) : Math.round(value)}${suffix || ""}`;
+};
 
-    const canvas = document.getElementById('traj-canvas');
-    const ctx = canvas.getContext('2d');
+const animateStatValue = (el, target) => {
+  const suffix = el.dataset.suffix || "";
+  const startValue = Number(el.textContent.replace(/[^\d.]/g, "")) || 0;
+  const delta = target - startValue;
+  const duration = 900;
+  const start = performance.now();
 
-    const metricsEl = document.getElementById('metrics');
-    const explanationEl = document.getElementById('explanation');
-    const statsEl = document.getElementById('traj-stats');
-
-    function updateLabels() {
-        v0Val.textContent = v0.value;
-        angleVal.textContent = angle.value;
-        massVal.textContent = mass.value;
-        dragVal.textContent = drag.value;
+  const tick = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    const current = startValue + delta * progress;
+    el.textContent = formatValue(current, suffix);
+    if (progress < 1) {
+      requestAnimationFrame(tick);
     }
+  };
 
-    function clearCanvas() {
-        ctx.clearRect(0,0,canvas.width, canvas.height);
-        // background
-        ctx.fillStyle = '#0f1116';
-        ctx.fillRect(0,0,canvas.width, canvas.height);
+  requestAnimationFrame(tick);
+};
+
+const animateStats = () => {
+  statValues.forEach((el) => {
+    const target = Number(el.dataset.value);
+    animateStatValue(el, target);
+  });
+};
+
+const drawLineChart = (canvas) => {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
+
+  const padding = 24;
+  const points = chartData.line.map((value, index) => ({
+    x: index,
+    y: value,
+  }));
+
+  const maxY = 1.05;
+  const minY = 0.4;
+  const scaleX = (width - padding * 2) / (points.length - 1);
+  const scaleY = (height - padding * 2) / (maxY - minY);
+
+  ctx.strokeStyle = "rgba(111, 29, 39, 0.15)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i += 1) {
+    const y = padding + i * ((height - padding * 2) / 3);
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = "#8a2230";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    const x = padding + index * scaleX;
+    const y = height - padding - (point.y - minY) * scaleY;
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
     }
+  });
+  ctx.stroke();
 
-    function drawTrajectory(trueTraj, mlTraj) {
-        clearCanvas();
-        // Determine scaling
-        const allX = (trueTraj.x || []).concat(mlTraj.x || []);
-        const allY = (trueTraj.y || []).concat(mlTraj.y || []);
-        const maxX = Math.max(1, ...allX);
-        const maxY = Math.max(1, ...allY);
+  ctx.fillStyle = "#a72b3d";
+  points.forEach((point, index) => {
+    const x = padding + index * scaleX;
+    const y = height - padding - (point.y - minY) * scaleY;
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+};
 
-        function toCanvas(x,y) {
-            const px = (x / maxX) * (canvas.width - 40) + 20;
-            const py = canvas.height - ((y / maxY) * (canvas.height - 40) + 20);
-            return [px, py];
-        }
+const drawBarChart = (canvas) => {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
 
-        // Draw true trajectory
-        ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#67e8f9';
-        for (let i=0;i<trueTraj.x.length;i++){
-            const [px,py] = toCanvas(trueTraj.x[i], trueTraj.y[i]);
-            if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-        }
-        ctx.stroke();
+  const data = chartData.bar;
+  const padding = 20;
+  const barWidth = (width - padding * 2) / data.length - 8;
+  const maxVal = Math.max(...data);
 
-        // Draw ML trajectory
-        ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6,6]);
-        ctx.strokeStyle = '#fb7185';
-        for (let i=0;i<mlTraj.x.length;i++){
-            const [px,py] = toCanvas(mlTraj.x[i], mlTraj.y[i]);
-            if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(111, 29, 39, 0.12)";
+  ctx.fillRect(0, height - padding - 2, width, 2);
 
-        // Legend
-        ctx.fillStyle = '#e9eef6';
-        ctx.fillText('True Physics', 10, 20);
-        ctx.fillStyle = '#67e8f9';
-        ctx.fillRect(95, 12, 12, 6);
-        ctx.fillStyle = '#fb7185';
-        ctx.fillRect(190, 12, 12, 6);
-        ctx.fillStyle = '#e9eef6';
-        ctx.fillText('ML Prediction', 110, 20);
-    }
+  data.forEach((value, index) => {
+    const x = padding + index * (barWidth + 8);
+    const barHeight = ((height - padding * 2) * value) / maxVal;
+    ctx.fillStyle = "#6f1d27";
+    ctx.fillRect(x, height - padding - barHeight, barWidth, barHeight);
+    ctx.fillStyle = "rgba(167, 43, 61, 0.35)";
+    ctx.fillRect(x, height - padding - barHeight, barWidth, 6);
+  });
+};
 
-    async function runSimulation() {
-        // Pulse canvas to indicate run
-        animateCanvasPulse();
+const drawGauge = (canvas) => {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
 
-        const payload = {
-            v0: parseFloat(v0.value),
-            angle: parseFloat(angle.value),
-            mass: parseFloat(mass.value),
-            drag: parseFloat(drag.value)
-        };
+  const centerX = width / 2;
+  const centerY = height * 0.65;
+  const radius = Math.min(width, height) * 0.36;
+  const value = chartData.gauge;
 
-        const res = await fetch('/api/simulate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!data.success) {
-            alert('Simulation failed: ' + (data.error || 'unknown'));
-            return;
-        }
+  ctx.lineWidth = 18;
+  ctx.strokeStyle = "rgba(111, 29, 39, 0.15)";
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, Math.PI, 0);
+  ctx.stroke();
 
-        const physics = data.physics; // arrays
-        const ml = data.ml || {x:[], y:[], t:[]};
+  ctx.strokeStyle = "#8a2230";
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, Math.PI, Math.PI * (1 - value));
+  ctx.stroke();
 
-        drawTrajectory(physics, ml);
+  ctx.fillStyle = "#3d0f15";
+  ctx.font = "600 26px Segoe UI, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`${Math.round(value * 100)}%`, centerX, centerY - 10);
 
-        // Show metrics and explanation
-        metricsEl.innerHTML = `Error margin: <strong>${data.error_margin.toFixed(3)} m</strong>`;
-        // Explanation: support both string and structured response
-        explanationEl.textContent = data.explanation || (data.explanation_text || 'No explanation available.');
-        // Render symbolic steps if present
-        const symPanel = document.getElementById('symbolic-panel');
-        if (data.symbolic && Array.isArray(data.symbolic) && data.symbolic.length > 0) {
-            symPanel.innerHTML = data.symbolic.map(s => {
-                if (s.step && s.expr) return `<div><strong>${s.step}</strong>: <pre style="white-space:pre-wrap; font-size:13px;">${JSON.stringify(s.expr, null, 2)}</pre></div>`;
-                if (s.step && s.values) return `<div><strong>${s.step}</strong>: <pre style="white-space:pre-wrap; font-size:13px;">${JSON.stringify(s.values, null, 2)}</pre></div>`;
-                return `<div><pre style="white-space:pre-wrap; font-size:13px;">${JSON.stringify(s)}</pre></div>`;
-            }).join('');
-            document.getElementById('toggle-symbolic').style.display = 'inline-block';
-        } else {
-            symPanel.innerHTML = '';
-            document.getElementById('toggle-symbolic').style.display = 'none';
-        }
+  ctx.fillStyle = "rgba(61, 15, 21, 0.7)";
+  ctx.font = "14px Segoe UI, sans-serif";
+  ctx.fillText("Composite Score", centerX, centerY + 18);
+};
 
-        statsEl.innerHTML = `Duration: ${physics.t.length ? physics.t.length : 0} samples`;
-    }
+const sizeCanvas = (canvas) => {
+  const ratio = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+};
 
-    async function trainModel() {
-        trainBtn.disabled = true; trainBtn.textContent = 'Training...';
-        const res = await fetch('/api/train_physics', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            alert('Training complete. Metrics: ' + JSON.stringify(data.metrics));
-        } else {
-            alert('Training failed: ' + (data.error || 'unknown'));
-        }
-        trainBtn.disabled = false; trainBtn.textContent = 'Train ML Model';
-    }
+const renderCharts = () => {
+  const line = document.getElementById("line-chart");
+  const bar = document.getElementById("bar-chart");
+  const gauge = document.getElementById("gauge-chart");
 
-    // Wire up UI
-    updateLabels();
-    v0.addEventListener('input', updateLabels);
-    angle.addEventListener('input', updateLabels);
-    mass.addEventListener('input', updateLabels);
-    drag.addEventListener('input', updateLabels);
+  [line, bar, gauge].forEach((canvas) => {
+    sizeCanvas(canvas);
+  });
 
-    runBtn.addEventListener('click', runSimulation);
-    trainBtn.addEventListener('click', trainModel);
+  drawLineChart(line);
+  drawBarChart(bar);
+  drawGauge(gauge);
+};
 
-    // Toggle symbolic panel
-    const toggleBtn = document.getElementById('toggle-symbolic');
-    const symPanel = document.getElementById('symbolic-panel');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-            toggleBtn.setAttribute('aria-expanded', String(!expanded));
-            if (expanded) {
-                symPanel.classList.add('hidden');
-                symPanel.setAttribute('aria-hidden', 'true');
-                toggleBtn.textContent = 'Show derivation';
-            } else {
-                symPanel.classList.remove('hidden');
-                symPanel.setAttribute('aria-hidden', 'false');
-                toggleBtn.textContent = 'Hide derivation';
-            }
-        });
-    }
+const updateTimestamp = () => {
+  const now = new Date();
+  lastUpdated.textContent = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-    // Small animation: when running simulation, pulse the canvas
-    async function animateCanvasPulse() {
-        canvas.style.transition = 'transform 0.25s ease, box-shadow 0.25s ease';
-        canvas.style.transform = 'scale(1.02)';
-        canvas.style.boxShadow = '0 12px 30px rgba(26,115,232,0.12)';
-        await new Promise(r => setTimeout(r, 250));
-        canvas.style.transform = '';
-        canvas.style.boxShadow = '';
-    }
-
-    // Attach keyboard shortcut: press '/' to focus inline search
-    document.addEventListener('keydown', (e) => {
-        if (e.key === '/') {
-            const el = document.getElementById('inline-search');
-            if (el) { el.focus(); e.preventDefault(); }
-        }
-        // 'c' opens canvas focus and run
-        if (e.key === 'c') {
-            runBtn.focus();
-        }
-    });
-
-    // Initial render
-    clearCanvas();
+window.addEventListener("resize", () => {
+  renderCharts();
 });
+
+const applyDashboardData = (payload) => {
+  if (!payload) return;
+
+  const { stats, charts, recent_questions, sessions, timestamp } = payload;
+
+  if (stats) {
+    const mapping = [
+      stats.model_accuracy,
+      stats.questions_asked,
+      stats.avg_confidence,
+      stats.active_simulations,
+      stats.inference_latency_ms,
+    ];
+    statValues.forEach((el, index) => {
+      const nextValue = mapping[index];
+      if (nextValue !== undefined) {
+        el.dataset.value = nextValue;
+      }
+    });
+    animateStats();
+  }
+
+  if (charts) {
+    if (Array.isArray(charts.line)) chartData.line = charts.line;
+    if (Array.isArray(charts.bar)) chartData.bar = charts.bar;
+    if (typeof charts.gauge === "number") chartData.gauge = charts.gauge;
+    renderCharts();
+  }
+
+  if (insightList && Array.isArray(recent_questions)) {
+    insightList.innerHTML = "";
+    recent_questions.forEach((item) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "insight-item";
+      wrapper.innerHTML = `
+        <strong>${item.question}</strong>
+        <span class="insight-value">Confidence: ${item.confidence}% · ${item.time}</span>
+      `;
+      insightList.appendChild(wrapper);
+    });
+  }
+
+  if (sessionGrid && Array.isArray(sessions)) {
+    sessionGrid.innerHTML = "";
+    sessions.forEach((entry) => {
+      const card = document.createElement("div");
+      card.className = "detail-card";
+      card.innerHTML = `
+        <p class="detail-label">${entry.title}</p>
+        <p class="detail-value">${entry.count} messages</p>
+        <p class="detail-meta">${entry.last_time}</p>
+      `;
+      card.addEventListener("click", () => {
+        window.location.href = `/history/${entry.chat_id}`;
+      });
+      sessionGrid.appendChild(card);
+    });
+  }
+
+  if (timestamp && lastUpdated) {
+    const parsed = new Date(timestamp);
+    lastUpdated.textContent = parsed.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } else {
+    updateTimestamp();
+  }
+};
+
+const fetchDashboardData = async () => {
+  try {
+    const response = await fetch("/api/dashboard");
+    if (!response.ok) return;
+    const payload = await response.json();
+    applyDashboardData(payload);
+  } catch (error) {
+    updateTimestamp();
+  }
+};
+
+animateStats();
+renderCharts();
+updateTimestamp();
+fetchDashboardData();
+setInterval(fetchDashboardData, 20000);

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vector AI | Animations Lab</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}" />
+  </head>
+  <body class="ani-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <p class="brand-kicker">Vector AI</p>
+          <h1 class="brand-title">Animations Lab</h1>
+        </div>
+      </div>
+      <nav class="topnav">
+        <a href="/">Home</a>
+        <a href="/chat">Chat</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/history">History</a>
+      </nav>
+    </header>
+
+    <main class="ani-layout">
+      <section class="ani-panel">
+        <header class="panel-header">
+          <h2 id="question-title">Interactive Physics Animation</h2>
+          <p id="question-subtitle" class="muted">
+            Tune the parameters and press run to see the trajectory.
+          </p>
+        </header>
+
+        <div class="control-grid">
+          <label>
+            Initial velocity (m/s)
+            <input type="number" id="input-v0" value="50" min="1" step="1" />
+          </label>
+          <label>
+            Launch angle (deg)
+            <input type="number" id="input-angle" value="45" min="5" max="85" step="1" />
+          </label>
+          <label>
+            Mass (kg)
+            <input type="number" id="input-mass" value="1" min="0.2" step="0.1" />
+          </label>
+          <label>
+            Drag coefficient
+            <input type="number" id="input-drag" value="0.02" min="0" step="0.01" />
+          </label>
+        </div>
+
+        <div class="control-actions">
+          <button id="run-sim" class="btn primary">Run Animation</button>
+          <button id="pause-sim" class="btn ghost">Pause</button>
+          <button id="reset-sim" class="btn subtle">Reset</button>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <p class="label">Range</p>
+            <p id="stat-range" class="value">--</p>
+          </div>
+          <div class="summary-card">
+            <p class="label">Max height</p>
+            <p id="stat-height" class="value">--</p>
+          </div>
+          <div class="summary-card">
+            <p class="label">Flight time</p>
+            <p id="stat-time" class="value">--</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="canvas-panel">
+        <canvas id="sim-canvas" width="820" height="420" aria-label="Projectile animation"></canvas>
+        <div class="canvas-legend">
+          <span class="dot actual"></span> physics model
+          <span class="dot ml"></span> ML prediction
+        </div>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='animations.js') }}"></script>
+  </body>
+</html>

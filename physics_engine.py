@@ -20,6 +20,10 @@ import joblib
 import os
 import torch
 import warnings
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 # Try to import sympy for symbolic derivations; optional
 try:
@@ -85,7 +89,6 @@ class Simulator:
             vys.append(vy)
 
             # Compute accelerations
-            speed = np.hypot(vx, vy)
             # Linear drag: a_drag = -(drag / m) * v
             ax = - (drag / mass) * vx
             ay = -self.g - (drag / mass) * vy
@@ -140,6 +143,10 @@ def generate_dataset(n_samples=500, t_samples=50, random_state=42):
     for v0, angle, mass, drag in zip(v0s, angles, masses, drags):
         sim_res = sim.simulate_projectile(v0=v0, angle=angle, mass=mass, drag=drag,
                                           dt=0.02, max_time=15.0)
+        
+        if len(sim_res["t"]) < 2:
+            continue
+
         # Sample t grid (uniformly) up to the duration
         ts = np.linspace(0, sim_res["t"][-1], t_samples)
 
@@ -260,6 +267,9 @@ class Learner:
 class Explainer:
     """Produce human-readable explanations comparing physics vs ML predictions."""
 
+    def __init__(self, simulator):
+        self.simulator = simulator
+
     def explain_simulation(self, params, metrics, error_margin):
         """Return both a plain-English explanation and optional symbolic derivation.
 
@@ -270,6 +280,7 @@ class Explainer:
         symbolic_steps = []
         parts.append("Simulation Explanation:")
 
+        params = params or {}
         v0 = params.get("v0")
         angle = params.get("angle")
         mass = params.get("mass")
@@ -332,7 +343,7 @@ class Explainer:
                     symbolic_steps.append({"step": "h_max", "expr": str(h_max_expr)})
 
                     # Numeric evaluations using provided params
-                    subs_map = {v0s: float(v0), thetas: float(sp.rad(angle)), g: float(self.simulator.g)}
+                    subs_map = {v0s: float(v0), thetas: float(np.deg2rad(angle)), g: float(self.simulator.g)}
                     try:
                         t_flight_val = float(sp.N(t_flight_expr.subs(subs_map)))
                         range_val = float(sp.N(range_expr.subs(subs_map)))
@@ -366,9 +377,14 @@ class Explainer:
         # Describe ML behavior
         if metrics:
             parts.append("Machine learning performance on held-out test data:")
-            rmse = metrics.get('rmse', metrics.get('val_loss', 0))
+            x_rmse = metrics.get("x_rmse")
+            y_rmse = metrics.get("y_rmse")
+            if x_rmse is not None and y_rmse is not None:
+                rmse = float(np.mean([x_rmse, y_rmse]))
+            else:
+                rmse = metrics.get("rmse", metrics.get("val_loss", 0))
             parts.append(f"- Overall RMSE: {rmse:.3f}")
-            parts.append("- Model: PyTorch MLP with Residual Connections")
+            parts.append("- Model: Ridge regression with standardization")
 
             # Offer interpretability hints
             if metrics.get('y_rmse', 0) > 5.0:
@@ -391,10 +407,15 @@ class Explainer:
 # Instantiate module-level objects to match app expectations
 simulator = Simulator()
 learner = Learner()
-explainer = Explainer()
+explainer = Explainer(simulator)
 
 # Attempt to load pre-trained models quietly
 try:
-    learner.load()
-except Exception:
-    pass
+    if not learner.load():
+        print("Physics models not found. Training now...")
+        learner.train()
+except Exception as e:
+    print(f"Physics engine initialization warning: {e}")
+    learner.train()
+except Exception as e:
+    print(f"Physics engine initialization warning: {e}")

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vector AI | History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='history.css') }}" />
+  </head>
+  <body class="history-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <p class="brand-kicker">Vector AI</p>
+          <h1 class="brand-title">Chat History</h1>
+        </div>
+      </div>
+      <nav class="topnav">
+        <a href="/">Home</a>
+        <a href="/chat">Chat</a>
+        <a href="/animations">Animations</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="history-layout">
+      <aside class="session-list">
+        <h2>Sessions</h2>
+        {% if sessions %}
+          <ul>
+          {% for session in sessions %}
+            <li class="{% if active_chat_id == session.chat_id %}active{% endif %}">
+              <a href="/history/{{ session.chat_id }}">
+                <span class="session-title">{{ session.title }}</span>
+                <span class="session-meta">{{ session.count }} messages · {{ session.last_time }}</span>
+              </a>
+            </li>
+          {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No saved sessions yet.</p>
+        {% endif %}
+      </aside>
+
+      <section class="session-detail">
+        {% if active_session %}
+          <header>
+            <h2>{{ active_session.title }}</h2>
+            <p class="muted">{{ active_session.last_time }}</p>
+          </header>
+          <div class="message-list">
+            {% for message in active_session.messages %}
+              <div class="message-row {{ message.role }}">
+                <div class="bubble">
+                  <p>{{ message.message }}</p>
+                  <span class="meta">{{ message.time }} · {{ message.topic }} · {{ message.confidence }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <h2>Pick a session to review</h2>
+            <p class="muted">Your previous chats will appear here.</p>
+          </div>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

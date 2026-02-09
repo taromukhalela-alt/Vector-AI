@@ -1,0 +1,187 @@
+:root {
+  --maroon-900: #3b0f14;
+  --maroon-800: #4d151b;
+  --maroon-700: #6b1e26;
+  --maroon-600: #8a2330;
+  --maroon-200: #f1d8db;
+  --cream-50: #fffaf6;
+  --white: #ffffff;
+  --text-strong: #2a0b10;
+  --text-muted: #6d4a4e;
+  --shadow: 0 18px 36px rgba(59, 15, 20, 0.12);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top left, #fff, var(--cream-50) 38%, #f3e0e3 100%);
+  color: var(--text-strong);
+  min-height: 100vh;
+}
+
+.history-shell {
+  padding: 24px clamp(18px, 4vw, 52px) 48px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--maroon-600), var(--maroon-800));
+  box-shadow: 0 10px 20px rgba(59, 15, 20, 0.2);
+}
+
+.brand-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  color: var(--maroon-600);
+}
+
+.brand-title {
+  margin: 6px 0 0;
+  font-family: "Playfair Display", "Georgia", serif;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  color: var(--maroon-800);
+}
+
+.topnav {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.topnav a {
+  text-decoration: none;
+  color: var(--maroon-700);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  border: 1px solid rgba(107, 30, 38, 0.2);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.history-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 2.1fr);
+  gap: 20px;
+}
+
+.session-list,
+.session-detail {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  padding: 20px;
+  border: 1px solid rgba(107, 30, 38, 0.12);
+  box-shadow: var(--shadow);
+}
+
+.session-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.session-list li {
+  border-radius: 14px;
+  background: rgba(241, 216, 219, 0.5);
+}
+
+.session-list li.active {
+  background: rgba(107, 30, 38, 0.12);
+}
+
+.session-list a {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  text-decoration: none;
+  color: var(--text-strong);
+}
+
+.session-title {
+  font-weight: 700;
+}
+
+.session-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.message-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.message-row {
+  display: flex;
+}
+
+.message-row.user {
+  justify-content: flex-end;
+}
+
+.message-row.assistant {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(241, 216, 219, 0.6);
+}
+
+.message-row.user .bubble {
+  background: var(--maroon-700);
+  color: var(--white);
+}
+
+.meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+@media (max-width: 980px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
+}

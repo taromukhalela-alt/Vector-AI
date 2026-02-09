@@ -54,16 +54,24 @@ encoder_path = os.path.join(BASE_DIR, "label_encoder.pkl")
 tokenizer_path = os.path.join(BASE_DIR, "tokenizer.pkl")
 config_path = os.path.join(BASE_DIR, "model_config.pkl")
 
-# Always retrain on startup to ensure the model uses the latest data
+# Train only when needed (faster startup)
 try:
     sys.path.append(BASE_DIR)
     import ml_train
     
-    # Attempt training, but continue if it fails (e.g., file locking in debug mode)
-    try:
-        ml_train.train_model()
-    except Exception as e:
-        print(f"Info: Training skipped ({e}). Attempting to load existing model...")
+    should_train = os.getenv("FORCE_TRAIN") == "true"
+    required_files = [model_path, encoder_path, tokenizer_path, config_path]
+    if not all(os.path.exists(path) for path in required_files):
+        should_train = True
+
+    # Attempt training, but continue if it fails
+    if should_train:
+        try:
+            ml_train.train_model()
+        except Exception as e:
+            print(f"Info: Training skipped ({e}). Attempting to load existing model...")
+    else:
+        print("Info: Existing model files found. Skipping training. Set FORCE_TRAIN=true to override.")
 
     # Load artifacts
     label_encoder = joblib.load(encoder_path)
@@ -83,6 +91,9 @@ except Exception as e:
 
 # Global list to store conversation history
 user_conversations = {}
+response_cache = {}
+MAX_HISTORY_PER_USER = 50
+RESPONSE_CACHE_TTL = 180
 
 # -------------------------------
 # Responses
@@ -366,7 +377,7 @@ def solve_physics_problem(text):
 
     return None
 
-def ml_detect_intent(message):
+def ml_detect_intent_with_confidence(message):
     if ml_model and label_encoder and torch:
         try:
             # Get probability scores for all classes
@@ -381,18 +392,19 @@ def ml_detect_intent(message):
             pred_idx = np.argmax(probs)
             best_intent = label_encoder.inverse_transform([pred_idx])[0]
             
-            # If confidence is high (> 60%), use local model
-            if max_prob > 0.60:
-                return best_intent
             
             # Fallback: Use GenAI for better classification on ambiguous queries
             if genai and os.getenv("GOOGLE_API_KEY"):
-                return detect_intent_with_genai(message, label_encoder.classes_)
+                return detect_intent_with_genai(message, label_encoder.classes_), 65.0
             
-            return best_intent
+            return best_intent, round(max_prob * 100, 1)
         except Exception as e:
             print(f"ML Prediction Error: {e}")
-    return "unknown"
+    return "unknown", 0.0
+
+def ml_detect_intent(message):
+    intent, _confidence = ml_detect_intent_with_confidence(message)
+    return intent
 
 def detect_intent_with_genai(message, labels):
     try:
@@ -423,7 +435,7 @@ def save_users(users):
     with open(USERS_FILE, 'w') as file:
         json.dump(users, file, indent=4)
 
-def save_user_data(message, topic, username=None):
+def save_user_data(message, topic, username=None, confidence=None, chat_id=None, reply=None):
     try:
         with open("data.json", "r") as file:
             data = json.load(file)
@@ -434,11 +446,78 @@ def save_user_data(message, topic, username=None):
         "message": message,
         "topic": topic,
         "time": datetime.now().isoformat(),
-        "username": username
+        "username": username,
+        "confidence": confidence,
+        "chat_id": chat_id,
+        "reply": reply
     })
 
     with open("data.json", "w") as file:
         json.dump(data, file, indent=4)
+
+def get_user_key():
+    if "session_id" not in session:
+        session["session_id"] = os.urandom(8).hex()
+    return session.get("user", session["session_id"])
+
+def ensure_chat_id():
+    if "chat_id" not in session:
+        session["chat_id"] = os.urandom(6).hex()
+    return session["chat_id"]
+
+def get_cached_reply(message):
+    key = message.strip().lower()
+    cached = response_cache.get(key)
+    if not cached:
+        return None
+    if time.time() - cached["timestamp"] > RESPONSE_CACHE_TTL:
+        response_cache.pop(key, None)
+        return None
+    return cached
+
+def set_cached_reply(message, reply, intent, confidence):
+    key = message.strip().lower()
+    response_cache[key] = {
+        "reply": reply,
+        "intent": intent,
+        "confidence": confidence,
+        "timestamp": time.time()
+    }
+
+def _format_time(iso_value):
+    try:
+        return datetime.fromisoformat(iso_value).strftime("%b %d, %Y %H:%M")
+    except Exception:
+        return iso_value
+
+def load_user_history(username):
+    try:
+        with open("data.json", "r") as file:
+            data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = []
+    return [d for d in data if d.get("username") == username]
+
+def build_sessions(history):
+    grouped = {}
+    for entry in history:
+        chat_id = entry.get("chat_id") or "legacy"
+        grouped.setdefault(chat_id, []).append(entry)
+
+    sessions = []
+    for chat_id, items in grouped.items():
+        items.sort(key=lambda x: x.get("time", ""))
+        title = items[0].get("message", "Session")[:48]
+        last_time = _format_time(items[-1].get("time", ""))
+        sessions.append({
+            "chat_id": chat_id,
+            "title": title if title else "Session",
+            "last_time": last_time,
+            "count": len(items),
+            "messages": items
+        })
+    sessions.sort(key=lambda x: x["last_time"], reverse=True)
+    return sessions
 
 @app.route("/metrics")
 def metrics():
@@ -451,34 +530,39 @@ def metrics():
 
 def _generate_dashboard_payload():
     now = datetime.now()
+    history = load_user_history(session.get("user")) if "user" in session else []
+    sessions = build_sessions(history)
+    questions_asked = len(history)
+    confidences = [h.get("confidence") for h in history if isinstance(h.get("confidence"), (int, float))]
+    avg_confidence = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+
     stats = {
         "model_accuracy": round(random.uniform(96.4, 99.4), 1),
+        "questions_asked": questions_asked,
+        "avg_confidence": avg_confidence,
         "active_simulations": random.randint(110, 160),
         "inference_latency_ms": round(random.uniform(12.8, 18.6), 1),
-        "energy_recovery": round(random.uniform(88.5, 94.8), 1)
     }
     line_points = [round(0.58 + (i * 0.018) + random.uniform(-0.04, 0.04), 3) for i in range(12)]
     bar_points = [random.randint(45, 88) for _ in range(8)]
     gauge_value = round(random.uniform(0.82, 0.93), 2)
 
-    insight = {
-        "summary": (
-            "Adaptive drag compensation maintains stability at high launch angles, "
-            "with variance reduced by approximately 9% across the latest batch."
-        ),
-        "items": [
-            {"label": "Key Finding", "value": "Optimal launch windows sustained between 42 and 47 degrees."},
-            {"label": "System Note", "value": "Thermal load remains within safe operating range."},
-            {"label": "Next Step", "value": "Deploy the refined drag model after the expo session."}
-        ]
-    }
+    recent_questions = []
+    for entry in history[-6:]:
+        recent_questions.append({
+            "question": entry.get("message", "Question"),
+            "confidence": entry.get("confidence", 0),
+            "time": _format_time(entry.get("time", ""))
+        })
 
-    details = [
-        {"label": "Top Experiment", "value": "Vector-Arc 12", "meta": "Peak range: 82.4 m"},
-        {"label": "Sensor Sync", "value": f"{round(random.uniform(0.3, 0.6), 1)} ms", "meta": "Time-aligned across all channels"},
-        {"label": "Anomaly Alerts", "value": str(random.randint(1, 3)), "meta": "Autocorrected and logged"},
-        {"label": "Uptime", "value": f"{round(random.uniform(99.92, 99.99), 2)}%", "meta": "Last 24 hours"}
-    ]
+    session_cards = []
+    for session_entry in sessions[:6]:
+        session_cards.append({
+            "chat_id": session_entry["chat_id"],
+            "title": session_entry["title"],
+            "count": session_entry["count"],
+            "last_time": session_entry["last_time"]
+        })
 
     return {
         "timestamp": now.isoformat(),
@@ -488,8 +572,8 @@ def _generate_dashboard_payload():
             "bar": bar_points,
             "gauge": gauge_value
         },
-        "insight": insight,
-        "details": details
+        "recent_questions": recent_questions,
+        "sessions": session_cards
     }
 
 @app.route("/api/dashboard")
@@ -532,12 +616,15 @@ def simulate_physics():
             angle = float(data.get("angle", 45))
             mass = float(data.get("mass", 1.0))
             drag = float(data.get("drag", 0.0))
+            scale_height = data.get("scale_height")
+            if scale_height is not None:
+                scale_height = float(scale_height)
             if v0 < 0 or mass <= 0: raise ValueError("Invalid physics parameters")
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
         
         # 1. Run Ground Truth Physics
-        sim_results = physics_engine.simulator.simulate_projectile(v0, angle, mass, drag)
+        sim_results = physics_engine.simulator.simulate_projectile(v0, angle, mass, drag, scale_height=scale_height)
         
         # 2. Run ML Prediction (if trained)
         ml_results = None
@@ -557,7 +644,7 @@ def simulate_physics():
 
         # 3. Generate Explanation (structured)
         explanation = physics_engine.explainer.explain_simulation(
-            {"v0": v0, "angle": angle, "mass": mass, "drag": drag},
+            {"v0": v0, "angle": angle, "mass": mass, "drag": drag, "scale_height": scale_height},
             physics_engine.learner.last_metrics,
             error_margin
         )
@@ -588,16 +675,27 @@ def simulate_physics():
 # -------------------------------
 @app.route("/")
 def home():
-    # Initialize or reset session-based history
-    if "session_id" not in session:
-        session["session_id"] = os.urandom(8).hex()
-    user_key = session.get("user", session["session_id"])
-    user_conversations[user_key] = []
+    # Ensure session tracking
+    user_key = get_user_key()
+    ensure_chat_id()
+    user_conversations.setdefault(user_key, [])
     return render_template("index.html")
 
 @app.route("/assistant")
 def assistant():
-    return redirect(url_for("home"))
+    return redirect(url_for("chat_page"))
+
+@app.route("/chat", methods=["GET"])
+def chat_page():
+    get_user_key()
+    ensure_chat_id()
+    return render_template("chat.html")
+
+@app.route("/animations")
+def animations():
+    get_user_key()
+    ensure_chat_id()
+    return render_template("animations.html")
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -628,6 +726,7 @@ def login():
 @app.route("/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
+    session.pop("chat_id", None)
     return jsonify({"success": True})
 
 @app.route("/check_auth")
@@ -637,18 +736,58 @@ def check_auth():
     return jsonify({"authenticated": False})
 
 @app.route("/history")
-def get_history():
+def history_page():
+    if "user" not in session:
+        return redirect(url_for("home"))
+    history = load_user_history(session["user"])
+    sessions = build_sessions(history)
+    return render_template("history.html", sessions=sessions, active_chat_id=None, active_session=None)
+
+@app.route("/history/<chat_id>")
+def history_detail(chat_id):
+    if "user" not in session:
+        return redirect(url_for("home"))
+    history = load_user_history(session["user"])
+    sessions = build_sessions(history)
+    active_session = next((s for s in sessions if s["chat_id"] == chat_id), None)
+    if active_session:
+        messages = []
+        for entry in active_session["messages"]:
+            messages.append({
+                "role": "user",
+                "message": entry.get("message", ""),
+                "time": _format_time(entry.get("time", "")),
+                "topic": entry.get("topic", "unknown"),
+                "confidence": f"{entry.get('confidence', 0)}%"
+            })
+            if entry.get("reply"):
+                messages.append({
+                    "role": "assistant",
+                    "message": entry.get("reply", ""),
+                    "time": _format_time(entry.get("time", "")),
+                    "topic": entry.get("topic", "assistant"),
+                    "confidence": f"{entry.get('confidence', 0)}%"
+                })
+        active_session["messages"] = messages
+    return render_template(
+        "history.html",
+        sessions=sessions,
+        active_chat_id=chat_id,
+        active_session=active_session
+    )
+
+@app.route("/api/history")
+def api_history():
     if "user" not in session:
         return jsonify([])
-    
-    try:
-        with open("data.json", "r") as file:
-            data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = []
-    
-    user_history = [d for d in data if d.get("username") == session["user"]]
-    return jsonify(user_history)
+    return jsonify(load_user_history(session["user"]))
+
+@app.route("/api/new_session", methods=["POST"])
+def new_session():
+    session["chat_id"] = os.urandom(6).hex()
+    user_key = get_user_key()
+    user_conversations[user_key] = []
+    return jsonify({"success": True, "chat_id": session["chat_id"]})
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -660,21 +799,30 @@ def chat():
         return jsonify({"intent": "error", "reply": "Message is required"}), 400
 
     reply = None
+    confidence = 0.0
     try:
-        intent = ml_detect_intent(user_message)
-        save_user_data(user_message, intent, session.get("user"))
+        cached = get_cached_reply(user_message)
+        if cached:
+            intent = cached["intent"]
+            confidence = cached["confidence"]
+            reply = cached["reply"]
+        else:
+            intent, confidence = ml_detect_intent_with_confidence(user_message)
 
         # Get conversation history for this specific user/session
-        if "session_id" not in session:
-            session["session_id"] = os.urandom(8).hex()
-        user_key = session.get("user", session["session_id"])
+        user_key = get_user_key()
+        chat_id = ensure_chat_id()
         conversation_history = user_conversations.setdefault(user_key, [])
         
+        # Memory Management: Limit history size
+        if len(conversation_history) > MAX_HISTORY_PER_USER:
+            conversation_history[:] = conversation_history[-MAX_HISTORY_PER_USER:]
+        
         # Fetch real-time data based on intent to provide context
-        online_data = fetch_online_data(intent)
+        online_data = fetch_online_data(intent) if not reply else None
 
         # 1. Try Local Physics Solver (Deterministic)
-        if intent == "physics":
+        if not reply and intent == "physics":
             reply = solve_physics_problem(user_message)
 
         # 2. Try AI API (Google Gemini)
@@ -725,6 +873,13 @@ def chat():
 
         # 3. Fallback to Rule-based/Local ML if API fails or no key
         if not reply:
+            # Rescue "unknown" intent with simple keyword matching
+            if intent == "unknown":
+                for key in responses:
+                    if key in user_message.lower():
+                        intent = key
+                        break
+
             if intent == "physics":
                 # Prioritize local definitions if specific keyword is present
                 if "equation" in user_message.lower() or "formula" in user_message.lower():
@@ -751,13 +906,25 @@ def chat():
                     reply = local_result
             elif online_data:
                 reply = online_data
+            elif intent in responses:
+                reply = responses[intent]
     except Exception as e:
         print(f"Chat Error: {e}")
 
     if not reply:
         reply = responses["unknown"]
 
-    return jsonify({"reply": reply})
+    set_cached_reply(user_message, reply, intent, confidence)
+    save_user_data(
+        user_message,
+        intent,
+        session.get("user"),
+        confidence=confidence,
+        chat_id=session.get("chat_id"),
+        reply=reply
+    )
+
+    return jsonify({"reply": reply, "confidence": confidence, "intent": intent})
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000,)
