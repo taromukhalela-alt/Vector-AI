@@ -29,8 +29,7 @@ set FLASK_APP=app.py
 python app.py
 ```
 
-3. Open your browser at http://localhost:5000/dashboard
-
+3. Open your browser at http://localhost:5000
 Notes for judges and teachers
 - The ML model is intentionally simple (Ridge) for interpretability. It shows
   how a data-driven model can approximate physical behavior but is not a
