@@ -283,5 +283,14 @@
         "confidence": 20.0,
         "chat_id": "251930f6ab5b",
         "reply": "That's an interesting question, but I'm only able to help with physics topics covered in the CAPS curriculum. Try asking me about forces, waves, electricity, or any other physics concept!"
+    },
+    {
+        "message": "hi",
+        "topic": "unknown",
+        "time": "2026-03-10T23:25:01.263296",
+        "username": "taro",
+        "confidence": 20.0,
+        "chat_id": "e631cf33fb74",
+        "reply": "That's an interesting question. I can give a quick, simple answer, then let's switch back to CAPS physics topics like forces, waves, electricity, or energy."
     }
 ]

@@ -14,3 +14,4 @@ matplotlib
 pytest
 onnx
 onnxruntime
+flask-cors

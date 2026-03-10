@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask_cors import CORS
 from flask_caching import Cache
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,7 +13,7 @@ import sys
 import numpy as np
 import logging
 import time
-from model.generator import MAX_HISTORY, build_prompt, generate_response, normalize_history
+from model.generator import MAX_HISTORY, normalize_history
 try:
     import torch
 except ImportError:
@@ -27,7 +28,8 @@ import physics_engine  # Import the new module
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "vector_ai_ethereal_secret_key"  # Required for session management
+app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
+CORS(app, origins=[os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")])
 
 # Configure Caching
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
@@ -37,6 +39,44 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 USERS_FILE = "users.json"
+
+# ============================================================
+# SYSTEM PROMPTS
+# ============================================================
+PHYSICS_SYSTEM_PROMPT = """You are Vector AI — a knowledgeable, friendly tutor 
+for South African high school students (CAPS curriculum, Grades 10–12).
+
+CONVERSATION RULES:
+1. If the student says yes/sure/okay/ja — immediately do what you last offered. Never ask again.
+2. Never repeat the same response twice in a row. Check history before responding.
+3. Vary your openers. Don't start every reply with "Great question!".
+4. For single-word topics (e.g. "electricity") — start explaining immediately.
+5. Give worked examples with numbered steps when helpful.
+6. Keep physics responses to 3–5 sentences unless a worked example is needed.
+7. You are NOT limited to physics only. If a student asks something else, help them
+   naturally like a knowledgeable friend would — then gently connect it back to 
+   physics if there's a relevant link. Never flatly refuse or say "I only do physics".
+8. For off-topic questions with NO physics link — answer helpfully and briefly,
+   then offer to continue with physics.
+"""
+
+GENERAL_MODE_ADDITION = """
+You are also a general knowledge assistant. When students ask non-physics questions:
+- Answer them naturally and helpfully, like a smart older student would
+- Keep non-physics answers brief (1-3 sentences)
+- If there's a genuine physics connection, mention it naturally — don't force it
+- NEVER say "I only help with physics" or "That's outside my scope"
+- For maths: always help — it directly supports physics
+- For personal questions or casual chat: respond warmly and move on
+"""
+
+PHYSICS_SYSTEM_PROMPT = PHYSICS_SYSTEM_PROMPT + GENERAL_MODE_ADDITION
+
+VOICE_SYSTEM_PROMPT = PHYSICS_SYSTEM_PROMPT + """
+
+VOICE MODE: Response will be read aloud. Max 2-3 sentences.
+No markdown. No symbols. Spell equations in plain English (e.g. "F equals m times a").
+"""
 
 # -------------------------------
 # Configure AI API (Google Gemini)
@@ -99,9 +139,9 @@ try:
         try:
             ml_train.train_model()
         except Exception as e:
-            print(f"Info: Training skipped ({e}). Attempting to load existing model...")
+            logger.info("Training skipped (%s). Attempting to load existing model...", e)
     else:
-        print("Info: Existing model files found. Skipping training. Set FORCE_TRAIN=true to override.")
+        logger.info("Existing model files found. Skipping training. Set FORCE_TRAIN=true to override.")
 
     # Load artifacts
     label_encoder = joblib.load(encoder_path)
@@ -115,7 +155,7 @@ try:
     ml_model.load_state_dict(torch.load(model_path))
     ml_model.eval() # Set to evaluation mode
 except Exception as e:
-    print(f"Warning: ML Model failed to load. Error: {e}")
+    logger.warning("ML Model failed to load. Error: %s", e)
     ml_model = None
     label_encoder = None
 
@@ -129,6 +169,69 @@ AFFIRMATIVES = {
     "go ahead", "show me", "yes please", "definitely", "of course",
     "do it", "yup", "yas", "ja", "ja please",
 }
+
+INTENT_KEYWORDS = {
+    "projectile": ["projectile", "launch", "angle", "range", "parabola", "throw", "ball"],
+    "waves": ["wave", "frequency", "amplitude", "wavelength", "sound", "transverse", "longitudinal", "doppler"],
+    "forces": ["force", "newton", "friction", "normal", "net force", "acceleration", "mass", "weight"],
+    "momentum": ["momentum", "collision", "impulse", "elastic", "inelastic", "conservation"],
+    "energy": ["energy", "kinetic", "potential", "work", "power", "joule", "conservation"],
+    "electricity": ["circuit", "current", "voltage", "resistance", "ohm", "capacitor", "series", "parallel"],
+    "magnetism": ["magnetic", "magnet", "field", "flux", "induction", "faraday", "lenz", "motor", "generator"],
+    "optics": ["light", "refraction", "reflection", "lens", "mirror", "snell", "critical angle", "optic"],
+    "gravitation": ["gravity", "orbit", "satellite", "planet", "gravitational", "kepler"],
+    "nuclear": ["nuclear", "radioactive", "decay", "half life", "fission", "fusion", "alpha", "beta", "gamma"],
+    "quantum": ["quantum", "photon", "photoelectric", "planck", "wave particle", "duality", "electron", "energy level"],
+    "thermodynamics": ["temperature", "pressure", "volume", "gas", "ideal gas", "boyle", "charles", "thermodynamics", "heat"],
+    "shm": ["pendulum", "spring", "oscillat", "harmonic", "period", "simple harmonic"],
+    "electrostatics": ["charge", "coulomb", "electric field", "potential", "capacitance", "electrostatic"],
+}
+
+def classify_intent(message):
+    try:
+        if ml_model is not None and tokenizer is not None and label_encoder is not None:
+            return ml_detect_intent_with_confidence(message)
+    except Exception as e:
+        logger.info("Intent classification fallback: %s", e)
+
+    msg = (message or "").lower()
+    scores = {}
+    for intent, keywords in INTENT_KEYWORDS.items():
+        scores[intent] = sum(1 for kw in keywords if kw in msg)
+    if not scores:
+        return ("general", 0.3)
+    best = max(scores, key=scores.get)
+    confidence = scores[best] / max(len(msg.split()) * 0.3, 1)
+    return (best, min(confidence, 1.0)) if scores[best] > 0 else ("general", 0.3)
+
+def build_prompt(history, user_message, system_prompt):
+    lines = [system_prompt, ""]
+    for item in normalize_history(history):
+        role = "User" if item["role"] == "user" else "Assistant"
+        lines.append(f"{role}: {item['content']}")
+    lines.append(f"User: {user_message}")
+    lines.append("Assistant:")
+    return "\n".join(lines)
+
+def generate_response(user_message, history=None, system_prompt=None):
+    if history is None:
+        history = []
+    if system_prompt is None:
+        system_prompt = PHYSICS_SYSTEM_PROMPT
+
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key or genai is None:
+        return "I can help with CAPS physics and general questions. Please ask a question."
+
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = build_prompt(history, user_message, system_prompt)
+        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+        text = (response.text or "").strip()
+        return text if text else "I can help with CAPS physics. Ask me anything."
+    except Exception as e:
+        logger.error("Generation error: %s", e)
+        return "I hit a small snag. Could you rephrase that?"
 
 # -------------------------------
 # Responses
@@ -199,7 +302,7 @@ def summarize_content(text):
         )
         return response.text
     except Exception as e:
-        print(f"Summarization Error: {e}")
+        logger.info("Summarization Error: %s", e)
         return text
 
 
@@ -263,7 +366,7 @@ def fetch_online_data(topic):
             if data:
                 result = f"Latest Python Release: {data.get('tag_name')}\n\nRelease Notes:\n{data.get('body')}"
     except Exception as e:
-        print(f"API Fetch Error: {e}")
+        logger.info("API Fetch Error: %s", e)
 
     if result:
         # Summarize the fetched content using AI before caching/displaying
@@ -323,7 +426,7 @@ def build_example_prompt(history, user_message, intent):
         "Provide a worked CAPS physics example relevant to the student's last question. "
         f"Question: {user_message}"
     )
-    return build_prompt(history, example_request, intent)
+    return build_prompt(history, example_request, PHYSICS_SYSTEM_PROMPT)
 
 def perform_unit_conversion(query):
     query = query.lower()
@@ -524,7 +627,7 @@ def ml_detect_intent_with_confidence(message):
 
             return best_intent, round(max(0.0, min(1.0, confidence)) * 100, 1)
         except Exception as e:
-            print(f"ML Prediction Error: {e}")
+            logger.info("ML Prediction Error: %s", e)
     return ("physics", 55.0) if is_physics_like() else ("unknown", 20.0)
 
 def ml_detect_intent(message):
@@ -545,7 +648,7 @@ def detect_intent_with_genai(message, labels):
                 return label
         return "unknown"
     except Exception as e:
-        print(f"GenAI Intent Fallback Error: {e}")
+        logger.info("GenAI Intent Fallback Error: %s", e)
         return "unknown"
 
 def get_physics_info(message):
@@ -928,34 +1031,37 @@ def new_session():
 
 @app.route("/match-animation", methods=["POST"])
 def match_animation():
-    payload = request.get_json(silent=True) or {}
-    question = (payload.get("question") or "").strip()
-    if not question:
+    try:
+        payload = request.get_json(silent=True) or {}
+        question = (payload.get("question") or "").strip()
+        if not question:
+            return jsonify({"animation_id": None})
+
+        intent, confidence = classify_intent(question)
+        conf_value = float(confidence)
+
+        intent_to_animation = {
+            "projectile": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
+            "waves": {"animation_id": "waves", "animation_label": "Wave Motion"},
+            "forces": {"animation_id": "forces", "animation_label": "Newton's Laws"},
+            "momentum": {"animation_id": "collision", "animation_label": "Momentum and Collisions"},
+            "energy": {"animation_id": "energy", "animation_label": "Conservation of Energy"},
+            "gravitation": {"animation_id": "orbit", "animation_label": "Gravitation and Orbits"},
+            "electricity": {"animation_id": "electricity", "animation_label": "Electric Fields"},
+            "magnetism": {"animation_id": "magnetism", "animation_label": "Magnetic Fields"},
+            "optics": {"animation_id": "optics", "animation_label": "Refraction and Optics"},
+            "nuclear": {"animation_id": "nuclear", "animation_label": "Nuclear Decay"},
+            "thermodynamics": {"animation_id": "thermodynamics", "animation_label": "Gas and Thermodynamics"},
+            "shm": {"animation_id": "pendulum", "animation_label": "Simple Harmonic Motion"},
+            "electrostatics": {"animation_id": "electricity", "animation_label": "Electric Fields"},
+        }
+
+        if conf_value >= 0.35 and intent in intent_to_animation:
+            return jsonify(intent_to_animation[intent])
         return jsonify({"animation_id": None})
-
-    intent, confidence = ml_detect_intent_with_confidence(question)
-    conf_value = float(confidence)
-    if conf_value > 1:
-        conf_value = conf_value / 100.0
-
-    intent_to_animation = {
-        "projectile_motion": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
-        "waves": {"animation_id": "waves", "animation_label": "Wave Motion"},
-        "forces": {"animation_id": "forces", "animation_label": "Newton's Laws"},
-        "momentum": {"animation_id": "collision", "animation_label": "Momentum and Collisions"},
-        "energy": {"animation_id": "energy", "animation_label": "Conservation of Energy"},
-        "gravitation": {"animation_id": "orbit", "animation_label": "Gravitation and Orbits"},
-        "electricity": {"animation_id": "electricity", "animation_label": "Electric Fields"},
-        "magnetism": {"animation_id": "magnetism", "animation_label": "Magnetic Fields"},
-        "optics": {"animation_id": "optics", "animation_label": "Refraction and Optics"},
-        "nuclear": {"animation_id": "nuclear", "animation_label": "Nuclear Decay"},
-        "thermodynamics": {"animation_id": "thermodynamics", "animation_label": "Gas and Thermodynamics"},
-        "shm": {"animation_id": "pendulum", "animation_label": "Simple Harmonic Motion"},
-    }
-
-    if conf_value >= 0.35 and intent in intent_to_animation:
-        return jsonify(intent_to_animation[intent])
-    return jsonify({"animation_id": None})
+    except Exception as e:
+        logger.error("Match animation error: %s", e)
+        return jsonify({"animation_id": None})
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -967,15 +1073,16 @@ def chat():
     if not user_message:
         return jsonify({"intent": "error", "reply": "Message is required"}), 400
 
+    voice_mode = bool(payload.get("voice_mode", False))
     history = normalize_history(payload.get("history", []))
     user_key = get_user_key()
     if not history:
-        history = list(user_conversations.get(user_key, []))
-    intent = "unknown"
-    confidence = 0.0
+        history = normalize_history(session.get("history", [])) or list(user_conversations.get(user_key, []))
+    intent = "general"
+    confidence = 0.3
 
     try:
-        intent, confidence = ml_detect_intent_with_confidence(user_message)
+        intent, confidence = classify_intent(user_message)
 
         # Optional deterministic hint for factual computations
         deterministic_hint = None
@@ -984,25 +1091,18 @@ def chat():
         elif intent == "physics":
             deterministic_hint = solve_physics_problem(user_message)
 
+        system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
+        prompt = user_message
         if is_affirmative(user_message):
             last_offer = extract_last_offer(history)
-            prompt = build_prompt(
-                history,
-                f"The student agreed. Now actually do this (don't ask again): {last_offer}",
-                intent
+            prompt = (
+                f"The student agreed. Your last message was: \"{last_offer[:300]}\". "
+                "Now FULFILL what you offered — give the example/explanation. Do not ask again."
             )
-        else:
-            prompt = build_prompt(history, user_message, intent)
         if deterministic_hint:
-            prompt += f"\n\nReference computed result (if relevant): {deterministic_hint}"
+            prompt = f"{prompt}\n\nReference computed result (if relevant): {deterministic_hint}"
 
-        reply = generate_response(
-            prompt,
-            intent,
-            user_message,
-            confidence,
-            deterministic_hint=deterministic_hint
-        )
+        reply = generate_response(prompt, history, system_prompt)
 
         # Update rolling history shared with frontend
         history.append({"role": "user", "content": user_message})
@@ -1011,23 +1111,15 @@ def chat():
 
         if detect_loop(history):
             example_prompt = build_example_prompt(history[:-1], user_message, intent)
-            reply = (
-                "Let me take a different approach! Here's a worked example to make this clearer:\n\n"
-                + generate_response(
-                    example_prompt,
-                    intent,
-                    user_message,
-                    confidence,
-                    deterministic_hint=deterministic_hint
-                )
-            )
+            reply = generate_response(example_prompt, history[:-1], system_prompt)
             history[-1]["content"] = reply
 
         # Keep server-side copy for existing analytics/history pages
         user_conversations[user_key] = list(history)
+        session["history"] = list(history)
         ensure_chat_id()
     except Exception as e:
-        print(f"Chat Error: {e}")
+        logger.error("Chat Error: %s", e)
         reply = "I hit a temporary issue. Please retry your physics question."
 
     save_user_data(
@@ -1041,6 +1133,13 @@ def chat():
 
     return jsonify({"reply": reply, "history": history, "confidence": confidence, "intent": intent})
 
+@app.errorhandler(Exception)
+def handle_exception(error):
+    logger.error("Unhandled server error: %s", error)
+    if request.path.startswith("/api") or request.is_json:
+        return jsonify({"success": False, "error": "Server error"}), 500
+    return "Something went wrong. Please try again.", 500
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5000,)
+    app.run(debug=False, host="0.0.0.0", port=5000)
   

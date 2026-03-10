@@ -1,95 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vector AI | Physics Studio</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
-  </head>
-  <body class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark"></span>
-        <div>
-          <p class="brand-kicker">Vector AI</p>
-          <h1 class="brand-title">Physics Studio</h1>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1d2021">
+  <title>Vector AI | Physics Studio</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-logo">⚛ Vector AI</div>
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" data-tab="chat"       role="tab">Chat</button>
+      <button class="tab-btn"        data-tab="animations" role="tab">Animations</button>
+      <button class="tab-btn"        data-tab="topics"     role="tab">Topics</button>
+    </nav>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- CHAT TAB -->
+    <section id="tab-chat" class="tab-panel active" role="tabpanel">
+      <div class="chat-layout">
+        <aside class="chat-sidebar">
+          <div class="sidebar-label">Session</div>
+          <p class="sidebar-info">Ask any CAPS physics question. The visualizer updates live.</p>
+          <button class="btn-primary" id="new-session-btn">New Session</button>
+          <button class="btn-secondary" id="logout-btn">Logout</button>
+          <div class="sidebar-label" style="margin-top:16px">Quick Start</div>
+          <div class="quick-prompts">
+            <div class="quick-prompt-chip" data-prompt="Explain Newton's second law">Newton's 2nd Law</div>
+            <div class="quick-prompt-chip" data-prompt="What is the Doppler effect?">Doppler Effect</div>
+            <div class="quick-prompt-chip" data-prompt="How does a capacitor work?">Capacitors</div>
+            <div class="quick-prompt-chip" data-prompt="What is projectile motion?">Projectile Motion</div>
+            <div class="quick-prompt-chip" data-prompt="Explain wave-particle duality">Wave-Particle</div>
+          </div>
+        </aside>
+        <div class="chat-main">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-bar">
+            <input 
+              type="text" 
+              id="chat-input" 
+              placeholder="Ask about motion, waves, electricity, momentum..."
+              autocomplete="off"
+              inputmode="text"
+            >
+            <button class="send-btn" id="send-btn">Send</button>
+          </div>
         </div>
       </div>
-      <nav class="topnav">
-        <a href="/chat">Chat</a>
-        <a href="/animations">Animations</a>
-        <a href="/dashboard">Dashboard</a>
-      </nav>
-    </header>
-
-    <main class="hero">
-      <section class="hero-copy">
-        <p class="eyebrow">Precision learning for modern physics</p>
-        <h2>Ask. Simulate. Understand.</h2>
-        <p class="lede">
-          Vector AI blends smart tutoring with interactive physics animations. Every question can
-          turn into a simulation you can explore.
-        </p>
-        <div class="hero-actions">
-          <a class="btn primary" href="/chat">Launch Chat</a>
-          <a class="btn ghost" href="/animations">Explore Animations</a>
-        </div>
-      </section>
-
-      <section class="auth-panel" aria-labelledby="auth-title">
-        <div class="auth-card">
-          <h3 id="auth-title">Sign in to continue</h3>
-          <p class="muted">Save chats, replay sessions, and tune animations.</p>
-
-          <div class="auth-tabs">
-            <button class="tab active" data-tab="login">Login</button>
-            <button class="tab" data-tab="signup">Sign up</button>
-          </div>
-
-          <form id="login-form" class="auth-form" data-panel="login">
-            <label>
-              Username
-              <input type="text" id="login-username" autocomplete="username" required />
-            </label>
-            <label>
-              Password
-              <input type="password" id="login-password" autocomplete="current-password" required />
-            </label>
-            <button type="submit" class="btn primary full">Enter Studio</button>
-          </form>
-
-          <form id="signup-form" class="auth-form hidden" data-panel="signup">
-            <label>
-              Username
-              <input type="text" id="signup-username" autocomplete="username" required />
-            </label>
-            <label>
-              Password
-              <input type="password" id="signup-password" autocomplete="new-password" required />
-            </label>
-            <button type="submit" class="btn primary full">Create Account</button>
-          </form>
-
-          <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
-        </div>
-      </section>
-    </main>
-
-    <section class="feature-grid">
-      <article>
-        <h4>Adaptive tutoring</h4>
-        <p>Confidence-aware answers with realtime context and curated physics references.</p>
-      </article>
-      <article>
-        <h4>Editable simulations</h4>
-        <p>Change launch angles, mass, and drag to see cause and effect instantly.</p>
-      </article>
-      <article>
-        <h4>Session history</h4>
-        <p>Reopen any past chat, now sorted by confidence and timeline.</p>
-      </article>
     </section>
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
-  </body>
+    <!-- ANIMATIONS TAB -->
+    <section id="tab-animations" class="tab-panel" role="tabpanel">
+      <aside class="anim-sidebar" id="anim-sidebar">
+        <div class="anim-sidebar-heading">Physics Fields</div>
+        <!-- JS generates buttons here -->
+      </aside>
+      <div class="anim-viewport">
+        <canvas id="physics-canvas"></canvas>
+        <div class="anim-hud">
+          <div class="hud-title" id="hud-title">Select a Physics Field</div>
+          <div class="hud-formula" id="hud-formula"></div>
+        </div>
+        <div class="anim-readout" id="anim-readout"></div>
+        <div class="anim-controls-bar" id="anim-controls-bar"></div>
+        <div class="ke-bar" id="ke-bar"><div class="ke-fill" id="ke-fill"></div></div>
+      </div>
+    </section>
+
+  <!-- TOPICS TAB -->
+  <section id="tab-topics" class="tab-panel" role="tabpanel">
+    <div id="topics-grid" class="topics-grid"></div>
+  </section>
+
+  </div>
+</div>
+
+<!-- VOICE MODE OVERLAY — fullscreen, toggled on/off -->
+<div id="voice-mode" class="voice-overlay hidden">
+  <div class="voice-header">
+    <span class="voice-status-label" id="voice-status-label">Tap to speak</span>
+    <button class="voice-close-btn" id="voice-close-btn">✕ Text Mode</button>
+  </div>
+
+  <div class="voice-avatar-wrap">
+    <canvas id="avatar-canvas"></canvas>
+    <div class="avatar-ripple r1"></div>
+    <div class="avatar-ripple r2"></div>
+    <div class="avatar-ripple r3"></div>
+  </div>
+
+  <div class="voice-transcript-area">
+    <div class="transcript-you" id="transcript-you"></div>
+    <div class="transcript-ai" id="transcript-ai"></div>
+  </div>
+
+  <div class="voice-controls">
+    <button class="voice-mic-btn" id="voice-mic-btn">
+      <span class="mic-icon">🎤</span>
+      <span class="mic-label">Hold to Talk</span>
+    </button>
+    <button class="voice-end-btn" id="voice-end-btn">⏹ End</button>
+  </div>
+
+  <div class="mic-error hidden" id="mic-error">
+    🎤 Microphone access denied.
+    <a href="#" onclick="openMicSettings()">Enable in browser settings</a>
+  </div>
+</div>
+
+<!-- Voice Mode trigger button (floating, always visible) -->
+<button class="voice-launch-btn" id="voice-launch-btn" title="Voice Mode">🎤</button>
+
+<!-- Mobile FAB -->
+<button class="mobile-fab" id="mobile-fab" title="New session">＋</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/static/avatar.js"></script>
+<script src="/static/animations.js"></script>
+<script src="/static/voice.js"></script>
+<script src="/static/main.js"></script>
+</body>
 </html>
