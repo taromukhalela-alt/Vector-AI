@@ -19,6 +19,19 @@ let animationFrame = null;
 let paused = false;
 let simData = null;
 let index = 0;
+let currentAnimationId = "projectile";
+let backgroundType = "light";
+let backgroundColor = "#f7eef0";
+let actualColor = "#6b1e26";
+let mlColor = "#a93643";
+let currentGravity = 9.8;
+
+const getAnimConfig = () => window.animConfig || {};
+
+const intToHex = (value, fallback) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return `#${value.toString(16).padStart(6, "0")}`;
+};
 
 const getQuery = () => {
   const params = new URLSearchParams(window.location.search);
@@ -43,8 +56,26 @@ const applyQuestionPreset = (question) => {
 const clearCanvas = () => {
   if (!ctx || !canvas) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#f7eef0";
+  ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (backgroundType === "grid") {
+    ctx.strokeStyle = "rgba(107, 30, 38, 0.08)";
+    ctx.lineWidth = 1;
+    const spacing = 32;
+    for (let x = 0; x <= canvas.width; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+  }
 };
 
 const drawPath = (points, color) => {
@@ -89,24 +120,29 @@ const updateStats = (xValues, yValues, tValues) => {
 
 const renderFrame = () => {
   if (!simData || !ctx) return;
-  if (paused) {
+  const config = getAnimConfig();
+  if (paused || config.paused) {
     animationFrame = requestAnimationFrame(renderFrame);
     return;
   }
 
   clearCanvas();
-  drawPath(simData.path, "#6b1e26");
-  if (simData.mlPath) {
-    drawPath(simData.mlPath, "#a93643");
+  if (config.showTrails !== false) {
+    drawPath(simData.path, actualColor);
+    if (simData.mlPath) {
+      drawPath(simData.mlPath, mlColor);
+    }
   }
 
-  const point = simData.path[index];
-  drawProjectile(point, "#6b1e26");
-  if (simData.mlPath && simData.mlPath[index]) {
-    drawProjectile(simData.mlPath[index], "#a93643");
+  const idx = Math.min(simData.path.length - 1, Math.floor(index));
+  const point = simData.path[idx];
+  drawProjectile(point, actualColor);
+  if (simData.mlPath && simData.mlPath[idx]) {
+    drawProjectile(simData.mlPath[idx], mlColor);
   }
 
-  index += 1;
+  const speed = Number(config.speed) || 1;
+  index += speed;
   if (index >= simData.path.length) index = simData.path.length - 1;
   animationFrame = requestAnimationFrame(renderFrame);
 };
@@ -117,6 +153,7 @@ const runSimulation = async () => {
     angle: Number(inputAngle.value),
     mass: Number(inputMass.value),
     drag: Number(inputDrag.value),
+    gravity: currentGravity,
   };
 
   const response = await fetch("/api/simulate", {
@@ -140,14 +177,96 @@ const runSimulation = async () => {
   renderFrame();
 };
 
+const setPaused = (value) => {
+  paused = value;
+  const config = getAnimConfig();
+  if (config) config.paused = value;
+  if (pauseBtn) pauseBtn.textContent = value ? "Resume" : "Pause";
+  const cfgPause = document.getElementById("cfg-pause");
+  if (cfgPause) cfgPause.textContent = value ? "Resume" : "Pause";
+};
+
+const rebuildCurrentAnimation = () => {
+  if (currentAnimationId === "projectile") {
+    runSimulation();
+  } else {
+    clearCanvas();
+    if (ctx && canvas) {
+      ctx.fillStyle = "rgba(59, 15, 20, 0.6)";
+      ctx.font = "16px \"Source Sans 3\", sans-serif";
+      ctx.fillText("Animation coming soon.", 24, 36);
+    }
+    if (statRange) statRange.textContent = "--";
+    if (statHeight) statHeight.textContent = "--";
+    if (statTime) statTime.textContent = "--";
+  }
+};
+
+const updateSceneColors = () => {
+  const config = getAnimConfig();
+  actualColor = intToHex(config.primaryColor, actualColor);
+  mlColor = intToHex(config.secondaryColor, mlColor);
+};
+
+const updateLabelVisibility = () => {};
+
+const updateAnimationParam = (paramId, value) => {
+  if (currentAnimationId !== "projectile") return;
+  if (paramId === "angle" && inputAngle) inputAngle.value = value;
+  if (paramId === "velocity" && inputV0) inputV0.value = value;
+  if (paramId === "mass" && inputMass) inputMass.value = value;
+  if (paramId === "drag" && inputDrag) inputDrag.value = value;
+  if (paramId === "gravity") currentGravity = value;
+  if (simData) rebuildCurrentAnimation();
+};
+
+const setBackground = (type, color) => {
+  backgroundType = type;
+  backgroundColor = color || backgroundColor;
+  clearCanvas();
+};
+
+const loadAnimation = (animation) => {
+  if (!animation) return;
+  currentAnimationId = animation.id;
+  if (questionTitle) questionTitle.textContent = animation.label || "Physics Animation";
+  if (questionSubtitle) questionSubtitle.textContent = animation.description || "Tune the parameters and press run.";
+  if (window.injectPhysicsParams) window.injectPhysicsParams(animation.id);
+  rebuildCurrentAnimation();
+};
+
+const PHYSICS_ANIMATIONS = [
+  { id: "projectile", label: "Projectile Motion", description: "Launch angle and speed control a parabolic path." },
+  { id: "waves", label: "Wave Motion", description: "Frequency and amplitude change wave shape." },
+  { id: "forces", label: "Newtons Laws", description: "Forces and friction determine acceleration." },
+  { id: "collision", label: "Momentum and Collisions", description: "Mass and velocity affect momentum transfer." },
+  { id: "energy", label: "Conservation of Energy", description: "Track energy changes through a system." },
+  { id: "orbit", label: "Gravitation and Orbits", description: "Explore orbital paths and eccentricity." },
+  { id: "electricity", label: "Electric Fields", description: "Visualize electric field behavior." },
+  { id: "magnetism", label: "Magnetic Fields", description: "Magnetic forces and field lines." },
+  { id: "optics", label: "Refraction and Optics", description: "Light bending and lens effects." },
+  { id: "nuclear", label: "Nuclear Decay", description: "Half-life and decay rates." },
+  { id: "thermodynamics", label: "Gas and Thermodynamics", description: "Temperature and volume changes." },
+  { id: "pendulum", label: "Simple Harmonic Motion", description: "Pendulum length and angle affect period." },
+];
+
 if (runBtn) runBtn.addEventListener("click", () => runSimulation());
-if (pauseBtn) pauseBtn.addEventListener("click", () => (paused = !paused));
+if (pauseBtn) pauseBtn.addEventListener("click", () => setPaused(!paused));
 if (resetBtn)
   resetBtn.addEventListener("click", () => {
-    paused = true;
+    setPaused(true);
     index = 0;
     clearCanvas();
   });
 
 applyQuestionPreset(getQuery());
 clearCanvas();
+
+window.rebuildCurrentAnimation = rebuildCurrentAnimation;
+window.updateLabelVisibility = updateLabelVisibility;
+window.updateSceneColors = updateSceneColors;
+window.updateAnimationParam = updateAnimationParam;
+window.applyBackground = setBackground;
+window.loadAnimation = loadAnimation;
+window.PHYSICS_ANIMATIONS = PHYSICS_ANIMATIONS;
+window.setPaused = setPaused;

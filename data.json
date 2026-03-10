@@ -274,5 +274,14 @@
         "topic": "physics",
         "time": "2026-02-01T12:10:11.711924",
         "username": "taro"
+    },
+    {
+        "message": "hi",
+        "topic": "unknown",
+        "time": "2026-03-10T05:44:21.862736",
+        "username": "taro",
+        "confidence": 20.0,
+        "chat_id": "251930f6ab5b",
+        "reply": "That's an interesting question, but I'm only able to help with physics topics covered in the CAPS curriculum. Try asking me about forces, waves, electricity, or any other physics concept!"
     }
 ]

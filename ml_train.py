@@ -134,6 +134,79 @@ def train_model():
         ]
     }
 
+    physics_intent_samples = {
+        "kinematics": [
+            "Find velocity if distance is 100 m and time is 10 s",
+            "Solve a kinematics problem using v^2 = u^2 + 2as",
+            "How do I calculate acceleration?",
+        ],
+        "dynamics": [
+            "Explain Newton's second law",
+            "Find the net force on a 5 kg object with 2 m/s^2 acceleration",
+            "What is a free-body diagram?",
+        ],
+        "projectile_motion": [
+            "Projectile launched at 30 degrees with speed 20 m/s",
+            "Find the range of a projectile",
+            "How does a ball fall when thrown sideways?",
+        ],
+        "forces": [
+            "Explain friction and normal force",
+            "Calculate force given mass and acceleration",
+            "What forces act on a block on a slope?",
+        ],
+        "momentum": [
+            "Calculate momentum of a 10 kg object moving at 5 m/s",
+            "Explain impulse and momentum",
+            "Conservation of momentum in collisions",
+        ],
+        "energy": [
+            "Calculate kinetic energy of a moving object",
+            "Explain potential energy and work",
+            "Find power if work is 100 J and time is 5 s",
+        ],
+        "gravitation": [
+            "Calculate gravitational force between two planets",
+            "Explain weight vs mass",
+            "What is the value of g on Earth?",
+        ],
+        "waves": [
+            "Explain wave speed and frequency",
+            "Find wavelength if speed and frequency are known",
+            "What is amplitude in a wave?",
+        ],
+        "electricity": [
+            "Use Ohm's law to find current",
+            "Explain voltage and resistance",
+            "Calculate resistance in a circuit",
+        ],
+        "magnetism": [
+            "Explain magnetic fields",
+            "Force on a current-carrying wire",
+            "What is an electromagnet?",
+        ],
+        "optics": [
+            "Explain refraction and Snell's law",
+            "How do lenses form images?",
+            "What is the law of reflection?",
+        ],
+        "thermodynamics": [
+            "Explain heat vs temperature",
+            "Use the ideal gas law",
+            "What is thermal equilibrium?",
+        ],
+        "nuclear": [
+            "Explain radioactive decay",
+            "Calculate half-life",
+            "What is nuclear fission?",
+        ],
+        "shm": [
+            "Explain simple harmonic motion",
+            "Period of a pendulum",
+            "Oscillation of a spring",
+        ],
+    }
+
     # Add physics training examples to the lists
     physics_texts = [
         "What is the speed of light?", "Explain Newton's laws", "What is thermodynamics?",
@@ -163,6 +236,10 @@ def train_model():
     
     data["text"].extend(physics_texts)
     data["label"].extend(["physics"] * len(physics_texts))
+
+    for label, examples in physics_intent_samples.items():
+        data["text"].extend(examples)
+        data["label"].extend([label] * len(examples))
 
     # Optional: Augment data if enabled via env var (to avoid slow startup)
     if os.getenv("ENABLE_GENAI_TRAINING") == "true":

@@ -52,6 +52,29 @@ model_path = os.path.join(BASE_DIR, "intent_model.pth")
 encoder_path = os.path.join(BASE_DIR, "label_encoder.pkl")
 tokenizer_path = os.path.join(BASE_DIR, "tokenizer.pkl")
 config_path = os.path.join(BASE_DIR, "model_config.pkl")
+EXPECTED_LABELS = {
+    "ai",
+    "physics",
+    "python",
+    "trends",
+    "jokes",
+    "greeting",
+    "capabilities",
+    "kinematics",
+    "dynamics",
+    "projectile_motion",
+    "forces",
+    "momentum",
+    "energy",
+    "gravitation",
+    "waves",
+    "electricity",
+    "magnetism",
+    "optics",
+    "thermodynamics",
+    "nuclear",
+    "shm",
+}
 
 # Train only when needed (faster startup)
 try:
@@ -62,6 +85,14 @@ try:
     required_files = [model_path, encoder_path, tokenizer_path, config_path]
     if not all(os.path.exists(path) for path in required_files):
         should_train = True
+    elif not should_train:
+        try:
+            existing_encoder = joblib.load(encoder_path)
+            existing_labels = set(existing_encoder.classes_)
+            if not EXPECTED_LABELS.issubset(existing_labels):
+                should_train = True
+        except Exception:
+            should_train = True
 
     # Attempt training, but continue if it fails
     if should_train:
@@ -93,6 +124,11 @@ user_conversations = {}
 response_cache = {}
 MAX_HISTORY_PER_USER = 50
 RESPONSE_CACHE_TTL = 180
+AFFIRMATIVES = {
+    "yes", "yeah", "yep", "sure", "okay", "ok", "please",
+    "go ahead", "show me", "yes please", "definitely", "of course",
+    "do it", "yup", "yas", "ja", "ja please",
+}
 
 # -------------------------------
 # Responses
@@ -235,6 +271,59 @@ def fetch_online_data(topic):
         api_cache[topic] = (result, datetime.now())
 
     return result
+
+def is_affirmative(message):
+    if not message:
+        return False
+    cleaned = message.lower().strip().rstrip("!?.")
+    return cleaned in AFFIRMATIVES
+
+def extract_last_offer(history):
+    """Find the last assistant message that contained an offer/question."""
+    for msg in reversed(history or []):
+        if msg.get("role") != "assistant":
+            continue
+        content = msg.get("content", "")
+        if "?" not in content:
+            continue
+        sentences = content.split(".")
+        for sentence in reversed(sentences):
+            if "?" in sentence:
+                return sentence.strip()
+    return "Give a worked CAPS physics example relevant to the current topic."
+
+def detect_loop(history, threshold=2):
+    """
+    Returns True if the last `threshold` assistant messages are too similar.
+    Prevents the AI from repeating the same response.
+    """
+    if not history or len(history) < threshold * 2:
+        return False
+
+    recent_assistant_msgs = [
+        (m.get("content") or "").lower().strip()
+        for m in history
+        if m.get("role") == "assistant"
+    ][-threshold:]
+
+    if len(recent_assistant_msgs) < threshold:
+        return False
+
+    words_a = set(recent_assistant_msgs[0].split())
+    words_b = set(recent_assistant_msgs[1].split())
+
+    if not words_a:
+        return False
+
+    overlap = len(words_a & words_b) / len(words_a)
+    return overlap > 0.6
+
+def build_example_prompt(history, user_message, intent):
+    example_request = (
+        "Provide a worked CAPS physics example relevant to the student's last question. "
+        f"Question: {user_message}"
+    )
+    return build_prompt(history, example_request, intent)
 
 def perform_unit_conversion(query):
     query = query.lower()
@@ -660,20 +749,25 @@ def simulate_physics():
             mass = float(data.get("mass", 1.0))
             drag = float(data.get("drag", 0.0))
             scale_height = data.get("scale_height")
+            gravity = data.get("gravity")
             if scale_height is not None:
                 scale_height = float(scale_height)
+            if gravity is not None:
+                gravity = float(gravity)
             if v0 < 0 or mass <= 0: raise ValueError("Invalid physics parameters")
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
         
         # 1. Run Ground Truth Physics
-        sim_results = physics_engine.simulator.simulate_projectile(v0, angle, mass, drag, scale_height=scale_height)
+        sim_results = physics_engine.simulator.simulate_projectile(
+            v0, angle, mass, drag, scale_height=scale_height, g=gravity
+        )
         
         # 2. Run ML Prediction (if trained)
         ml_results = None
         error_margin = 0.0
         
-        if physics_engine.learner.is_trained:
+        if physics_engine.learner.is_trained and (gravity is None or abs(gravity - 9.8) < 1e-3):
             # We ask the ML model to predict positions for the same timestamps
             ml_results = physics_engine.learner.predict_trajectory(
                 v0, angle, mass, drag, sim_results["t"]
@@ -832,6 +926,37 @@ def new_session():
     user_conversations[user_key] = []
     return jsonify({"success": True, "chat_id": session["chat_id"]})
 
+@app.route("/match-animation", methods=["POST"])
+def match_animation():
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get("question") or "").strip()
+    if not question:
+        return jsonify({"animation_id": None})
+
+    intent, confidence = ml_detect_intent_with_confidence(question)
+    conf_value = float(confidence)
+    if conf_value > 1:
+        conf_value = conf_value / 100.0
+
+    intent_to_animation = {
+        "projectile_motion": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
+        "waves": {"animation_id": "waves", "animation_label": "Wave Motion"},
+        "forces": {"animation_id": "forces", "animation_label": "Newton's Laws"},
+        "momentum": {"animation_id": "collision", "animation_label": "Momentum and Collisions"},
+        "energy": {"animation_id": "energy", "animation_label": "Conservation of Energy"},
+        "gravitation": {"animation_id": "orbit", "animation_label": "Gravitation and Orbits"},
+        "electricity": {"animation_id": "electricity", "animation_label": "Electric Fields"},
+        "magnetism": {"animation_id": "magnetism", "animation_label": "Magnetic Fields"},
+        "optics": {"animation_id": "optics", "animation_label": "Refraction and Optics"},
+        "nuclear": {"animation_id": "nuclear", "animation_label": "Nuclear Decay"},
+        "thermodynamics": {"animation_id": "thermodynamics", "animation_label": "Gas and Thermodynamics"},
+        "shm": {"animation_id": "pendulum", "animation_label": "Simple Harmonic Motion"},
+    }
+
+    if conf_value >= 0.35 and intent in intent_to_animation:
+        return jsonify(intent_to_animation[intent])
+    return jsonify({"animation_id": None})
+
 @app.route("/chat", methods=["POST"])
 def chat():
     if not request.is_json:
@@ -843,6 +968,9 @@ def chat():
         return jsonify({"intent": "error", "reply": "Message is required"}), 400
 
     history = normalize_history(payload.get("history", []))
+    user_key = get_user_key()
+    if not history:
+        history = list(user_conversations.get(user_key, []))
     intent = "unknown"
     confidence = 0.0
 
@@ -856,7 +984,15 @@ def chat():
         elif intent == "physics":
             deterministic_hint = solve_physics_problem(user_message)
 
-        prompt = build_prompt(history, user_message, intent)
+        if is_affirmative(user_message):
+            last_offer = extract_last_offer(history)
+            prompt = build_prompt(
+                history,
+                f"The student agreed. Now actually do this (don't ask again): {last_offer}",
+                intent
+            )
+        else:
+            prompt = build_prompt(history, user_message, intent)
         if deterministic_hint:
             prompt += f"\n\nReference computed result (if relevant): {deterministic_hint}"
 
@@ -873,8 +1009,21 @@ def chat():
         history.append({"role": "assistant", "content": reply})
         history = history[-MAX_HISTORY:]
 
+        if detect_loop(history):
+            example_prompt = build_example_prompt(history[:-1], user_message, intent)
+            reply = (
+                "Let me take a different approach! Here's a worked example to make this clearer:\n\n"
+                + generate_response(
+                    example_prompt,
+                    intent,
+                    user_message,
+                    confidence,
+                    deterministic_hint=deterministic_hint
+                )
+            )
+            history[-1]["content"] = reply
+
         # Keep server-side copy for existing analytics/history pages
-        user_key = get_user_key()
         user_conversations[user_key] = list(history)
         ensure_chat_id()
     except Exception as e:

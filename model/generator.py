@@ -20,9 +20,8 @@ SYSTEM_PROMPT_PATH = BASE_DIR / "prompts" / "system_prompt.txt"
 MAX_HISTORY = 10
 OFF_TOPIC_THRESHOLD = 0.4
 OFF_TOPIC_RESPONSE = (
-    "That's an interesting question, but I'm only able to help with physics topics "
-    "covered in the CAPS curriculum. Try asking me about forces, waves, electricity, "
-    "or any other physics concept!"
+    "That's an interesting question. I can give a quick, simple answer, then let's "
+    "switch back to CAPS physics topics like forces, waves, electricity, or energy."
 )
 FOLLOW_UP_PROMPTS = [
     "Does that make sense so far?",
@@ -30,6 +29,31 @@ FOLLOW_UP_PROMPTS = [
     "Can you tell me what you already know about this topic?",
     "Which part are you most unsure about?",
 ]
+PHYSICS_INTENTS = {
+    "physics",
+    "kinematics",
+    "dynamics",
+    "projectile_motion",
+    "forces",
+    "momentum",
+    "energy",
+    "gravitation",
+    "waves",
+    "electricity",
+    "magnetism",
+    "optics",
+    "thermodynamics",
+    "nuclear",
+    "shm",
+}
+ANTI_REPETITION_SUFFIX = """
+
+IMPORTANT: Check the conversation history above carefully.
+- Do NOT repeat any question you already asked.
+- If the student just said yes/agreed, PROVIDE the thing you offered - do not ask again.
+- If you already gave this explanation, try a completely different angle.
+- Never start your response with "Great question!" more than once per conversation.
+"""
 
 _generator = None
 PHYSICS_SNIPPETS = {
@@ -91,13 +115,13 @@ def normalize_confidence(confidence):
 
 
 def choose_follow_up(intent):
-    if intent == "physics":
+    if intent in PHYSICS_INTENTS:
         return "Would you like a worked example from a CAPS-style exam question?"
     return random.choice(FOLLOW_UP_PROMPTS)
 
 
 def is_off_topic(intent, confidence):
-    if intent == "physics":
+    if intent in PHYSICS_INTENTS:
         return False
     return normalize_confidence(confidence) < OFF_TOPIC_THRESHOLD
 
@@ -112,6 +136,7 @@ def build_prompt(history, user_message, intent):
         lines.append(f"{role}: {item['content']}")
 
     lines.append(f"User: {user_message}")
+    lines.append(ANTI_REPETITION_SUFFIX.strip())
     lines.append("Assistant:")
     return "\n".join(lines)
 
@@ -160,7 +185,6 @@ def _pick_physics_snippet(user_message):
 def _rule_based_physics_reply(user_message, deterministic_hint=None):
     base = _pick_physics_snippet(user_message)
     parts = [
-        "Great question.",
         base,
         "If you want a full solution, I can walk step-by-step from known values to final answer.",
     ]
@@ -191,11 +215,16 @@ def _sanitize_generated_reply(reply):
 
 def generate_response(prompt, intent, user_message, confidence, deterministic_hint=None):
     if is_off_topic(intent, confidence):
+        if intent != "unknown":
+            brief = _rule_based_non_physics_reply(intent, deterministic_hint=deterministic_hint)
+            return (
+                f"{brief} If you want, ask me a CAPS physics question next."
+            )
         return OFF_TOPIC_RESPONSE
 
     reply = _gemini_generate(prompt)
     if not reply:
-        if intent == "physics":
+        if intent in PHYSICS_INTENTS:
             reply = _rule_based_physics_reply(user_message, deterministic_hint=deterministic_hint)
         else:
             reply = _rule_based_non_physics_reply(intent, deterministic_hint=deterministic_hint)

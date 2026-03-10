@@ -53,7 +53,7 @@ class Simulator:
         self.g = g
 
     def simulate_projectile(self, v0=50.0, angle=45.0, mass=1.0, drag=0.0,
-                            dt=0.01, max_time=20.0):
+                            dt=0.01, max_time=20.0, g=None, scale_height=None):
         """Simulate projectile motion until it hits the ground (y <= 0).
 
         Parameters
@@ -81,6 +81,8 @@ class Simulator:
         vxs = []
         vys = []
 
+        _ = scale_height
+        gravity = self.g if g is None else g
         while t <= max_time and y >= 0 - 1e-6:
             ts.append(t)
             xs.append(x)
@@ -91,7 +93,7 @@ class Simulator:
             # Compute accelerations
             # Linear drag: a_drag = -(drag / m) * v
             ax = - (drag / mass) * vx
-            ay = -self.g - (drag / mass) * vy
+            ay = -gravity - (drag / mass) * vy
 
             # Euler integration
             vx = vx + ax * dt

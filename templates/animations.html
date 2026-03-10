@@ -80,8 +80,68 @@
           <span class="dot ml"></span> ML prediction
         </div>
       </section>
+
+      <aside class="config-panel" id="config-panel">
+        <div class="config-section">
+          <h4 class="config-heading">Animation</h4>
+          <label>Speed
+            <input type="range" id="cfg-speed" min="0.1" max="3" step="0.1" value="1">
+            <span id="cfg-speed-val">1x</span>
+          </label>
+          <label>
+            <input type="checkbox" id="cfg-trails" checked> Show Trails
+          </label>
+          <label>
+            <input type="checkbox" id="cfg-labels" checked> Show Formula Labels
+          </label>
+          <label>
+            <input type="checkbox" id="cfg-vectors" checked> Show Force Vectors
+          </label>
+          <button id="cfg-reset">Reset</button>
+          <button id="cfg-pause">Pause</button>
+        </div>
+
+        <div class="config-section">
+          <h4 class="config-heading">Appearance</h4>
+          <label>Primary Color
+            <input type="color" id="cfg-color-primary" value="#b8bb26">
+          </label>
+          <label>Secondary Color
+            <input type="color" id="cfg-color-secondary" value="#8ec07c">
+          </label>
+          <label>Background
+            <select id="cfg-bg">
+              <option value="dark">Dark (Gruvbox)</option>
+              <option value="space">Space</option>
+              <option value="grid">Grid</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </label>
+          <label>Particle Count
+            <input type="range" id="cfg-particles" min="50" max="500" step="50" value="200">
+            <span id="cfg-particles-val">200</span>
+          </label>
+        </div>
+
+        <div class="config-section" id="cfg-physics-params">
+          <h4 class="config-heading">Physics Parameters</h4>
+        </div>
+
+        <div class="config-section">
+          <h4 class="config-heading">Auto-Match</h4>
+          <p class="config-hint">Type any physics question and we will load the best animation for it.</p>
+          <textarea
+            id="cfg-question"
+            placeholder="e.g. How does a ball fall when thrown sideways?"
+            rows="3"
+          ></textarea>
+          <button id="cfg-match-btn">Find Animation</button>
+          <div id="cfg-match-result"></div>
+        </div>
+      </aside>
     </main>
 
     <script src="{{ url_for('static', filename='animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='config.js') }}"></script>
   </body>
 </html>

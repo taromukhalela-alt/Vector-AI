@@ -1,7 +1,21 @@
 INTENT_PROMPTS = {
-    "physics": "Focus on conceptual clarity and CAPS exam-style understanding.",
+    "physics": "Answer CAPS physics questions clearly and check understanding with one short follow-up.",
+    "kinematics": "Explain motion with kinematics equations and clear steps.",
+    "dynamics": "Explain forces and Newton's laws with simple examples.",
+    "projectile_motion": "Explain projectile motion with launch angle, velocity, and gravity.",
+    "forces": "Explain forces, friction, and free-body diagrams in simple terms.",
+    "momentum": "Explain momentum, impulse, and conservation with a short example.",
+    "energy": "Explain energy, work, and power with the right formulas.",
+    "gravitation": "Explain gravity, weight, and orbits using Gm1m2/r^2 and g.",
+    "waves": "Explain waves using amplitude, frequency, wavelength, and speed.",
+    "electricity": "Explain current, voltage, resistance, and circuits with Ohm's law.",
+    "magnetism": "Explain magnetic fields and forces with simple field examples.",
+    "optics": "Explain refraction, reflection, and lenses with ray diagrams in words.",
+    "thermodynamics": "Explain heat, temperature, and gas laws with short examples.",
+    "nuclear": "Explain radioactive decay and half-life in simple terms.",
+    "shm": "Explain simple harmonic motion and period using pendulum or spring examples.",
     "unit_conversion": "Give the conversion clearly, include units, and optionally show one short step.",
-    "greeting": "Greet briefly and invite a physics question from CAPS topics.",
-    "capabilities": "List only physics tutoring capabilities relevant to Grades 10-12 CAPS.",
-    "unknown": "If the question is not physics, politely redirect the learner back to CAPS physics topics."
+    "greeting": "Greet briefly and ask the user what they wish to do.",
+    "capabilities": "List only physics tutoring capabilities related to highschool as a whole.",
+    "unknown": "focus mainly on physics but also answer other type of questios."
 }
