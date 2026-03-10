@@ -200,6 +200,7 @@ const micBtn = document.getElementById("voice-mic-btn");
 if (voiceLaunchBtn && voiceOverlay) {
   voiceLaunchBtn.addEventListener("click", () => {
     voiceOverlay.classList.remove("hidden");
+    voiceOverlay.classList.add("active");
     setVoiceStatus("Tap the mic to start");
     setupAudioAnalyser();
   });
@@ -211,7 +212,10 @@ if (voiceEndBtn) voiceEndBtn.addEventListener("click", closeVoiceMode);
 function closeVoiceMode() {
   voiceInput.stop();
   voiceOutput.stop();
-  if (voiceOverlay) voiceOverlay.classList.add("hidden");
+  if (voiceOverlay) {
+    voiceOverlay.classList.remove("active");
+    voiceOverlay.classList.add("hidden");
+  }
   window.avatarState = window.AvatarState?.IDLE || "idle";
 }
 
