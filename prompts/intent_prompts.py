@@ -9,6 +9,7 @@ INTENT_PROMPTS = {
     "gravitation": "Explain gravity, weight, and orbits using Gm1m2/r^2 and g.",
     "waves": "Explain waves using amplitude, frequency, wavelength, and speed.",
     "electricity": "Explain current, voltage, resistance, and circuits with Ohm's law.",
+    "electrostatics": "Explain charge, electric fields, and Coulomb's law with simple examples.",
     "magnetism": "Explain magnetic fields and forces with simple field examples.",
     "optics": "Explain refraction, reflection, and lenses with ray diagrams in words.",
     "thermodynamics": "Explain heat, temperature, and gas laws with short examples.",
@@ -17,5 +18,5 @@ INTENT_PROMPTS = {
     "unit_conversion": "Give the conversion clearly, include units, and optionally show one short step.",
     "greeting": "Greet briefly and ask the user what they wish to do.",
     "capabilities": "List only physics tutoring capabilities related to highschool as a whole.",
-    "unknown": "focus mainly on physics but also answer other type of questios."
+    "unknown": "Focus mainly on physics, but still answer clearly and kindly if the question is broader."
 }

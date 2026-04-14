@@ -5,25 +5,29 @@ import json
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import urllib.request
+import queue
 import joblib
 import random
 import os
 import re
 import sys
+import threading
 import numpy as np
 import logging
 import time
 from model.generator import MAX_HISTORY, normalize_history
-try:
-    import torch
-except ImportError:
-    torch = None
 from dotenv import load_dotenv
 try:
     from google import genai
 except ImportError:
     genai = None
 import physics_engine  # Import the new module
+from caps_knowledge import (
+    PHYSICS_INTENTS,
+    answer_caps_question,
+    build_keyword_map,
+    normalize_text,
+)
 
 load_dotenv()
 
@@ -43,39 +47,24 @@ USERS_FILE = "users.json"
 # ============================================================
 # SYSTEM PROMPTS
 # ============================================================
-PHYSICS_SYSTEM_PROMPT = """You are Vector AI — a knowledgeable, friendly tutor 
-for South African high school students (CAPS curriculum, Grades 10–12).
-
-CONVERSATION RULES:
-1. If the student says yes/sure/okay/ja — immediately do what you last offered. Never ask again.
-2. Never repeat the same response twice in a row. Check history before responding.
-3. Vary your openers. Don't start every reply with "Great question!".
-4. For single-word topics (e.g. "electricity") — start explaining immediately.
-5. Give worked examples with numbered steps when helpful.
-6. Keep physics responses to 3–5 sentences unless a worked example is needed.
-7. You are NOT limited to physics only. If a student asks something else, help them
-   naturally like a knowledgeable friend would — then gently connect it back to 
-   physics if there's a relevant link. Never flatly refuse or say "I only do physics".
-8. For off-topic questions with NO physics link — answer helpfully and briefly,
-   then offer to continue with physics.
+PHYSICS_SYSTEM_PROMPT = """You are Vector AI, a knowledgeable and friendly tutor for South African high school students following the CAPS curriculum for Grades 10 to 12.
+If the student says yes, sure, okay, or ja, immediately do what you last offered and do not ask again.
+Do not repeat the same response twice in a row.
+For a single word topic such as electricity, start explaining immediately.
+Keep most physics answers to 3 to 5 sentences unless a worked example is needed.
+Use clear CAPS aligned explanations and correct technical terms.
+When a student asks a non physics question, answer briefly and naturally, then connect back to physics only if it makes real sense.
+For maths questions, help directly because maths supports physics.
 """
 
-GENERAL_MODE_ADDITION = """
-You are also a general knowledge assistant. When students ask non-physics questions:
-- Answer them naturally and helpfully, like a smart older student would
-- Keep non-physics answers brief (1-3 sentences)
-- If there's a genuine physics connection, mention it naturally — don't force it
-- NEVER say "I only help with physics" or "That's outside my scope"
-- For maths: always help — it directly supports physics
-- For personal questions or casual chat: respond warmly and move on
-"""
-
-PHYSICS_SYSTEM_PROMPT = PHYSICS_SYSTEM_PROMPT + GENERAL_MODE_ADDITION
-
-VOICE_SYSTEM_PROMPT = PHYSICS_SYSTEM_PROMPT + """
-
-VOICE MODE: Response will be read aloud. Max 2-3 sentences.
-No markdown. No symbols. Spell equations in plain English (e.g. "F equals m times a").
+VOICE_SYSTEM_PROMPT = """You are Vector AI in voice mode for a South African CAPS physics learner.
+Your answer will be spoken by text to speech.
+Use short plain sentences only.
+Do not use bullet points, numbered lists, markdown, emojis, brackets, slashes, stars, arrows, or special symbols.
+Spell formulas in words instead of symbols.
+Use transition words in this order when they fit: First, Next, Then, Finally.
+Never speak in note form.
+Keep the reply to 2 or 3 short sentences unless the student asked for a worked example.
 """
 
 # -------------------------------
@@ -88,9 +77,8 @@ No markdown. No symbols. Spell equations in plain English (e.g. "F equals m time
 # Load ML model
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(BASE_DIR, "intent_model.pth")
+model_path = os.path.join(BASE_DIR, "intent_model.pkl")
 encoder_path = os.path.join(BASE_DIR, "label_encoder.pkl")
-tokenizer_path = os.path.join(BASE_DIR, "tokenizer.pkl")
 config_path = os.path.join(BASE_DIR, "model_config.pkl")
 EXPECTED_LABELS = {
     "ai",
@@ -109,11 +97,13 @@ EXPECTED_LABELS = {
     "gravitation",
     "waves",
     "electricity",
+    "electrostatics",
     "magnetism",
     "optics",
     "thermodynamics",
     "nuclear",
     "shm",
+    "unit_conversion",
 }
 
 # Train only when needed (faster startup)
@@ -122,7 +112,7 @@ try:
     import ml_train
     
     should_train = os.getenv("FORCE_TRAIN") == "true"
-    required_files = [model_path, encoder_path, tokenizer_path, config_path]
+    required_files = [model_path, encoder_path, config_path]
     if not all(os.path.exists(path) for path in required_files):
         should_train = True
     elif not should_train:
@@ -143,21 +133,12 @@ try:
     else:
         logger.info("Existing model files found. Skipping training. Set FORCE_TRAIN=true to override.")
 
-    # Load artifacts
-    label_encoder = joblib.load(encoder_path)
-    tokenizer = joblib.load(tokenizer_path)
-    config = joblib.load(config_path)
-    
-    # Initialize and load PyTorch model
-    embed_dim = config.get("embed_dim", 32)
-    hidden_dim = config.get("hidden_dim", 32)
-    ml_model = ml_train.IntentModel(config["vocab_size"], embed_dim, hidden_dim, config["num_classes"])
-    ml_model.load_state_dict(torch.load(model_path))
-    ml_model.eval() # Set to evaluation mode
+    ml_model, label_encoder, config = ml_train.load_model_artifacts()
 except Exception as e:
     logger.warning("ML Model failed to load. Error: %s", e)
     ml_model = None
     label_encoder = None
+    config = {}
 
 # Global list to store conversation history
 user_conversations = {}
@@ -170,39 +151,24 @@ AFFIRMATIVES = {
     "do it", "yup", "yas", "ja", "ja please",
 }
 
-INTENT_KEYWORDS = {
-    "projectile": ["projectile", "launch", "angle", "range", "parabola", "throw", "ball"],
-    "waves": ["wave", "frequency", "amplitude", "wavelength", "sound", "transverse", "longitudinal", "doppler"],
-    "forces": ["force", "newton", "friction", "normal", "net force", "acceleration", "mass", "weight"],
-    "momentum": ["momentum", "collision", "impulse", "elastic", "inelastic", "conservation"],
-    "energy": ["energy", "kinetic", "potential", "work", "power", "joule", "conservation"],
-    "electricity": ["circuit", "current", "voltage", "resistance", "ohm", "capacitor", "series", "parallel"],
-    "magnetism": ["magnetic", "magnet", "field", "flux", "induction", "faraday", "lenz", "motor", "generator"],
-    "optics": ["light", "refraction", "reflection", "lens", "mirror", "snell", "critical angle", "optic"],
-    "gravitation": ["gravity", "orbit", "satellite", "planet", "gravitational", "kepler"],
-    "nuclear": ["nuclear", "radioactive", "decay", "half life", "fission", "fusion", "alpha", "beta", "gamma"],
-    "quantum": ["quantum", "photon", "photoelectric", "planck", "wave particle", "duality", "electron", "energy level"],
-    "thermodynamics": ["temperature", "pressure", "volume", "gas", "ideal gas", "boyle", "charles", "thermodynamics", "heat"],
-    "shm": ["pendulum", "spring", "oscillat", "harmonic", "period", "simple harmonic"],
-    "electrostatics": ["charge", "coulomb", "electric field", "potential", "capacitance", "electrostatic"],
-}
+INTENT_KEYWORDS = build_keyword_map()
 
 def classify_intent(message):
     try:
-        if ml_model is not None and tokenizer is not None and label_encoder is not None:
+        if ml_model is not None and label_encoder is not None:
             return ml_detect_intent_with_confidence(message)
     except Exception as e:
         logger.info("Intent classification fallback: %s", e)
 
-    msg = (message or "").lower()
+    msg = normalize_text(message or "")
     scores = {}
     for intent, keywords in INTENT_KEYWORDS.items():
         scores[intent] = sum(1 for kw in keywords if kw in msg)
     if not scores:
-        return ("general", 0.3)
+        return ("unknown", 30.0)
     best = max(scores, key=scores.get)
-    confidence = scores[best] / max(len(msg.split()) * 0.3, 1)
-    return (best, min(confidence, 1.0)) if scores[best] > 0 else ("general", 0.3)
+    confidence = min(0.92, max(0.35, scores[best] / max(len(msg.split()) * 0.25, 1)))
+    return (best, round(confidence * 100, 1)) if scores[best] > 0 else ("unknown", 30.0)
 
 def build_prompt(history, user_message, system_prompt):
     lines = [system_prompt, ""]
@@ -213,7 +179,55 @@ def build_prompt(history, user_message, system_prompt):
     lines.append("Assistant:")
     return "\n".join(lines)
 
-def generate_response(user_message, history=None, system_prompt=None):
+def make_voice_friendly(text):
+    cleaned = (text or "").strip()
+    replacements = {
+        "\n": " ",
+        "*": " ",
+        "#": " ",
+        "•": " ",
+        "→": " to ",
+        "=": " equals ",
+        "/": " per ",
+        "^2": " squared ",
+        "^3": " cubed ",
+        "m/s^2": " meters per second squared ",
+        "m/s": " meters per second ",
+        "kg": " kilograms ",
+        " N ": " newtons ",
+        " J ": " joules ",
+        " W ": " watts ",
+        " V ": " volts ",
+        " A ": " amperes ",
+        "Ω": " ohms ",
+    }
+    for source, target in replacements.items():
+        cleaned = cleaned.replace(source, target)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+def _gemini_generate_with_timeout(prompt, api_key, timeout_seconds):
+    result_queue = queue.Queue(maxsize=1)
+
+    def worker():
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+            result_queue.put(("ok", (response.text or "").strip()))
+        except Exception as exc:
+            result_queue.put(("error", exc))
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    try:
+        status, payload = result_queue.get(timeout=timeout_seconds)
+    except queue.Empty:
+        raise TimeoutError("Gemini request timed out")
+    if status == "error":
+        raise payload
+    return payload
+
+def generate_response(user_message, history=None, system_prompt=None, local_hint=None):
     if history is None:
         history = []
     if system_prompt is None:
@@ -221,17 +235,16 @@ def generate_response(user_message, history=None, system_prompt=None):
 
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key or genai is None:
-        return "I can help with CAPS physics and general questions. Please ask a question."
+        return local_hint or "I can help with CAPS physics and general questions. Please ask a question."
 
     try:
-        client = genai.Client(api_key=api_key)
         prompt = build_prompt(history, user_message, system_prompt)
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
-        text = (response.text or "").strip()
-        return text if text else "I can help with CAPS physics. Ask me anything."
+        timeout_seconds = 1.5 if local_hint else 6.0
+        text = _gemini_generate_with_timeout(prompt, api_key, timeout_seconds)
+        return text if text else (local_hint or "I can help with CAPS physics. Ask me anything.")
     except Exception as e:
         logger.error("Generation error: %s", e)
-        return "I hit a small snag. Could you rephrase that?"
+        return local_hint or "I hit a small snag. Could you rephrase that?"
 
 # -------------------------------
 # Responses
@@ -268,11 +281,15 @@ physics_facts = {
 }
 
 PHYSICS_KEYWORDS = {
-    "physics", "force", "acceleration", "velocity", "speed", "distance", "time", "mass",
-    "momentum", "energy", "work", "power", "gravity", "newton", "wave", "frequency",
-    "wavelength", "electricity", "voltage", "current", "resistance", "ohm", "circuit",
-    "projectile", "kinetic", "potential", "friction", "inertia"
+    keyword
+    for values in INTENT_KEYWORDS.values()
+    for keyword in values
 }
+
+
+def get_local_physics_response(message, intent=None):
+    answer = answer_caps_question(message, predicted_intent=intent)
+    return answer["response"] if answer else None
 
 # -------------------------------
 # Helper functions
@@ -466,141 +483,25 @@ def perform_unit_conversion(query):
     return None
 
 def solve_physics_problem(text):
-    """
-    Attempts to solve simple physics word problems using regex extraction.
-    Supports: Newton's Second Law (F=ma), Velocity (v=d/t), Kinetic Energy (K=0.5mv^2).
-    """
-    text = text.lower()
-    
-    # Normalize scientific notation: "5 x 10^3" -> "5e3"
-    text = re.sub(r"\s*[x*]\s*10\^([-+]?\d+)", r"e\1", text)
-
-    # Regex pattern for numbers (integer, float, scientific notation)
-    num = r"([-+]?\d+(?:\.\d+)?(?:e[-+]?\d+)?)"
-
-    # Regex patterns for variables with units
-    m_match = re.search(rf"{num}\s*(?:kg|kilograms?)", text)
-    a_match = re.search(rf"{num}\s*(?:m/s\^?2|m/s/s)", text)
-    f_match = re.search(rf"{num}\s*(?:n|newtons?)", text)
-    v_match = re.search(rf"{num}\s*(?:m/s|meters? per second)", text)
-    d_match = re.search(rf"{num}\s*(?:m|meters?)", text)
-    t_match = re.search(rf"{num}\s*(?:s|seconds?)", text)
-    j_match = re.search(rf"{num}\s*(?:j|joules?)", text)
-    watts_match = re.search(rf"{num}\s*(?:w|watts?)", text)
-    volts_match = re.search(rf"{num}\s*(?:v|volts?)", text)
-    amps_match = re.search(rf"{num}\s*(?:a|amps?|amperes?)", text)
-    ohms_match = re.search(rf"{num}\s*(?:Ω|ohms?|ohm)", text)
-
-    # 1. Newton's Second Law: F = ma
-    if "force" in text or "acceleration" in text or "mass" in text:
-        # Calculate Force
-        if m_match and a_match and not f_match:
-            m = float(m_match.group(1))
-            a = float(a_match.group(1))
-            return f"Physics Solver (F=ma): Force = {m} kg × {a} m/s² = {m*a:.2f} N"
-        # Calculate Acceleration
-        if f_match and m_match and not a_match:
-            f_val = float(f_match.group(1))
-            m = float(m_match.group(1))
-            if m == 0: return "Error: Mass cannot be zero."
-            return f"Physics Solver (a=F/m): Acceleration = {f_val} N / {m} kg = {f_val/m:.2f} m/s²"
-        # Calculate Mass
-        if f_match and a_match and not m_match:
-            f_val = float(f_match.group(1))
-            a = float(a_match.group(1))
-            if a == 0: return "Error: Acceleration cannot be zero."
-            return f"Physics Solver (m=F/a): Mass = {f_val} N / {a} m/s² = {f_val/a:.2f} kg"
-
-    # 2. Velocity: v = d/t
-    if "velocity" in text or "speed" in text or "distance" in text or "time" in text:
-        # Calculate Velocity
-        if d_match and t_match and not v_match:
-             d = float(d_match.group(1))
-             t = float(t_match.group(1))
-             if t == 0: return "Error: Time cannot be zero."
-             return f"Physics Solver (v=d/t): Velocity = {d} m / {t} s = {d/t:.2f} m/s"
-
-    # 3. Kinetic Energy: K = 0.5 * m * v^2
-    if "kinetic" in text and "energy" in text:
-        if m_match and v_match:
-            m = float(m_match.group(1))
-            v = float(v_match.group(1))
-            return f"Physics Solver (K=½mv²): Kinetic Energy = 0.5 × {m} kg × ({v} m/s)² = {0.5 * m * v**2:.2f} J"
-
-    # 4. Momentum: p = mv
-    if "momentum" in text:
-        if m_match and v_match:
-            m = float(m_match.group(1))
-            v = float(v_match.group(1))
-            return f"Physics Solver (p=mv): Momentum = {m} kg × {v} m/s = {m*v:.2f} kg·m/s"
-
-    # 5. Work: W = Fd
-    if "work" in text:
-        if f_match and d_match:
-            f_val = float(f_match.group(1))
-            d = float(d_match.group(1))
-            return f"Physics Solver (W=Fd): Work = {f_val} N × {d} m = {f_val*d:.2f} J"
-            
-    # 6. Gravitational Potential Energy: U = mgh
-    if "potential" in text and "energy" in text:
-        if m_match and d_match:
-            m = float(m_match.group(1))
-            h = float(d_match.group(1))
-            return f"Physics Solver (U=mgh): Potential Energy = {m} kg × 9.8 m/s² × {h} m = {m*9.8*h:.2f} J"
-
-    # 7. Power: P = W/t
-    if "power" in text:
-        if j_match and t_match:
-            work = float(j_match.group(1))
-            t = float(t_match.group(1))
-            if t == 0: return "Error: Time cannot be zero."
-            return f"Physics Solver (P=W/t): Power = {work} J / {t} s = {work/t:.2f} W"
-
-    # 8. Ohm's Law: V = IR
-    if "circuit" in text or "voltage" in text or "current" in text or "resistance" in text:
-        if amps_match and ohms_match and not volts_match:
-            i = float(amps_match.group(1))
-            r = float(ohms_match.group(1))
-            return f"Physics Solver (V=IR): Voltage = {i} A × {r} Ω = {i*r:.2f} V"
-        if volts_match and ohms_match and not amps_match:
-            v = float(volts_match.group(1))
-            r = float(ohms_match.group(1))
-            if r == 0: return "Error: Resistance cannot be zero."
-            return f"Physics Solver (I=V/R): Current = {v} V / {r} Ω = {v/r:.2f} A"
-        if volts_match and amps_match and not ohms_match:
-            v = float(volts_match.group(1))
-            i = float(amps_match.group(1))
-            if i == 0: return "Error: Current cannot be zero."
-            return f"Physics Solver (R=V/I): Resistance = {v} V / {i} A = {v/i:.2f} Ω"
-
-    return None
+    return get_local_physics_response(text)
 
 def ml_detect_intent_with_confidence(message):
-    text = (message or "").lower()
+    text = normalize_text(message or "")
 
     def is_physics_like():
         has_keyword = any(word in text for word in PHYSICS_KEYWORDS)
         has_equation_pattern = bool(re.search(r"\b([a-z]\s*=\s*[a-z0-9+\-*/^ ]+)\b", text))
-        has_units = bool(re.search(r"\b(m/s|m/s\^2|newton|n|joule|j|watt|w|volt|v|ohm|kg|m|s)\b", text))
+        has_units = bool(re.search(r"\b(m/s|m/s\^2|newton|n|joule|j|watt|w|volt|v|ohm|kg|hz|coulomb)\b", text))
         return has_keyword or has_equation_pattern or has_units
 
-    if ml_model and label_encoder and torch:
+    if ml_model and label_encoder:
         try:
-            # Get probability scores for all classes
-            seq = tokenizer.texts_to_sequences([message])
-            if not seq or not seq[0]:
-                return ("physics", 55.0) if is_physics_like() else ("unknown", 20.0)
-            tensor = torch.tensor(seq, dtype=torch.long)
-            
-            with torch.no_grad():
-                logits = ml_model(tensor)
-                probs = torch.softmax(logits, dim=1).numpy()[0]
-            
+            probs = ml_model.predict_proba([message])[0]
             max_prob = float(np.max(probs))
             pred_idx = int(np.argmax(probs))
             second_prob = float(np.partition(probs, -2)[-2]) if len(probs) > 1 else 0.0
             margin = max_prob - second_prob
-            best_intent = label_encoder.inverse_transform([pred_idx])[0]
+            best_intent = ml_model.classes_[pred_idx]
 
             confidence = (0.7 * max_prob) + (0.3 * margin)
             physics_like = is_physics_like()
@@ -614,17 +515,6 @@ def ml_detect_intent_with_confidence(message):
                 best_intent = "unknown"
                 confidence = min(confidence, 0.35)
 
-            # Only ask Gemini to classify if the model is ambiguous.
-            ambiguous = max_prob < 0.55 or margin < 0.18
-            if ambiguous and genai and os.getenv("GOOGLE_API_KEY"):
-                gen_intent = detect_intent_with_genai(message, label_encoder.classes_)
-                if gen_intent in set(label_encoder.classes_):
-                    if gen_intent == best_intent:
-                        confidence = min(0.95, confidence + 0.15)
-                    elif confidence < 0.62:
-                        best_intent = gen_intent
-                        confidence = max(0.45, confidence)
-
             return best_intent, round(max(0.0, min(1.0, confidence)) * 100, 1)
         except Exception as e:
             logger.info("ML Prediction Error: %s", e)
@@ -634,24 +524,10 @@ def ml_detect_intent(message):
     intent, _confidence = ml_detect_intent_with_confidence(message)
     return intent
 
-def detect_intent_with_genai(message, labels):
-    try:
-        client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-        prompt = f"Classify the following message into exactly one of these categories: {', '.join(labels)}. Message: '{message}'. Return only the category name (e.g., 'physics' or 'ai')."
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
-        label_set = {l.lower() for l in labels}
-        raw = (response.text or "").strip().lower()
-        if raw in label_set:
-            return raw
-        for label in label_set:
-            if label in raw:
-                return label
-        return "unknown"
-    except Exception as e:
-        logger.info("GenAI Intent Fallback Error: %s", e)
-        return "unknown"
-
 def get_physics_info(message):
+    local = get_local_physics_response(message, intent="physics")
+    if local:
+        return local
     for key in physics_facts:
         if key in message.lower():
             return physics_facts[key]
@@ -1041,7 +917,7 @@ def match_animation():
         conf_value = float(confidence)
 
         intent_to_animation = {
-            "projectile": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
+            "projectile_motion": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
             "waves": {"animation_id": "waves", "animation_label": "Wave Motion"},
             "forces": {"animation_id": "forces", "animation_label": "Newton's Laws"},
             "momentum": {"animation_id": "collision", "animation_label": "Momentum and Collisions"},
@@ -1056,7 +932,7 @@ def match_animation():
             "electrostatics": {"animation_id": "electricity", "animation_label": "Electric Fields"},
         }
 
-        if conf_value >= 0.35 and intent in intent_to_animation:
+        if conf_value >= 35.0 and intent in intent_to_animation:
             return jsonify(intent_to_animation[intent])
         return jsonify({"animation_id": None})
     except Exception as e:
@@ -1078,17 +954,16 @@ def chat():
     user_key = get_user_key()
     if not history:
         history = normalize_history(session.get("history", [])) or list(user_conversations.get(user_key, []))
-    intent = "general"
-    confidence = 0.3
+    intent = "unknown"
+    confidence = 30.0
 
     try:
         intent, confidence = classify_intent(user_message)
 
-        # Optional deterministic hint for factual computations
         deterministic_hint = None
         if intent == "unit_conversion":
             deterministic_hint = perform_unit_conversion(user_message)
-        elif intent == "physics":
+        elif intent in PHYSICS_INTENTS or intent == "physics":
             deterministic_hint = solve_physics_problem(user_message)
 
         system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
@@ -1096,13 +971,18 @@ def chat():
         if is_affirmative(user_message):
             last_offer = extract_last_offer(history)
             prompt = (
-                f"The student agreed. Your last message was: \"{last_offer[:300]}\". "
-                "Now FULFILL what you offered — give the example/explanation. Do not ask again."
+                f'The student agreed. Your last message was: "{last_offer[:300]}". '
+                "Now fulfill what you offered and do not ask again."
             )
         if deterministic_hint:
-            prompt = f"{prompt}\n\nReference computed result (if relevant): {deterministic_hint}"
+            prompt = (
+                f"{prompt}\n\nUSE THIS CALCULATED RESULT: {deterministic_hint}. "
+                "Do not calculate it yourself. Build the explanation around this exact result."
+            )
 
-        reply = generate_response(prompt, history, system_prompt)
+        reply = generate_response(prompt, history, system_prompt, local_hint=deterministic_hint)
+        if voice_mode:
+            reply = make_voice_friendly(reply)
 
         # Update rolling history shared with frontend
         history.append({"role": "user", "content": user_message})
@@ -1111,7 +991,9 @@ def chat():
 
         if detect_loop(history):
             example_prompt = build_example_prompt(history[:-1], user_message, intent)
-            reply = generate_response(example_prompt, history[:-1], system_prompt)
+            reply = generate_response(example_prompt, history[:-1], system_prompt, local_hint=deterministic_hint)
+            if voice_mode:
+                reply = make_voice_friendly(reply)
             history[-1]["content"] = reply
 
         # Keep server-side copy for existing analytics/history pages

@@ -18,7 +18,6 @@ from dataclasses import dataclass
 import numpy as np
 import joblib
 import os
-import torch
 import warnings
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error, r2_score
@@ -403,7 +402,10 @@ class Explainer:
         # Ethical / pedagogical note
         parts.append("Tip: Use ML to accelerate approximate predictions or to interpolate between known cases, but validate against physics for high-stakes or extrapolative scenarios.")
 
-        return "\n".join(parts)
+        return {
+            "text": "\n".join(parts),
+            "symbolic": symbolic_steps,
+        }
 
 
 # Instantiate module-level objects to match app expectations
@@ -419,5 +421,3 @@ try:
 except Exception as e:
     print(f"Physics engine initialization warning: {e}")
     learner.train()
-except Exception as e:
-    print(f"Physics engine initialization warning: {e}")

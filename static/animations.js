@@ -2,10 +2,13 @@
 // VECTOR AI — 3D Physics Animations (Three.js r128)
 // ============================================================
 
-const canvas = document.getElementById("physics-canvas");
-if (!canvas || typeof THREE === "undefined") {
-  console.warn("Physics canvas or Three.js missing.");
-}
+let canvas = null;
+let canvasContainer = null;
+let renderer = null;
+let scene = null;
+let camera = null;
+let resizeObserver = null;
+let debugCube = null;
 
 const PERF = {
   MAX_FPS: 30,
@@ -28,51 +31,6 @@ window.animConfig = animConfig;
 let currentAnim = "idle";
 let animId = null;
 let currentAnimCleanup = null;
-
-const renderer = canvas
-  ? new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: false,
-      powerPreference: "low-power",
-    })
-  : null;
-
-if (renderer) {
-  renderer.setPixelRatio(PERF.PIXEL_RATIO);
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  renderer.shadowMap.enabled = PERF.USE_SHADOWS;
-  renderer.setClearColor(0x1d2021);
-  renderer.domElement.addEventListener(
-    "webglcontextlost",
-    (e) => {
-      e.preventDefault();
-      if (animId) {
-        cancelAnimationFrame(animId);
-        animId = null;
-      }
-    },
-    false
-  );
-  renderer.domElement.addEventListener(
-    "webglcontextrestored",
-    () => {
-      if (window.loadAnimation) window.loadAnimation(currentAnim);
-    },
-    false
-  );
-}
-
-const scene = new THREE.Scene();
-scene.fog = PERF.USE_FOG ? new THREE.FogExp2(0x1d2021, 0.04) : null;
-
-const camera = new THREE.PerspectiveCamera(
-  60,
-  canvas ? canvas.clientWidth / canvas.clientHeight : 1,
-  0.1,
-  500
-);
-camera.position.set(0, 4, 14);
 
 // === GRUVBOX COLORS ===
 const GRV = {
@@ -105,6 +63,93 @@ const MAT = {
 
 const persistentNodes = [];
 
+function getCanvasSize() {
+  const containerRect = canvasContainer?.getBoundingClientRect();
+  const canvasRect = canvas?.getBoundingClientRect();
+  const width = Math.max(
+    Math.floor(containerRect?.width || 0),
+    Math.floor(canvasRect?.width || 0),
+    960
+  );
+  const height = Math.max(
+    Math.floor(containerRect?.height || 0),
+    Math.floor(canvasRect?.height || 0),
+    560
+  );
+  return { width, height };
+}
+
+function addDebugHelpers() {
+  if (!scene) return;
+  const grid = addGrid();
+  persistentNodes.push(grid);
+
+  debugCube = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 1.2, 1.2),
+    new THREE.MeshPhongMaterial({
+      color: GRV.orange,
+      emissive: GRV.orange,
+      emissiveIntensity: 0.18,
+    })
+  );
+  debugCube.position.set(0, -1.4, 0);
+  scene.add(debugCube);
+  persistentNodes.push(debugCube);
+}
+
+function initScene() {
+  canvas = document.getElementById("physics-canvas");
+  canvasContainer = document.getElementById("canvas-container") || canvas?.parentElement || null;
+
+  if (!canvas || typeof THREE === "undefined") {
+    console.warn("Physics canvas or Three.js missing.");
+    return false;
+  }
+
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+    powerPreference: "low-power",
+  });
+
+  const { width, height } = getCanvasSize();
+  renderer.setPixelRatio(PERF.PIXEL_RATIO);
+  renderer.setSize(width, height, false);
+  renderer.shadowMap.enabled = PERF.USE_SHADOWS;
+  renderer.setClearColor(0x1d2021);
+  renderer.domElement.addEventListener(
+    "webglcontextlost",
+    (e) => {
+      e.preventDefault();
+      if (animId) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+    },
+    false
+  );
+  renderer.domElement.addEventListener(
+    "webglcontextrestored",
+    () => {
+      if (window.loadAnimation) window.loadAnimation(currentAnim);
+    },
+    false
+  );
+
+  scene = new THREE.Scene();
+  scene.fog = PERF.USE_FOG ? new THREE.FogExp2(0x1d2021, 0.04) : null;
+
+  camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 500);
+  camera.position.set(0, 4, 14);
+
+  setupLights();
+  addDebugHelpers();
+  updateOrbitCamera();
+  renderer.render(scene, camera);
+  return true;
+}
+
 // === LIGHTS (shared) ===
 function setupLights() {
   const ambient = new THREE.AmbientLight(0xffffff, 0.25);
@@ -125,7 +170,6 @@ function setupLights() {
 
   persistentNodes.push(ambient, keyLight, rimLight, fillLight);
 }
-setupLights();
 
 // === GRID FLOOR ===
 function addGrid() {
@@ -136,7 +180,6 @@ function addGrid() {
   scene.add(grid);
   return grid;
 }
-addGrid();
 
 // === HELPERS ===
 function updateHUD(title, formula) {
@@ -249,7 +292,6 @@ function clearScene() {
   scene.children.slice().forEach((child) => {
     if (!persistentNodes.includes(child)) scene.remove(child);
   });
-  addGrid();
   updateReadout({});
   const keBar = document.getElementById("ke-bar");
   if (keBar) keBar.style.display = "none";
@@ -258,14 +300,17 @@ window.clearScene = clearScene;
 
 let lastFrame = 0;
 function throttledLoop(updateFn) {
+  if (!renderer || !scene || !camera) return;
+  lastFrame = 0;
   function loop(now) {
     animId = requestAnimationFrame(loop);
-    if (now - lastFrame < PERF.FRAME_INTERVAL) return;
-    const delta = (now - lastFrame) / 1000;
+    if (lastFrame && now - lastFrame < PERF.FRAME_INTERVAL) return;
+    const delta = lastFrame ? (now - lastFrame) / 1000 : PERF.FRAME_INTERVAL / 1000;
     lastFrame = now;
     if (!animConfig.paused) updateFn(delta);
+    if (debugCube) debugCube.rotation.y += delta * 0.6;
     updateOrbitCamera();
-    if (renderer) renderer.render(scene, camera);
+    renderer.render(scene, camera);
   }
   animId = requestAnimationFrame(loop);
 }
@@ -334,9 +379,8 @@ function setupOrbit() {
     { passive: true }
   );
 }
-setupOrbit();
-
 function updateOrbitCamera() {
+  if (!camera) return;
   camera.position.x = orbitRadius * Math.sin(orbitTheta) * Math.cos(orbitPhi);
   camera.position.y = orbitRadius * Math.sin(orbitPhi) + 2;
   camera.position.z = orbitRadius * Math.cos(orbitTheta) * Math.cos(orbitPhi);
@@ -345,19 +389,14 @@ function updateOrbitCamera() {
 
 function handleAnimResize() {
   if (!canvas || !renderer) return;
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
+  const { width: w, height: h } = getCanvasSize();
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
 }
 
 window.handleAnimResize = handleAnimResize;
-
-if (canvas) {
-  const ro = new ResizeObserver(() => handleAnimResize());
-  ro.observe(canvas);
-}
 
 // === ANIMATIONS ===
 function renderIdleParticles3D() {
@@ -1561,18 +1600,35 @@ window.loadAnimation = loadAnimation;
 window.setActiveAnimButton = setActiveAnimButton;
 window.currentAnim = currentAnim;
 
-const sidebar = document.getElementById("anim-sidebar");
-if (sidebar) {
-  ANIMATIONS.forEach((anim) => {
-    const btn = document.createElement("button");
-    btn.className = "anim-field-btn";
-    btn.dataset.anim = anim.id;
-    btn.innerHTML = `<span class="anim-field-icon">${anim.icon}</span>${anim.label}`;
-    btn.addEventListener("click", () => loadAnimation(anim.id));
-    sidebar.appendChild(btn);
-  });
+function bootAnimations() {
+  if (!initScene()) return;
+
+  setupOrbit();
+  handleAnimResize();
+
+  if (typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(() => handleAnimResize());
+    if (canvasContainer) resizeObserver.observe(canvasContainer);
+    resizeObserver.observe(canvas);
+  } else {
+    window.addEventListener("resize", handleAnimResize);
+  }
+
+  const sidebar = document.getElementById("anim-sidebar");
+  if (sidebar && !sidebar.dataset.ready) {
+    ANIMATIONS.forEach((anim) => {
+      const btn = document.createElement("button");
+      btn.className = "anim-field-btn";
+      btn.dataset.anim = anim.id;
+      btn.innerHTML = `<span class="anim-field-icon">${anim.icon}</span>${anim.label}`;
+      btn.addEventListener("click", () => loadAnimation(anim.id));
+      sidebar.appendChild(btn);
+    });
+    sidebar.dataset.ready = "true";
+  }
+
+  loadAnimation("idle");
+  window.addEventListener("resize", handleAnimResize);
 }
 
-if (canvas && renderer) {
-  loadAnimation("idle");
-}
+document.addEventListener("DOMContentLoaded", bootAnimations);
