@@ -17,8 +17,12 @@ import logging
 import time
 from model.generator import MAX_HISTORY, normalize_history
 from dotenv import load_dotenv
+
 try:
-    from google import genai
+    import google.generativeai as genai
+except ImportError:
+try:
+    import google.generativeai as genai
 except ImportError:
     genai = None
 import physics_engine  # Import the new module
@@ -31,16 +35,23 @@ from caps_knowledge import (
 
 load_dotenv()
 
+# Configure Logging first (before any logger usage)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
 CORS(app, origins=[os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")])
 
-# Configure Caching
-cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
+# Log API key status on startup for debugging
+gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+if gemini_key:
+    logger.info("Gemini API key loaded (length: %d)", len(gemini_key))
+else:
+    logger.warning("Gemini API key NOT found. Set GEMINI_API_KEY environment variable.")
 
-# Configure Logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure Caching
+cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
 USERS_FILE = "users.json"
 
@@ -51,20 +62,21 @@ PHYSICS_SYSTEM_PROMPT = """You are Vector AI, a knowledgeable and friendly tutor
 If the student says yes, sure, okay, or ja, immediately do what you last offered and do not ask again.
 Do not repeat the same response twice in a row.
 For a single word topic such as electricity, start explaining immediately.
-Keep most physics answers to 3 to 5 sentences unless a worked example is needed.
+Provide thorough, educational answers with clear step-by-step explanations and worked examples where relevant.
 Use clear CAPS aligned explanations and correct technical terms.
-When a student asks a non physics question, answer briefly and naturally, then connect back to physics only if it makes real sense.
-For maths questions, help directly because maths supports physics.
+When a student asks a non physics question, answer helpfully and naturally.
+For maths questions, provide full working because maths supports physics.
 """
 
 VOICE_SYSTEM_PROMPT = """You are Vector AI in voice mode for a South African CAPS physics learner.
 Your answer will be spoken by text to speech.
-Use short plain sentences only.
+Use clear, descriptive sentences that are easy to understand.
 Do not use bullet points, numbered lists, markdown, emojis, brackets, slashes, stars, arrows, or special symbols.
-Spell formulas in words instead of symbols.
-Use transition words in this order when they fit: First, Next, Then, Finally.
+Spell formulas in both words and symbols (e.g., v squared equals u squared plus 2 a s).
+Use transition words naturally: First, Next, Then, Finally.
 Never speak in note form.
-Keep the reply to 2 or 3 short sentences unless the student asked for a worked example.
+Provide complete explanations with examples that help the learner truly understand the concept.
+Each response should be educational, thorough, and suitable for listening.
 """
 
 # -------------------------------
@@ -110,7 +122,7 @@ EXPECTED_LABELS = {
 try:
     sys.path.append(BASE_DIR)
     import ml_train
-    
+
     should_train = os.getenv("FORCE_TRAIN") == "true"
     required_files = [model_path, encoder_path, config_path]
     if not all(os.path.exists(path) for path in required_files):
@@ -129,9 +141,13 @@ try:
         try:
             ml_train.train_model()
         except Exception as e:
-            logger.info("Training skipped (%s). Attempting to load existing model...", e)
+            logger.info(
+                "Training skipped (%s). Attempting to load existing model...", e
+            )
     else:
-        logger.info("Existing model files found. Skipping training. Set FORCE_TRAIN=true to override.")
+        logger.info(
+            "Existing model files found. Skipping training. Set FORCE_TRAIN=true to override."
+        )
 
     ml_model, label_encoder, config = ml_train.load_model_artifacts()
 except Exception as e:
@@ -146,12 +162,27 @@ response_cache = {}
 MAX_HISTORY_PER_USER = 50
 RESPONSE_CACHE_TTL = 180
 AFFIRMATIVES = {
-    "yes", "yeah", "yep", "sure", "okay", "ok", "please",
-    "go ahead", "show me", "yes please", "definitely", "of course",
-    "do it", "yup", "yas", "ja", "ja please",
+    "yes",
+    "yeah",
+    "yep",
+    "sure",
+    "okay",
+    "ok",
+    "please",
+    "go ahead",
+    "show me",
+    "yes please",
+    "definitely",
+    "of course",
+    "do it",
+    "yup",
+    "yas",
+    "ja",
+    "ja please",
 }
 
 INTENT_KEYWORDS = build_keyword_map()
+
 
 def classify_intent(message):
     try:
@@ -170,6 +201,7 @@ def classify_intent(message):
     confidence = min(0.92, max(0.35, scores[best] / max(len(msg.split()) * 0.25, 1)))
     return (best, round(confidence * 100, 1)) if scores[best] > 0 else ("unknown", 30.0)
 
+
 def build_prompt(history, user_message, system_prompt):
     lines = [system_prompt, ""]
     for item in normalize_history(history):
@@ -178,6 +210,7 @@ def build_prompt(history, user_message, system_prompt):
     lines.append(f"User: {user_message}")
     lines.append("Assistant:")
     return "\n".join(lines)
+
 
 def make_voice_friendly(text):
     cleaned = (text or "").strip()
@@ -206,16 +239,36 @@ def make_voice_friendly(text):
     cleaned = re.sub(r"\s+", " ", cleaned)
     return cleaned.strip()
 
+
 def _gemini_generate_with_timeout(prompt, api_key, timeout_seconds):
     result_queue = queue.Queue(maxsize=1)
 
     def worker():
         try:
+            from google import genai
+            from google.genai import types as genai_types
+            
             client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
-            result_queue.put(("ok", (response.text or "").strip()))
+            
+            # Format prompt as Content object with proper structure
+            contents = [
+                genai_types.Content(
+                    role="user",
+                    parts=[genai_types.Part.from_text(prompt)]
+                )
+            ]
+            
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=contents
+            )
+            
+            text = response.text or ''
+            result_queue.put(("ok", text.strip()))
         except Exception as exc:
-            result_queue.put(("error", exc))
+            import traceback
+            tb = traceback.format_exc()
+            result_queue.put(("error", (str(exc), tb)))
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
@@ -224,8 +277,11 @@ def _gemini_generate_with_timeout(prompt, api_key, timeout_seconds):
     except queue.Empty:
         raise TimeoutError("Gemini request timed out")
     if status == "error":
-        raise payload
+        exc_msg, tb = payload if isinstance(payload, tuple) else (str(payload), "")
+        print(f"\n[GEMINI ERROR]\n{tb}")
+        raise Exception(exc_msg)
     return payload
+
 
 def generate_response(user_message, history=None, system_prompt=None, local_hint=None):
     if history is None:
@@ -235,16 +291,36 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
 
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key or genai is None:
-        return local_hint or "I can help with CAPS physics and general questions. Please ask a question."
+        logger.error(
+            "Gemini API not available: key=%s, genai=%s",
+            bool(api_key),
+            genai is not None,
+        )
+        return local_hint or "I'm ready to help with CAPS physics. Ask me anything!"
 
     try:
         prompt = build_prompt(history, user_message, system_prompt)
-        timeout_seconds = 1.5 if local_hint else 6.0
+        # Longer timeout for hinted questions still not enough; use 4s hinted, 8s full
+        timeout_seconds = 4.0 if local_hint else 8.0
         text = _gemini_generate_with_timeout(prompt, api_key, timeout_seconds)
-        return text if text else (local_hint or "I can help with CAPS physics. Ask me anything.")
+        if text:
+            return text
+        # Gemini returned empty - fall back
+        if local_hint:
+            logger.info("Gemini returned empty, using local hint")
+            return local_hint
+        return "I couldn't generate a response. Please try rephrasing your question."
+    except TimeoutError:
+        logger.error("Gemini timeout after %.1fs", timeout_seconds)
+        if local_hint:
+            return local_hint
+        return "I'm taking too long. Could you ask a simpler question?"
     except Exception as e:
         logger.error("Generation error: %s", e)
-        return local_hint or "I hit a small snag. Could you rephrase that?"
+        if local_hint:
+            return local_hint
+        return "I hit a temporary issue. Please try again."
+
 
 # -------------------------------
 # Responses
@@ -258,8 +334,7 @@ responses = {
     "greeting": "Hello! I'm Vector AI. How can I assist you today?",
     "capabilities": "I can chat about AI, Physics, Python, tell jokes, and analyze trends.",
     "unit_conversion": "I can convert units for you. Try 'Convert 10 meters to feet'.",
-    
-    "unknown": "I'm still learning 🤖. Could you try rephrasing?"
+    "unknown": "I'm still learning 🤖. Could you try rephrasing?",
 }
 
 # -------------------------------
@@ -277,13 +352,11 @@ physics_facts = {
     "relativity": "Relativity encompasses two theories by Albert Einstein: special relativity and general relativity.",
     "electromagnetism": "Electromagnetism is a branch of physics involving the study of the electromagnetic force, a type of physical interaction that occurs between electrically charged particles.",
     "friction": "Friction is the force resisting the relative motion of solid surfaces, fluid layers, and material elements sliding against each other.",
-    "inertia": "Inertia is the resistance of any physical object to any change in its velocity."
+    "inertia": "Inertia is the resistance of any physical object to any change in its velocity.",
 }
 
 PHYSICS_KEYWORDS = {
-    keyword
-    for values in INTENT_KEYWORDS.values()
-    for keyword in values
+    keyword for values in INTENT_KEYWORDS.values() for keyword in values
 }
 
 
@@ -291,31 +364,34 @@ def get_local_physics_response(message, intent=None):
     answer = answer_caps_question(message, predicted_intent=intent)
     return answer["response"] if answer else None
 
+
 # -------------------------------
 # Helper functions
 # -------------------------------
 api_cache = {}
 CACHE_DURATION = 300  # 5 minutes
 
+
 def http_get_json(url):
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=5) as response:
             if response.getcode() == 200:
-                return json.loads(response.read().decode('utf-8'))
+                return json.loads(response.read().decode("utf-8"))
     except Exception:
         return None
+
 
 def summarize_content(text):
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key or not text or not genai:
         return text
-    
+
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=f"Summarize the following content concisely for a chat context:\n\n{text}"
+            model="gemini-1.5-flash",
+            contents=f"Summarize the following content concisely for a chat context:\n\n{text}",
         )
         return response.text
     except Exception as e:
@@ -340,21 +416,30 @@ def fetch_online_data(topic):
                 data = http_get_json(yt_url)
                 if data:
                     items = data.get("items", [])
-                    videos = [f"Title: {item['snippet']['title']}\nDescription: {item['snippet']['description']}" for item in items]
+                    videos = [
+                        f"Title: {item['snippet']['title']}\nDescription: {item['snippet']['description']}"
+                        for item in items
+                    ]
                     if videos:
                         result = "Trending on YouTube:\n" + "\n---\n".join(videos)
-            
+
             if not result:
                 # Hacker News Top Stories
-                top_ids = http_get_json("https://hacker-news.firebaseio.com/v0/topstories.json")
+                top_ids = http_get_json(
+                    "https://hacker-news.firebaseio.com/v0/topstories.json"
+                )
                 if top_ids:
                     top_ids = top_ids[:3]
                     titles = []
                     for tid in top_ids:
-                        item_data = http_get_json(f"https://hacker-news.firebaseio.com/v0/item/{tid}.json")
+                        item_data = http_get_json(
+                            f"https://hacker-news.firebaseio.com/v0/item/{tid}.json"
+                        )
                         if item_data:
                             title = item_data.get("title", "")
-                            text = item_data.get("text", "") # Get text content if available (e.g. Ask HN)
+                            text = item_data.get(
+                                "text", ""
+                            )  # Get text content if available (e.g. Ask HN)
                             entry = f"{title} - {text}" if text else title
                             titles.append(entry)
                     if titles:
@@ -362,24 +447,32 @@ def fetch_online_data(topic):
         elif topic == "physics":
             # Randomly choose between NASA APOD and Spaceflight News
             if random.choice([True, False]):
-                data = http_get_json("https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY")
+                data = http_get_json(
+                    "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+                )
                 if data:
                     result = f"NASA Astronomy Picture of the Day: {data.get('title')}\n\nExplanation: {data.get('explanation')}"
-            
+
             if not result:
                 # Spaceflight News API
-                data = http_get_json("https://api.spaceflightnewsapi.net/v3/articles?_limit=1")
+                data = http_get_json(
+                    "https://api.spaceflightnewsapi.net/v3/articles?_limit=1"
+                )
                 if data:
                     if data:
                         result = f"Latest Physics/Space News: {data[0]['title']}\n\nSummary: {data[0]['summary']}"
         elif topic == "ai":
             # Wikipedia API for AI
-            data = http_get_json("https://en.wikipedia.org/api/rest_v1/page/summary/Artificial_intelligence")
+            data = http_get_json(
+                "https://en.wikipedia.org/api/rest_v1/page/summary/Artificial_intelligence"
+            )
             if data:
                 result = f"AI Summary (Wikipedia): {data.get('extract')}"
         elif topic == "python":
             # GitHub API for CPython
-            data = http_get_json("https://api.github.com/repos/python/cpython/releases/latest")
+            data = http_get_json(
+                "https://api.github.com/repos/python/cpython/releases/latest"
+            )
             if data:
                 result = f"Latest Python Release: {data.get('tag_name')}\n\nRelease Notes:\n{data.get('body')}"
     except Exception as e:
@@ -392,11 +485,13 @@ def fetch_online_data(topic):
 
     return result
 
+
 def is_affirmative(message):
     if not message:
         return False
     cleaned = message.lower().strip().rstrip("!?.")
     return cleaned in AFFIRMATIVES
+
 
 def extract_last_offer(history):
     """Find the last assistant message that contained an offer/question."""
@@ -410,7 +505,8 @@ def extract_last_offer(history):
         for sentence in reversed(sentences):
             if "?" in sentence:
                 return sentence.strip()
-    return "Give a worked CAPS physics example relevant to the current topic."
+    return "Give a worked explanation and example relevant to the current topic."
+
 
 def detect_loop(history, threshold=2):
     """
@@ -438,6 +534,7 @@ def detect_loop(history, threshold=2):
     overlap = len(words_a & words_b) / len(words_a)
     return overlap > 0.6
 
+
 def build_example_prompt(history, user_message, intent):
     example_request = (
         "Provide a worked CAPS physics example relevant to the student's last question. "
@@ -445,53 +542,77 @@ def build_example_prompt(history, user_message, intent):
     )
     return build_prompt(history, example_request, PHYSICS_SYSTEM_PROMPT)
 
+
 def perform_unit_conversion(query):
     query = query.lower()
     # Simple regex for "convert X unit to unit"
     match = re.search(r"(\d+(?:\.\d+)?)\s*([a-z]+)\s*(?:to|in)\s*([a-z]+)", query)
     if not match:
         return None
-    
+
     val, u_from, u_to = float(match.group(1)), match.group(2), match.group(3)
-    
+
     # Normalization map
     u_map = {
-        "meter": "m", "meters": "m", "feet": "ft", "foot": "ft",
-        "kilogram": "kg", "kilograms": "kg", "pound": "lbs", "pounds": "lbs",
-        "lb": "lbs", "mile": "miles", "miles": "miles", "kilometer": "km", "kilometers": "km",
-        "celsius": "c", "fahrenheit": "f"
+        "meter": "m",
+        "meters": "m",
+        "feet": "ft",
+        "foot": "ft",
+        "kilogram": "kg",
+        "kilograms": "kg",
+        "pound": "lbs",
+        "pounds": "lbs",
+        "lb": "lbs",
+        "mile": "miles",
+        "miles": "miles",
+        "kilometer": "km",
+        "kilometers": "km",
+        "celsius": "c",
+        "fahrenheit": "f",
     }
-    
+
     u_from = u_map.get(u_from, u_from)
     u_to = u_map.get(u_to, u_to)
 
     # Conversions
     if u_from == "c" and u_to == "f":
-        return f"{val} C is {val * 9/5 + 32:.2f} F"
+        return f"{val} C is {val * 9 / 5 + 32:.2f} F"
     if u_from == "f" and u_to == "c":
-        return f"{val} F is {(val - 32) * 5/9:.2f} C"
-        
+        return f"{val} F is {(val - 32) * 5 / 9:.2f} C"
+
     factors = {
-        ("m", "ft"): 3.28084, ("ft", "m"): 0.3048,
-        ("kg", "lbs"): 2.20462, ("lbs", "kg"): 0.453592,
-        ("km", "miles"): 0.621371, ("miles", "km"): 1.60934
+        ("m", "ft"): 3.28084,
+        ("ft", "m"): 0.3048,
+        ("kg", "lbs"): 2.20462,
+        ("lbs", "kg"): 0.453592,
+        ("km", "miles"): 0.621371,
+        ("miles", "km"): 1.60934,
     }
-    
+
     if (u_from, u_to) in factors:
         return f"{val} {u_from} is {val * factors[(u_from, u_to)]:.2f} {u_to}"
-        
+
     return None
+
 
 def solve_physics_problem(text):
     return get_local_physics_response(text)
+
 
 def ml_detect_intent_with_confidence(message):
     text = normalize_text(message or "")
 
     def is_physics_like():
         has_keyword = any(word in text for word in PHYSICS_KEYWORDS)
-        has_equation_pattern = bool(re.search(r"\b([a-z]\s*=\s*[a-z0-9+\-*/^ ]+)\b", text))
-        has_units = bool(re.search(r"\b(m/s|m/s\^2|newton|n|joule|j|watt|w|volt|v|ohm|kg|hz|coulomb)\b", text))
+        has_equation_pattern = bool(
+            re.search(r"\b([a-z]\s*=\s*[a-z0-9+\-*/^ ]+)\b", text)
+        )
+        has_units = bool(
+            re.search(
+                r"\b(m/s|m/s\^2|newton|n|joule|j|watt|w|volt|v|ohm|kg|hz|coulomb)\b",
+                text,
+            )
+        )
         return has_keyword or has_equation_pattern or has_units
 
     if ml_model and label_encoder:
@@ -520,9 +641,11 @@ def ml_detect_intent_with_confidence(message):
             logger.info("ML Prediction Error: %s", e)
     return ("physics", 55.0) if is_physics_like() else ("unknown", 20.0)
 
+
 def ml_detect_intent(message):
     intent, _confidence = ml_detect_intent_with_confidence(message)
     return intent
+
 
 def get_physics_info(message):
     local = get_local_physics_response(message, intent="physics")
@@ -533,48 +656,58 @@ def get_physics_info(message):
             return physics_facts[key]
     return random.choice(list(physics_facts.values()))
 
+
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
     try:
-        with open(USERS_FILE, 'r') as file:
+        with open(USERS_FILE, "r") as file:
             return json.load(file)
     except (json.JSONDecodeError, ValueError):
         return {}
 
+
 def save_users(users):
-    with open(USERS_FILE, 'w') as file:
+    with open(USERS_FILE, "w") as file:
         json.dump(users, file, indent=4)
 
-def save_user_data(message, topic, username=None, confidence=None, chat_id=None, reply=None):
+
+def save_user_data(
+    message, topic, username=None, confidence=None, chat_id=None, reply=None
+):
     try:
         with open("data.json", "r") as file:
             data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         data = []
 
-    data.append({
-        "message": message,
-        "topic": topic,
-        "time": datetime.now().isoformat(),
-        "username": username,
-        "confidence": confidence,
-        "chat_id": chat_id,
-        "reply": reply
-    })
+    data.append(
+        {
+            "message": message,
+            "topic": topic,
+            "time": datetime.now().isoformat(),
+            "username": username,
+            "confidence": confidence,
+            "chat_id": chat_id,
+            "reply": reply,
+        }
+    )
 
     with open("data.json", "w") as file:
         json.dump(data, file, indent=4)
+
 
 def get_user_key():
     if "session_id" not in session:
         session["session_id"] = os.urandom(8).hex()
     return session.get("user", session["session_id"])
 
+
 def ensure_chat_id():
     if "chat_id" not in session:
         session["chat_id"] = os.urandom(6).hex()
     return session["chat_id"]
+
 
 def get_cached_reply(message):
     key = message.strip().lower()
@@ -586,20 +719,23 @@ def get_cached_reply(message):
         return None
     return cached
 
+
 def set_cached_reply(message, reply, intent, confidence):
     key = message.strip().lower()
     response_cache[key] = {
         "reply": reply,
         "intent": intent,
         "confidence": confidence,
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
+
 
 def _format_time(iso_value):
     try:
         return datetime.fromisoformat(iso_value).strftime("%b %d, %Y %H:%M")
     except Exception:
         return iso_value
+
 
 def load_user_history(username):
     try:
@@ -608,6 +744,7 @@ def load_user_history(username):
     except (FileNotFoundError, json.JSONDecodeError):
         data = []
     return [d for d in data if d.get("username") == username]
+
 
 def build_sessions(history):
     grouped = {}
@@ -620,32 +757,44 @@ def build_sessions(history):
         items.sort(key=lambda x: x.get("time", ""))
         title = items[0].get("message", "Session")[:48]
         last_time = _format_time(items[-1].get("time", ""))
-        sessions.append({
-            "chat_id": chat_id,
-            "title": title if title else "Session",
-            "last_time": last_time,
-            "count": len(items),
-            "messages": items
-        })
+        sessions.append(
+            {
+                "chat_id": chat_id,
+                "title": title if title else "Session",
+                "last_time": last_time,
+                "count": len(items),
+                "messages": items,
+            }
+        )
     sessions.sort(key=lambda x: x["last_time"], reverse=True)
     return sessions
+
 
 @app.route("/metrics")
 def metrics():
     """Simple monitoring endpoint."""
-    return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "cached_entries": len(api_cache)
-    })
+    return jsonify(
+        {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "cached_entries": len(api_cache),
+        }
+    )
+
 
 def _generate_dashboard_payload():
     now = datetime.now()
     history = load_user_history(session.get("user")) if "user" in session else []
     sessions = build_sessions(history)
     questions_asked = len(history)
-    confidences = [h.get("confidence") for h in history if isinstance(h.get("confidence"), (int, float))]
-    avg_confidence = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+    confidences = [
+        h.get("confidence")
+        for h in history
+        if isinstance(h.get("confidence"), (int, float))
+    ]
+    avg_confidence = (
+        round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+    )
 
     stats = {
         "model_accuracy": round(random.uniform(96.4, 99.4), 1),
@@ -654,38 +803,41 @@ def _generate_dashboard_payload():
         "active_simulations": random.randint(110, 160),
         "inference_latency_ms": round(random.uniform(12.8, 18.6), 1),
     }
-    line_points = [round(0.58 + (i * 0.018) + random.uniform(-0.04, 0.04), 3) for i in range(12)]
+    line_points = [
+        round(0.58 + (i * 0.018) + random.uniform(-0.04, 0.04), 3) for i in range(12)
+    ]
     bar_points = [random.randint(45, 88) for _ in range(8)]
     gauge_value = round(random.uniform(0.82, 0.93), 2)
 
     recent_questions = []
     for entry in history[-6:]:
-        recent_questions.append({
-            "question": entry.get("message", "Question"),
-            "confidence": entry.get("confidence", 0),
-            "time": _format_time(entry.get("time", ""))
-        })
+        recent_questions.append(
+            {
+                "question": entry.get("message", "Question"),
+                "confidence": entry.get("confidence", 0),
+                "time": _format_time(entry.get("time", "")),
+            }
+        )
 
     session_cards = []
     for session_entry in sessions[:6]:
-        session_cards.append({
-            "chat_id": session_entry["chat_id"],
-            "title": session_entry["title"],
-            "count": session_entry["count"],
-            "last_time": session_entry["last_time"]
-        })
+        session_cards.append(
+            {
+                "chat_id": session_entry["chat_id"],
+                "title": session_entry["title"],
+                "count": session_entry["count"],
+                "last_time": session_entry["last_time"],
+            }
+        )
 
     return {
         "timestamp": now.isoformat(),
         "stats": stats,
-        "charts": {
-            "line": line_points,
-            "bar": bar_points,
-            "gauge": gauge_value
-        },
+        "charts": {"line": line_points, "bar": bar_points, "gauge": gauge_value},
         "recent_questions": recent_questions,
-        "sessions": session_cards
+        "sessions": session_cards,
     }
+
 
 @app.route("/api/dashboard")
 def dashboard_data():
@@ -693,14 +845,17 @@ def dashboard_data():
     payload = _generate_dashboard_payload()
     return jsonify(payload)
 
+
 # -------------------------------
 # Science Expo / Dashboard Routes
 # -------------------------------
+
 
 @app.route("/dashboard")
 def dashboard():
     """Renders the main Science Expo Dashboard."""
     return render_template("dashboard.html")
+
 
 @app.route("/api/train_physics", methods=["POST"])
 def train_physics():
@@ -710,6 +865,7 @@ def train_physics():
         return jsonify({"success": True, "metrics": metrics})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
 
 @app.route("/api/simulate", methods=["POST"])
 @cache.cached(timeout=60, key_prefix=lambda: request.data)
@@ -733,25 +889,28 @@ def simulate_physics():
                 scale_height = float(scale_height)
             if gravity is not None:
                 gravity = float(gravity)
-            if v0 < 0 or mass <= 0: raise ValueError("Invalid physics parameters")
+            if v0 < 0 or mass <= 0:
+                raise ValueError("Invalid physics parameters")
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
-        
+
         # 1. Run Ground Truth Physics
         sim_results = physics_engine.simulator.simulate_projectile(
             v0, angle, mass, drag, scale_height=scale_height, g=gravity
         )
-        
+
         # 2. Run ML Prediction (if trained)
         ml_results = None
         error_margin = 0.0
-        
-        if physics_engine.learner.is_trained and (gravity is None or abs(gravity - 9.8) < 1e-3):
+
+        if physics_engine.learner.is_trained and (
+            gravity is None or abs(gravity - 9.8) < 1e-3
+        ):
             # We ask the ML model to predict positions for the same timestamps
             ml_results = physics_engine.learner.predict_trajectory(
                 v0, angle, mass, drag, sim_results["t"]
             )
-            
+
             # Calculate average Euclidean distance between True and ML points
             true_pos = np.column_stack((sim_results["x"], sim_results["y"]))
             pred_pos = np.column_stack((ml_results["x"], ml_results["y"]))
@@ -760,31 +919,44 @@ def simulate_physics():
 
         # 3. Generate Explanation (structured)
         explanation = physics_engine.explainer.explain_simulation(
-            {"v0": v0, "angle": angle, "mass": mass, "drag": drag, "scale_height": scale_height},
+            {
+                "v0": v0,
+                "angle": angle,
+                "mass": mass,
+                "drag": drag,
+                "scale_height": scale_height,
+            },
             physics_engine.learner.last_metrics,
-            error_margin
+            error_margin,
         )
 
         # Explanation may be a dict with 'text' and 'symbolic'
         if isinstance(explanation, dict):
-            explanation_text = explanation.get('text')
-            symbolic = explanation.get('symbolic')
+            explanation_text = explanation.get("text")
+            symbolic = explanation.get("symbolic")
         else:
             explanation_text = explanation
             symbolic = None
 
         logger.info(f"Simulation run in {time.time() - start_time:.3f}s")
-        return jsonify({
-            "success": True,
-            "physics": {k: v.tolist() for k, v in sim_results.items()}, # Convert numpy to list
-            "ml": {k: v.tolist() for k, v in ml_results.items()} if ml_results else None,
-            "explanation": explanation_text,
-            "symbolic": symbolic,
-            "error_margin": error_margin
-        })
+        return jsonify(
+            {
+                "success": True,
+                "physics": {
+                    k: v.tolist() for k, v in sim_results.items()
+                },  # Convert numpy to list
+                "ml": {k: v.tolist() for k, v in ml_results.items()}
+                if ml_results
+                else None,
+                "explanation": explanation_text,
+                "symbolic": symbolic,
+                "error_margin": error_margin,
+            }
+        )
     except Exception as e:
         logger.error(f"Simulation Error: {e}")
         return jsonify({"success": False, "error": str(e)})
+
 
 # -------------------------------
 # Routes
@@ -797,9 +969,11 @@ def home():
     user_conversations.setdefault(user_key, [])
     return render_template("index.html")
 
+
 @app.route("/assistant")
 def assistant():
     return redirect(url_for("chat_page"))
+
 
 @app.route("/chat", methods=["GET"])
 def chat_page():
@@ -807,37 +981,41 @@ def chat_page():
     ensure_chat_id()
     return render_template("chat.html")
 
+
 @app.route("/animations")
 def animations():
     get_user_key()
     ensure_chat_id()
     return render_template("animations.html")
 
+
 @app.route("/register", methods=["POST"])
 def register():
     username = request.json.get("username")
     password = request.json.get("password")
     users = load_users()
-    
+
     if username in users:
         return jsonify({"success": False, "message": "User already exists"})
-    
+
     users[username] = generate_password_hash(password)
     save_users(users)
     session["user"] = username
     return jsonify({"success": True, "username": username})
+
 
 @app.route("/login", methods=["POST"])
 def login():
     username = request.json.get("username")
     password = request.json.get("password")
     users = load_users()
-    
+
     if username in users and check_password_hash(users[username], password):
         session["user"] = username
         return jsonify({"success": True, "username": username})
-    
+
     return jsonify({"success": False, "message": "Invalid credentials"})
+
 
 @app.route("/logout", methods=["POST"])
 def logout():
@@ -845,11 +1023,13 @@ def logout():
     session.pop("chat_id", None)
     return jsonify({"success": True})
 
+
 @app.route("/check_auth")
 def check_auth():
     if "user" in session:
         return jsonify({"authenticated": True, "username": session["user"]})
     return jsonify({"authenticated": False})
+
 
 @app.route("/history")
 def history_page():
@@ -857,7 +1037,10 @@ def history_page():
         return redirect(url_for("home"))
     history = load_user_history(session["user"])
     sessions = build_sessions(history)
-    return render_template("history.html", sessions=sessions, active_chat_id=None, active_session=None)
+    return render_template(
+        "history.html", sessions=sessions, active_chat_id=None, active_session=None
+    )
+
 
 @app.route("/history/<chat_id>")
 def history_detail(chat_id):
@@ -869,28 +1052,33 @@ def history_detail(chat_id):
     if active_session:
         messages = []
         for entry in active_session["messages"]:
-            messages.append({
-                "role": "user",
-                "message": entry.get("message", ""),
-                "time": _format_time(entry.get("time", "")),
-                "topic": entry.get("topic", "unknown"),
-                "confidence": f"{entry.get('confidence', 0)}%"
-            })
-            if entry.get("reply"):
-                messages.append({
-                    "role": "assistant",
-                    "message": entry.get("reply", ""),
+            messages.append(
+                {
+                    "role": "user",
+                    "message": entry.get("message", ""),
                     "time": _format_time(entry.get("time", "")),
-                    "topic": entry.get("topic", "assistant"),
-                    "confidence": f"{entry.get('confidence', 0)}%"
-                })
+                    "topic": entry.get("topic", "unknown"),
+                    "confidence": f"{entry.get('confidence', 0)}%",
+                }
+            )
+            if entry.get("reply"):
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "message": entry.get("reply", ""),
+                        "time": _format_time(entry.get("time", "")),
+                        "topic": entry.get("topic", "assistant"),
+                        "confidence": f"{entry.get('confidence', 0)}%",
+                    }
+                )
         active_session["messages"] = messages
     return render_template(
         "history.html",
         sessions=sessions,
         active_chat_id=chat_id,
-        active_session=active_session
+        active_session=active_session,
     )
+
 
 @app.route("/api/history")
 def api_history():
@@ -898,12 +1086,14 @@ def api_history():
         return jsonify([])
     return jsonify(load_user_history(session["user"]))
 
+
 @app.route("/api/new_session", methods=["POST"])
 def new_session():
     session["chat_id"] = os.urandom(6).hex()
     user_key = get_user_key()
     user_conversations[user_key] = []
     return jsonify({"success": True, "chat_id": session["chat_id"]})
+
 
 @app.route("/match-animation", methods=["POST"])
 def match_animation():
@@ -917,19 +1107,49 @@ def match_animation():
         conf_value = float(confidence)
 
         intent_to_animation = {
-            "projectile_motion": {"animation_id": "projectile", "animation_label": "Projectile Motion"},
+            "projectile_motion": {
+                "animation_id": "projectile",
+                "animation_label": "Projectile Motion",
+            },
             "waves": {"animation_id": "waves", "animation_label": "Wave Motion"},
             "forces": {"animation_id": "forces", "animation_label": "Newton's Laws"},
-            "momentum": {"animation_id": "collision", "animation_label": "Momentum and Collisions"},
-            "energy": {"animation_id": "energy", "animation_label": "Conservation of Energy"},
-            "gravitation": {"animation_id": "orbit", "animation_label": "Gravitation and Orbits"},
-            "electricity": {"animation_id": "electricity", "animation_label": "Electric Fields"},
-            "magnetism": {"animation_id": "magnetism", "animation_label": "Magnetic Fields"},
-            "optics": {"animation_id": "optics", "animation_label": "Refraction and Optics"},
+            "momentum": {
+                "animation_id": "collision",
+                "animation_label": "Momentum and Collisions",
+            },
+            "energy": {
+                "animation_id": "energy",
+                "animation_label": "Conservation of Energy",
+            },
+            "gravitation": {
+                "animation_id": "orbit",
+                "animation_label": "Gravitation and Orbits",
+            },
+            "electricity": {
+                "animation_id": "electricity",
+                "animation_label": "Electric Fields",
+            },
+            "magnetism": {
+                "animation_id": "magnetism",
+                "animation_label": "Magnetic Fields",
+            },
+            "optics": {
+                "animation_id": "optics",
+                "animation_label": "Refraction and Optics",
+            },
             "nuclear": {"animation_id": "nuclear", "animation_label": "Nuclear Decay"},
-            "thermodynamics": {"animation_id": "thermodynamics", "animation_label": "Gas and Thermodynamics"},
-            "shm": {"animation_id": "pendulum", "animation_label": "Simple Harmonic Motion"},
-            "electrostatics": {"animation_id": "electricity", "animation_label": "Electric Fields"},
+            "thermodynamics": {
+                "animation_id": "thermodynamics",
+                "animation_label": "Gas and Thermodynamics",
+            },
+            "shm": {
+                "animation_id": "pendulum",
+                "animation_label": "Simple Harmonic Motion",
+            },
+            "electrostatics": {
+                "animation_id": "electricity",
+                "animation_label": "Electric Fields",
+            },
         }
 
         if conf_value >= 35.0 and intent in intent_to_animation:
@@ -938,6 +1158,7 @@ def match_animation():
     except Exception as e:
         logger.error("Match animation error: %s", e)
         return jsonify({"animation_id": None})
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -953,7 +1174,9 @@ def chat():
     history = normalize_history(payload.get("history", []))
     user_key = get_user_key()
     if not history:
-        history = normalize_history(session.get("history", [])) or list(user_conversations.get(user_key, []))
+        history = normalize_history(session.get("history", [])) or list(
+            user_conversations.get(user_key, [])
+        )
     intent = "unknown"
     confidence = 30.0
 
@@ -975,12 +1198,17 @@ def chat():
                 "Now fulfill what you offered and do not ask again."
             )
         if deterministic_hint:
+            # Provide computed result as context, but ask Gemini to create a full educational explanation
             prompt = (
-                f"{prompt}\n\nUSE THIS CALCULATED RESULT: {deterministic_hint}. "
-                "Do not calculate it yourself. Build the explanation around this exact result."
+                f"{prompt}\n\n"
+                f"Reference solution: {deterministic_hint}\n"
+                f"Provide a comprehensive, step-by-step explanation that helps the learner understand the physics concepts. "
+                f"Include the final result where relevant, but focus on teaching the reasoning and method."
             )
 
-        reply = generate_response(prompt, history, system_prompt, local_hint=deterministic_hint)
+        reply = generate_response(
+            prompt, history, system_prompt, local_hint=deterministic_hint
+        )
         if voice_mode:
             reply = make_voice_friendly(reply)
 
@@ -991,7 +1219,12 @@ def chat():
 
         if detect_loop(history):
             example_prompt = build_example_prompt(history[:-1], user_message, intent)
-            reply = generate_response(example_prompt, history[:-1], system_prompt, local_hint=deterministic_hint)
+            reply = generate_response(
+                example_prompt,
+                history[:-1],
+                system_prompt,
+                local_hint=deterministic_hint,
+            )
             if voice_mode:
                 reply = make_voice_friendly(reply)
             history[-1]["content"] = reply
@@ -1002,7 +1235,7 @@ def chat():
         ensure_chat_id()
     except Exception as e:
         logger.error("Chat Error: %s", e)
-        reply = "I hit a temporary issue. Please retry your physics question."
+        reply = "I hit a temporary issue. Please re-articulate your question."
 
     save_user_data(
         user_message,
@@ -1010,10 +1243,13 @@ def chat():
         session.get("user"),
         confidence=confidence,
         chat_id=session.get("chat_id"),
-        reply=reply
+        reply=reply,
     )
 
-    return jsonify({"reply": reply, "history": history, "confidence": confidence, "intent": intent})
+    return jsonify(
+        {"reply": reply, "history": history, "confidence": confidence, "intent": intent}
+    )
+
 
 @app.errorhandler(Exception)
 def handle_exception(error):
@@ -1022,6 +1258,6 @@ def handle_exception(error):
         return jsonify({"success": False, "error": "Server error"}), 500
     return "Something went wrong. Please try again.", 500
 
+
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
-  

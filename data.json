@@ -409,5 +409,212 @@
         "confidence": 97.4,
         "chat_id": "c1fd2784a608",
         "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "Explain wave motion.",
+        "topic": "waves",
+        "time": "2026-04-17T13:14:21.896914",
+        "username": null,
+        "confidence": 99.3,
+        "chat_id": "4d2140baa3a2",
+        "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "What is projectile motion?",
+        "topic": "projectile_motion",
+        "time": "2026-04-17T13:14:32.179065",
+        "username": null,
+        "confidence": 99.5,
+        "chat_id": "4d2140baa3a2",
+        "reply": "Projectile motion: Projectile motion is the curved path followed by an object moving under gravity."
+    },
+    {
+        "message": "Explain Newton's second law",
+        "topic": "dynamics",
+        "time": "2026-04-17T13:14:35.381375",
+        "username": null,
+        "confidence": 99.1,
+        "chat_id": "4d2140baa3a2",
+        "reply": "Newton's second law uses F = m a. F means force, m means mass, a means acceleration."
+    },
+    {
+        "message": "Explain Newton's second law",
+        "topic": "dynamics",
+        "time": "2026-04-19T10:36:35.778229",
+        "username": null,
+        "confidence": 99.1,
+        "chat_id": "c54e8adafb68",
+        "reply": "Newton's second law uses F = m a. F means force, m means mass, a means acceleration."
+    },
+    {
+        "message": "What is the Doppler effect?",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T10:36:38.666963",
+        "username": null,
+        "confidence": 15.0,
+        "chat_id": "c54e8adafb68",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "Explain wave-particle duality",
+        "topic": "waves",
+        "time": "2026-04-19T10:41:28.781621",
+        "username": null,
+        "confidence": 97.4,
+        "chat_id": "c54e8adafb68",
+        "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "Give me some trends",
+        "topic": "trends",
+        "time": "2026-04-19T10:41:38.202604",
+        "username": null,
+        "confidence": 28.8,
+        "chat_id": "c54e8adafb68",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "trends",
+        "topic": "trends",
+        "time": "2026-04-19T10:41:41.661829",
+        "username": null,
+        "confidence": 29.0,
+        "chat_id": "c54e8adafb68",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "How does a capacitor work?",
+        "topic": "ai",
+        "time": "2026-04-19T10:43:52.256932",
+        "username": null,
+        "confidence": 77.9,
+        "chat_id": "aeebc151ac1b",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "What is projectile motion?",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T10:43:54.740628",
+        "username": null,
+        "confidence": 99.5,
+        "chat_id": "aeebc151ac1b",
+        "reply": "Projectile motion: Projectile motion is the curved path followed by an object moving under gravity."
+    },
+    {
+        "message": "Explain wave-particle duality",
+        "topic": "waves",
+        "time": "2026-04-19T10:44:03.410354",
+        "username": null,
+        "confidence": 97.4,
+        "chat_id": "aeebc151ac1b",
+        "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "How does a capacitor work?",
+        "topic": "ai",
+        "time": "2026-04-19T10:56:25.698433",
+        "username": null,
+        "confidence": 77.9,
+        "chat_id": "2cc41401d34a",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "What is projectile motion?",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T10:56:29.468082",
+        "username": null,
+        "confidence": 99.5,
+        "chat_id": "2cc41401d34a",
+        "reply": "Projectile motion: Projectile motion is the curved path followed by an object moving under gravity."
+    },
+    {
+        "message": "Explain wave-particle duality",
+        "topic": "waves",
+        "time": "2026-04-19T10:56:31.498442",
+        "username": null,
+        "confidence": 97.4,
+        "chat_id": "2cc41401d34a",
+        "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "Explain Newton's second law",
+        "topic": "dynamics",
+        "time": "2026-04-19T10:56:34.763755",
+        "username": null,
+        "confidence": 99.1,
+        "chat_id": "2cc41401d34a",
+        "reply": "Newton's second law uses F = m a. F means force, m means mass, a means acceleration."
+    },
+    {
+        "message": "Give me some trends",
+        "topic": "trends",
+        "time": "2026-04-19T10:56:42.995071",
+        "username": null,
+        "confidence": 28.8,
+        "chat_id": "2cc41401d34a",
+        "reply": "I can help with CAPS physics and general questions. Please ask a question."
+    },
+    {
+        "message": "Explain Newton's second law",
+        "topic": "dynamics",
+        "time": "2026-04-19T11:59:21.131703",
+        "username": null,
+        "confidence": 99.1,
+        "chat_id": "ff5917482c26",
+        "reply": "Newton's second law uses F = m a. F means force, m means mass, a means acceleration."
+    },
+    {
+        "message": "What is the Doppler effect?",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T11:59:33.972899",
+        "username": null,
+        "confidence": 15.0,
+        "chat_id": "ff5917482c26",
+        "reply": "I'm taking too long. Could you ask a simpler question?"
+    },
+    {
+        "message": "How does a capacitor work?",
+        "topic": "ai",
+        "time": "2026-04-19T11:59:55.768009",
+        "username": null,
+        "confidence": 77.9,
+        "chat_id": "ff5917482c26",
+        "reply": "I'm taking too long. Could you ask a simpler question?"
+    },
+    {
+        "message": "Explain wave-particle duality",
+        "topic": "waves",
+        "time": "2026-04-19T12:00:04.103226",
+        "username": null,
+        "confidence": 97.4,
+        "chat_id": "ff5917482c26",
+        "reply": "Wave speed uses v = f lambda. v means wave speed, f means frequency, lambda means wavelength."
+    },
+    {
+        "message": "What is projectile motion?",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T12:00:17.609379",
+        "username": null,
+        "confidence": 99.5,
+        "chat_id": "ff5917482c26",
+        "reply": "Projectile motion: Projectile motion is the curved path followed by an object moving under gravity."
+    },
+    {
+        "message": "explain projectile motion",
+        "topic": "projectile_motion",
+        "time": "2026-04-19T12:00:51.641319",
+        "username": null,
+        "confidence": 99.6,
+        "chat_id": "ff5917482c26",
+        "reply": "Projectile motion: Projectile motion is the curved path followed by an object moving under gravity."
+    },
+    {
+        "message": "did not hear",
+        "topic": "thermodynamics",
+        "time": "2026-04-19T12:05:54.445244",
+        "username": null,
+        "confidence": 33.1,
+        "chat_id": "ff5917482c26",
+        "reply": "I'm taking too long. Could you ask a simpler question?"
     }
 ]
