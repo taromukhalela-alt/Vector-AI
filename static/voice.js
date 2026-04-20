@@ -1,4 +1,3 @@
-// === SPEECH RECOGNITION ===
 class VoiceInput {
   constructor(onResult, onStart, onEnd) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -7,6 +6,7 @@ class VoiceInput {
       this.supported = false;
       return;
     }
+
     this.supported = true;
     this.recognition = new SR();
     this.recognition.continuous = false;
@@ -21,12 +21,16 @@ class VoiceInput {
     this.recognition.onresult = (event) => {
       let interim = "";
       let final = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        event.results[i].isFinal ? (final += t) : (interim += t);
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += text;
+        } else {
+          interim += text;
+        }
       }
       updateTranscript(interim || final, "interim");
-      if (final) onResult(final);
+      if (final) onResult(final.trim());
     };
 
     this.recognition.onend = () => {
@@ -34,11 +38,13 @@ class VoiceInput {
       onEnd();
     };
 
-    this.recognition.onerror = (e) => {
-      console.error("Speech recognition error:", e.error);
+    this.recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
       window.avatarState = window.AvatarState?.IDLE || "idle";
       onEnd();
-      if (e.error === "not-allowed") showMicPermissionError();
+      if (event.error === "not-allowed") {
+        showMicPermissionError();
+      }
     };
   }
 
@@ -57,20 +63,29 @@ class VoiceInput {
   }
 }
 
-// === SPEECH SYNTHESIS ===
 class VoiceOutput {
   constructor() {
     this.synth = window.speechSynthesis;
     this.voice = null;
+    this.resumeTimer = null;
+    this.activeSession = 0;
     this.loadVoices();
   }
 
   loadVoices() {
     const setVoice = () => {
       const voices = this.synth.getVoices();
+      const savedVoiceIndex = localStorage.getItem("preferred_voice");
+
+      if (savedVoiceIndex !== null && voices[parseInt(savedVoiceIndex, 10)]) {
+        this.voice = voices[parseInt(savedVoiceIndex, 10)];
+        return;
+      }
+
       const preferred = [
         "Google UK English Female",
         "Microsoft Libby Online (Natural)",
+        "Microsoft Ryan Online (Natural)",
         "Samantha",
         "Karen",
         "en-ZA",
@@ -79,66 +94,74 @@ class VoiceOutput {
       ];
 
       for (const name of preferred) {
-        const match = voices.find((v) => v.name.includes(name) || v.lang.includes(name));
+        const match = voices.find((voice) => voice.name.includes(name) || voice.lang.includes(name));
         if (match) {
           this.voice = match;
-          break;
+          return;
         }
       }
 
-      if (!this.voice) {
-        this.voice = voices.find((v) => v.lang.startsWith("en")) || voices[0];
-      }
+      this.voice = voices.find((voice) => voice.lang.startsWith("en")) || voices[0] || null;
     };
 
     setVoice();
-    this.synth.addEventListener("voiceschanged", setVoice);
+    this.synth.addEventListener("voiceschanged", () => {
+      setVoice();
+      if (window.onVoicesLoaded) window.onVoicesLoaded();
+    });
   }
 
-  speak(text, onStart, onEnd) {
-    this.synth.cancel();
+  setVoice(voice) {
+    if (voice) {
+      this.voice = voice;
+      return;
+    }
+    this.loadVoices();
+  }
 
-    const clean = (text || "")
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/`/g, "")
-      .replace(/#{1,6} /g, "")
-      .replace(/\n+/g, ". ")
-      .replace(/F_net|F_s|F_k/g, "F net, F static, F kinetic")
-      .replace(/v²/g, "v squared")
-      .replace(/m\/s²/g, "metres per second squared")
-      .replace(/[=+\-×÷]/g, " ")
-      .substring(0, 600);
+  splitIntoChunks(text) {
+    const content = (text || "").trim();
+    if (!content) return [];
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.voice = this.voice;
-    utterance.rate = 0.95;
-    utterance.pitch = 1.05;
-    utterance.volume = 1.0;
+    const sentences = content.match(/[^.!?]+[.!?]?/g) || [content];
+    const chunks = [];
+    let current = "";
 
-    utterance.onstart = () => {
-      window.avatarState = window.AvatarState?.SPEAKING || "speaking";
-      this.startAmplitudeTracking();
-      if (onStart) onStart();
-    };
+    sentences.forEach((sentence) => {
+      const next = current ? `${current} ${sentence.trim()}` : sentence.trim();
+      if (next.length > 220 && current) {
+        chunks.push(current.trim());
+        current = sentence.trim();
+      } else {
+        current = next;
+      }
+    });
 
-    utterance.onend = () => {
-      window.avatarState = window.AvatarState?.IDLE || "idle";
-      window.speakingAmplitude = 0;
-      this.stopAmplitudeTracking();
-      if (onEnd) onEnd();
-    };
+    if (current) {
+      chunks.push(current.trim());
+    }
 
-    utterance.onerror = () => {
-      window.avatarState = window.AvatarState?.IDLE || "idle";
-      window.speakingAmplitude = 0;
-      if (onEnd) onEnd();
-    };
+    return chunks;
+  }
 
-    this.synth.speak(utterance);
+  startResumeGuard() {
+    this.stopResumeGuard();
+    this.resumeTimer = setInterval(() => {
+      if (this.synth?.speaking) {
+        this.synth.resume();
+      }
+    }, 1500);
+  }
+
+  stopResumeGuard() {
+    if (this.resumeTimer) {
+      clearInterval(this.resumeTimer);
+      this.resumeTimer = null;
+    }
   }
 
   startAmplitudeTracking() {
+    this.stopAmplitudeTracking();
     let t = 0;
     this._ampInterval = setInterval(() => {
       t += 0.1;
@@ -154,9 +177,81 @@ class VoiceOutput {
     window.speakingAmplitude = 0;
   }
 
-  stop() {
+  normalizeText(text) {
+    return (text || "")
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/`/g, "")
+      .replace(/#{1,6}\s/g, "")
+      .replace(/\n+/g, ". ")
+      .replace(/F_net|F_s|F_k/g, "F net, F static, F kinetic")
+      .replace(/vÂ²/g, "v squared")
+      .replace(/m\/sÂ²/g, "metres per second squared")
+      .replace(/[=+\-Ã—Ã·]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 1200);
+  }
+
+  speak(text, onStart, onEnd) {
+    this.activeSession += 1;
+    const sessionId = this.activeSession;
     this.synth.cancel();
     this.stopAmplitudeTracking();
+    this.stopResumeGuard();
+
+    const clean = this.normalizeText(text);
+    const chunks = this.splitIntoChunks(clean);
+    if (!chunks.length) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    const speakChunk = (index) => {
+      if (sessionId !== this.activeSession) return;
+
+      if (index >= chunks.length) {
+        window.avatarState = window.AvatarState?.IDLE || "idle";
+        this.stopAmplitudeTracking();
+        this.stopResumeGuard();
+        if (onEnd) onEnd();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
+      utterance.voice = this.voice;
+      utterance.rate = 0.95;
+      utterance.pitch = 1.02;
+      utterance.volume = 1.0;
+
+      utterance.onstart = () => {
+        window.avatarState = window.AvatarState?.SPEAKING || "speaking";
+        this.startAmplitudeTracking();
+        this.startResumeGuard();
+        if (index === 0 && onStart) onStart();
+      };
+
+      utterance.onend = () => {
+        if (sessionId !== this.activeSession) return;
+        speakChunk(index + 1);
+      };
+
+      utterance.onerror = () => {
+        if (sessionId !== this.activeSession) return;
+        speakChunk(index + 1);
+      };
+
+      this.synth.speak(utterance);
+    };
+
+    speakChunk(0);
+  }
+
+  stop() {
+    this.activeSession += 1;
+    this.synth.cancel();
+    this.stopAmplitudeTracking();
+    this.stopResumeGuard();
     window.avatarState = window.AvatarState?.IDLE || "idle";
     window.speakingAmplitude = 0;
   }
@@ -180,13 +275,15 @@ async function setupAudioAnalyser() {
       requestAnimationFrame(updateFrequencyData);
     }
     updateFrequencyData();
-  } catch (e) {
-    console.warn("Audio analyser not available:", e);
+  } catch (error) {
+    console.warn("Audio analyser not available:", error);
   }
 }
 
 const voiceInput = new VoiceInput(onSpeechResult, onListeningStart, onListeningEnd);
 const voiceOutput = new VoiceOutput();
+window.voiceOutput = voiceOutput;
+window.voiceInput = voiceInput;
 
 let isSpeaking = false;
 let isListening = false;
@@ -212,6 +309,8 @@ if (voiceEndBtn) voiceEndBtn.addEventListener("click", closeVoiceMode);
 function closeVoiceMode() {
   voiceInput.stop();
   voiceOutput.stop();
+  isSpeaking = false;
+  isListening = false;
   if (voiceOverlay) {
     voiceOverlay.classList.remove("active");
     voiceOverlay.classList.add("hidden");
@@ -223,6 +322,8 @@ if (micBtn) {
   micBtn.addEventListener("click", () => {
     if (isSpeaking) {
       voiceOutput.stop();
+      isSpeaking = false;
+      setVoiceStatus("Tap the mic to start");
       return;
     }
     if (isListening) {
@@ -234,8 +335,8 @@ if (micBtn) {
 
   micBtn.addEventListener(
     "touchstart",
-    (e) => {
-      e.preventDefault();
+    (event) => {
+      event.preventDefault();
       startListening();
     },
     { passive: false }
@@ -243,8 +344,8 @@ if (micBtn) {
 
   micBtn.addEventListener(
     "touchend",
-    (e) => {
-      e.preventDefault();
+    (event) => {
+      event.preventDefault();
       voiceInput.stop();
     },
     { passive: false }
@@ -270,7 +371,9 @@ function onListeningStart() {
 function onListeningEnd() {
   isListening = false;
   if (micBtn) micBtn.classList.remove("recording");
-  setVoiceStatus("Processing...");
+  if (!isSpeaking) {
+    setVoiceStatus("Processing...");
+  }
 }
 
 async function onSpeechResult(transcript) {
@@ -282,7 +385,7 @@ async function onSpeechResult(transcript) {
   window.avatarState = window.AvatarState?.IDLE || "idle";
 
   try {
-    const res = await fetch("/chat", {
+    const response = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -292,7 +395,7 @@ async function onSpeechResult(transcript) {
       }),
     });
 
-    const data = await res.json();
+    const data = await response.json();
     window.conversationHistory = Array.isArray(data.history) ? data.history : window.conversationHistory;
     if (window.conversationHistory.length > 14) {
       window.conversationHistory = window.conversationHistory.slice(-14);
@@ -318,15 +421,17 @@ async function onSpeechResult(transcript) {
         setVoiceStatus("Tap to speak");
       }
     );
-  } catch (err) {
-    setVoiceStatus("Error — try again");
+  } catch (error) {
+    console.error("Voice chat failed:", error);
+    isSpeaking = false;
+    setVoiceStatus("Error. Try again.");
     window.avatarState = window.AvatarState?.IDLE || "idle";
   }
 }
 
 function setVoiceStatus(text) {
-  const el = document.getElementById("voice-status-label");
-  if (el) el.textContent = text;
+  const label = document.getElementById("voice-status-label");
+  if (label) label.textContent = text;
 }
 
 function updateTranscript(text, type) {
@@ -337,8 +442,8 @@ function updateTranscript(text, type) {
 }
 
 function showMicPermissionError() {
-  const el = document.getElementById("mic-error");
-  if (el) el.classList.remove("hidden");
+  const error = document.getElementById("mic-error");
+  if (error) error.classList.remove("hidden");
 }
 
 window.openMicSettings = () => {
@@ -347,6 +452,6 @@ window.openMicSettings = () => {
 
 if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
   if (voiceLaunchBtn) {
-    voiceLaunchBtn.title = "Voice input requires Chrome or Edge. Text mode still works!";
+    voiceLaunchBtn.title = "Voice input requires Chrome or Edge. Text mode still works.";
   }
 }

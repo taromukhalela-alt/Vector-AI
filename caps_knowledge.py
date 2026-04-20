@@ -604,11 +604,20 @@ def _format_number(value: float) -> str:
 def _extract_target(formula: Dict, text: str) -> Optional[str]:
     signals = ("find", "calculate", "determine", "solve for", "work out", "what is", "how much")
     for symbol, meta in formula["variables"].items():
-        aliases = [meta["label"]] + list(meta["aliases"])
+        aliases = [symbol.lower(), meta["label"]] + list(meta["aliases"])
         for alias in aliases:
             if any(f"{signal} {alias}" in text for signal in signals):
                 return symbol
     return None
+
+
+def _resolve_variable_symbol(formula: Dict, target: Optional[str]) -> Optional[str]:
+    if not target:
+        return None
+    for symbol in formula["variables"]:
+        if symbol.lower() == target.lower():
+            return symbol
+    return target if target in formula["variables"] else None
 
 
 def _extract_explicit_symbol_values(text: str, formula: Dict) -> Dict[str, float]:
@@ -748,11 +757,18 @@ def answer_caps_question(query: str, predicted_intent: Optional[str] = None) -> 
 
     if formula:
         values = _collect_values(text, formula)
-        target = _extract_target(formula, text)
+        target = _resolve_variable_symbol(formula, _extract_target(formula, text))
         if not target:
             missing = [symbol for symbol in formula["solvers"] if symbol not in values]
             if len(missing) == 1:
                 target = missing[0]
+        if wants_definition and target and target in formula["variables"]:
+            meta = formula["variables"][target]
+            return {
+                "intent": formula["topic"],
+                "kind": "definition",
+                "response": f"In {formula['name']}, {target} means {meta['label']}.",
+            }
         if target:
             result = _safe_compute(formula, target, values)
             if result is not None:

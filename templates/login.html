@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if register %}Sign Up{% else %}Login{% endif %} - Vector AI</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --bg0: #1d2021;
+            --bg1: #282828;
+            --bg2: #3c3836;
+            --bg3: #504945;
+            --fg0: #f8f5f2;
+            --fg1: #ebdbb2;
+            --fg2: #d5c4a1;
+            --fg3: #bdae93;
+            --fg4: #a89984;
+            --red: #fb4934;
+            --green: #b8bb26;
+            --yellow: #fabd2f;
+            --blue: #83a598;
+            --purple: #d3869b;
+            --aqua: #8ec07c;
+            --orange: #fe8019;
+            --gray: #928374;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg0);
+            color: var(--fg0);
+            min-height: 100vh;
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .login-card {
+            background: var(--bg1);
+            border: 1px solid var(--bg3);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--bg3);
+            font-size: 1rem;
+            transition: all 0.2s;
+            background: var(--bg2);
+            color: var(--fg0);
+        }
+        
+        .input-field::placeholder {
+            color: var(--fg4);
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--aqua);
+            box-shadow: 0 0 0 3px rgba(142, 192, 124, 0.15);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            background: var(--green);
+            color: var(--bg0);
+            border-radius: 8px;
+            padding: 0.875rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #a3b122;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            width: 100%;
+            background: transparent;
+            color: var(--fg1);
+            border-radius: 8px;
+            padding: 0.875rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 1px solid var(--bg3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg2);
+            border-color: var(--fg4);
+        }
+        
+        .error-message {
+            color: var(--red);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            text-align: center;
+            background: rgba(251, 147, 56, 0.1);
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(251, 147, 56, 0.3);
+        }
+        
+        .success-message {
+            color: var(--green);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            text-align: center;
+            background: rgba(184, 187, 38, 0.1);
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(184, 187, 38, 0.3);
+        }
+        
+        .logo-text {
+            background: linear-gradient(135deg, var(--green) 0%, var(--aqua) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--fg4);
+            font-size: 0.875rem;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--bg3);
+        }
+        
+        .toggle-link {
+            color: var(--aqua);
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .toggle-link:hover {
+            color: var(--green);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen px-4 py-8">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--green);">
+                    <svg width="28" height="28" fill="none" stroke="#1d2021" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-3xl font-bold" style="color: var(--fg0);">Vector AI</h1>
+            <p class="text-lg mt-1" style="color: var(--fg3);">Your CAPS Physics and Chemistry Tutor</p>
+        </div>
+
+        <div class="login-card p-8">
+            <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--fg0);">
+                {% if register %}Create Account{% else %}Welcome Back{% endif %}
+            </h2>
+            
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+            
+            <div id="form-error" class="error-message" style="display: none;"></div>
+            <div id="form-success" class="success-message" style="display: none;"></div>
+            
+            <form id="auth-form" class="space-y-4">
+                {% if register %}
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--fg2);">Name</label>
+                    <input type="text" name="name" class="input-field" placeholder="Your name" required>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--fg2);">Email</label>
+                    <input type="email" name="email" class="input-field" placeholder="you@example.com" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--fg2);">Password</label>
+                    <input type="password" name="password" class="input-field" placeholder="••••••••" required minlength="6">
+                </div>
+
+                {% if register %}
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--fg2);">Confirm Password</label>
+                    <input type="password" name="confirm_password" class="input-field" placeholder="••••••••" required>
+                </div>
+                {% endif %}
+                
+                <button type="submit" class="btn-primary">
+                    {% if register %}Create Account{% else %}Sign In{% endif %}
+                </button>
+            </form>
+            
+            <div class="divider my-6">
+                <span>{% if register %}Already have an account?{% else %}Don't have an account?{% endif %}</span>
+            </div>
+            
+            <a href="{% if register %}{{ url_for('auth.login') }}{% else %}{{ url_for('auth.register') }}{% endif %}" class="btn-secondary block text-center">
+                {% if register %}Sign In{% else %}Create Account{% endif %}
+            </a>
+            
+            <p class="text-center text-sm mt-6" style="color: var(--fg4);">
+                <a href="{{ url_for('auth.landing') }}" class="toggle-link">&larr; Back to home</a>
+            </p>
+            
+            {% if not register %}
+            <div class="mt-6 p-4 rounded-lg" style="background: var(--bg2); border: 1px solid var(--bg3);">
+                <p class="text-sm font-medium mb-2" style="color: var(--yellow);">Demo Accounts</p>
+                <p class="text-xs" style="color: var(--fg3);">Password for all: <code style="color: var(--aqua);">password123</code></p>
+                <ul class="text-xs mt-2 space-y-1" style="color: var(--fg4);">
+                    <li>student@caps.edu.za</li>
+                    <li>physics@caps.edu.za</li>
+                    <li>demo@vector.ai</li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('auth-form');
+        const errorEl = document.getElementById('form-error');
+        const successEl = document.getElementById('form-success');
+        const isRegister = {% if register %}true{% else %}false{% endif %};
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+            
+            if (isRegister && data.password !== data.confirm_password) {
+                errorEl.textContent = 'Passwords do not match';
+                errorEl.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const endpoint = isRegister ? '{{ url_for("auth.register") }}' : '{{ url_for("auth.login") }}';
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                if (result.success) {
+                    successEl.textContent = 'Success! Redirecting...';
+                    successEl.style.display = 'block';
+                    window.location.href = result.redirect || '/chat';
+                } else {
+                    errorEl.textContent = result.message || 'Something went wrong';
+                    errorEl.style.display = 'block';
+                }
+            } catch (err) {
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

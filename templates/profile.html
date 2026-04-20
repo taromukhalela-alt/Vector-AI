@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Vector AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--bg-hard);
+        }
+        
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .profile-info h2 {
+            margin: 0 0 0.25rem;
+        }
+        
+        .profile-info p {
+            color: var(--fg-2);
+            margin: 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--fg);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--fg-2);
+            margin-top: 0.25rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-hard);
+        }
+        
+        .btn-danger {
+            background: var(--red);
+            color: white;
+        }
+        
+        .settings-section {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .settings-section h3 {
+            margin: 0 0 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+        
+        select, input[type="range"] {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        
+        @media (max-width: 600px) {
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="chat-shell">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark"></span>
+            <div>
+                <p class="brand-kicker">Vector AI</p>
+                <h1 class="brand-title">My Profile</h1>
+            </div>
+        </div>
+        <nav class="topnav">
+            <a href="/">Dashboard</a>
+            <a href="/chat">Chat</a>
+            <a href="/animations">Animations</a>
+            <a href="/notes">Notes</a>
+        </nav>
+    </header>
+
+    <main class="profile-container">
+        <div class="profile-header">
+            <div class="avatar">
+                {% if user.avatar %}
+                    <img src="{{ user.avatar }}" alt="Avatar">
+                {% else %}
+                    {{ user.name[0]|upper if user.name else 'U' }}
+                {% endif %}
+            </div>
+            <div class="profile-info">
+                <h2>{{ user.name }}</h2>
+                <p>{{ user.email }}</p>
+                <p class="muted">Member since {{ user.created_at|default('now', true)|slice(0, 10) if user.created_at else 'N/A' }}</p>
+            </div>
+            <div style="margin-left: auto;">
+                <button onclick="logout()" class="btn btn-danger">Logout</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="notes-count">0</div>
+                <div class="stat-label">Notes Created</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">~50</div>
+                <div class="stat-label">Topics Covered</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">CAPS</div>
+                <div class="stat-label">Curriculum Aligned</div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>🎤 Voice Preferences</h3>
+            <div class="setting-row">
+                <span>Default TTS Voice</span>
+                <select id="preferred-voice">
+                    <option value="default">System Default</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <span>Speech Rate</span>
+                <input type="range" id="speech-rate" min="0.5" max="1.5" step="0.1" value="0.95">
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>🔒 Account</h3>
+            <div class="setting-row">
+                <span>Email</span>
+                <span id="profile-email">{{ user.email }}</span>
+            </div>
+            <div class="setting-row">
+                <span>Provider</span>
+                <span>{{ user.provider|title }}</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function logout() {
+            fetch('/logout', { method: 'POST' })
+                .then(() => window.location.href = '/');
+        }
+
+        // Load voice options
+        const voiceSelect = document.getElementById('preferred-voice');
+        function loadVoices() {
+            const voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '<option value="default">System Default</option>';
+            voices.forEach((voice, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(opt);
+            });
+            
+            // Load saved preference
+            fetch('/api/user/preferences')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.preferences.voice) {
+                        voiceSelect.value = data.preferences.voice;
+                    }
+                });
+        }
+
+        if (speechSynthesis) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
+        }
+
+        voiceSelect.addEventListener('change', () => {
+            fetch('/api/user/preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ voice: voiceSelect.value })
+            });
+        });
+
+        // Load stats
+        fetch('/api/notes')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('notes-count').textContent = data.notes.length;
+                }
+            });
+    </script>
+</body>
+</html>

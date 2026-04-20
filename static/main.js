@@ -6,6 +6,7 @@ function initVectorAI() {
   const newSessionBtn = document.getElementById("new-session-btn");
   const mobileFab = document.getElementById("mobile-fab");
   const topicsGrid = document.getElementById("topics-grid");
+  const voiceSelects = Array.from(document.querySelectorAll(".voice-select"));
 
   let conversationHistory = [];
   window.conversationHistory = conversationHistory;
@@ -18,17 +19,26 @@ function initVectorAI() {
     return d.innerHTML;
   }
 
-  function appendMessage(text, role) {
-    if (!chatMessages) return;
-    const msg = document.createElement("div");
-    msg.className = `message ${role}`;
-    msg.innerHTML = sanitize(text || "")
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\n/g, "<br>");
-    chatMessages.appendChild(msg);
-    msg.scrollIntoView({ behavior: "smooth", block: "end" });
-  }
+   function appendMessage(text, role) {
+     if (!chatMessages) return;
+     const msg = document.createElement("div");
+     msg.className = `message ${role}`;
+     msg.innerHTML = sanitize(text || "")
+       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+       .replace(/`([^`]+)`/g, "<code>$1</code>")
+       .replace(/\n/g, "<br>");
+     chatMessages.appendChild(msg);
+     msg.scrollIntoView({ behavior: "smooth", block: "end" });
+     
+     // Add "Save as Note" button for assistant messages
+     if (role === 'assistant') {
+       const noteBtn = document.createElement('button');
+       noteBtn.className = 'note-action-btn';
+       noteBtn.textContent = 'Save as Note';
+       noteBtn.onclick = () => saveResponseAsNote(text);
+       msg.appendChild(noteBtn);
+     }
+   }
 
   function showTypingIndicator() {
     if (!chatMessages || typingNode) return;
@@ -45,7 +55,32 @@ function initVectorAI() {
     typingNode = null;
   }
 
-  async function requestAnimationMatch(question) {
+  async function saveResponseAsNote(content) {
+    // Try to infer topic from conversation history
+    const lastUserMsg = conversationHistory.slice(-2)[0]?.content || '';
+    const topic = lastUserMsg.split(' ').slice(0, 3).join(' ') || 'General';
+    
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Note: ${topic}`,
+          content: content,
+          topic: topic,
+          ai_generated: true
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        appendMessage('Note saved to your collection!', 'system');
+      }
+    } catch (err) {
+      console.error('Failed to save note:', err);
+    }
+  }
+
+   async function requestAnimationMatch(question) {
     try {
       const response = await fetch("/match-animation", {
         method: "POST",
@@ -92,7 +127,7 @@ function initVectorAI() {
       requestAnimationMatch(question);
     } catch (error) {
       hideTypingIndicator();
-      appendMessage("Connection error — please try again.", "assistant");
+      appendMessage("Connection error. Please try again.", "assistant");
     } finally {
       isSending = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -142,7 +177,7 @@ function initVectorAI() {
     });
   }
 
-  const tabs = document.querySelectorAll(".tab-btn");
+  const tabs = document.querySelectorAll(".tab-btn[data-tab]");
   const panels = document.querySelectorAll(".tab-panel");
 
   function activateTab(tabId) {
@@ -170,17 +205,21 @@ function initVectorAI() {
     btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
 
+  const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get("tab") || "chat";
+  const initialAnimation = params.get("anim");
+  const initialQuestion = params.get("q");
+
   const topics = [
-    { title: "Projectile Motion", desc: "Launch angles, range, and time of flight.", tag: "Kinematics", prompt: "What is projectile motion?" },
-    { title: "Simple Harmonic Motion", desc: "Pendulums, springs, and oscillations.", tag: "SHM", prompt: "Explain simple harmonic motion." },
-    { title: "Newton's Laws", desc: "Force, mass, and acceleration in action.", tag: "Dynamics", prompt: "Explain Newton's second law." },
-    { title: "Waves", desc: "Frequency, wavelength, and speed.", tag: "Waves", prompt: "Explain wave motion." },
-    { title: "Electric Fields", desc: "Charges and the field lines between them.", tag: "Electricity", prompt: "How do electric fields work?" },
-    { title: "Magnetic Fields", desc: "Currents, fields, and particle motion.", tag: "Magnetism", prompt: "Explain magnetic fields around a wire." },
-    { title: "Refraction", desc: "Snell's law and light bending through media.", tag: "Optics", prompt: "What is refraction and Snell's law?" },
-    { title: "Thermodynamics", desc: "Gas particles, temperature, and volume.", tag: "Thermo", prompt: "Explain the ideal gas law." },
-    { title: "Doppler Effect", desc: "Motion and frequency shifts in waves.", tag: "Waves", prompt: "What is the Doppler effect?" },
-    { title: "Photoelectric Effect", desc: "Photon energy and electron emission.", tag: "Modern", prompt: "Explain the photoelectric effect." },
+    { title: "Projectile Motion", desc: "Launch angles, range, and time of flight in CAPS Physical Sciences.", tag: "Physical Sci", prompt: "Explain projectile motion for Grade 11 CAPS Physical Sciences." },
+    { title: "Gas Laws", desc: "Pressure, temperature, and volume relationships in chemistry.", tag: "Chemistry", prompt: "Explain Boyle's law and Charles's law with examples." },
+    { title: "Reaction Rates", desc: "Collision theory, catalysts, and why reactions speed up.", tag: "Chemistry", prompt: "Explain collision theory and reaction rates." },
+    { title: "Newton's Laws", desc: "Force, mass, and acceleration in action.", tag: "Physical Sci", prompt: "Explain Newton's second law with a simple example." },
+    { title: "Waves", desc: "Frequency, wavelength, and speed with CAPS examples.", tag: "Physical Sci", prompt: "Explain wave motion and the Doppler effect." },
+    { title: "Electric Fields", desc: "Charges and the field lines between them.", tag: "Physical Sci", prompt: "How do electric fields work?" },
+    { title: "Bonding", desc: "Ionic and covalent bonding with particle-level explanations.", tag: "Chemistry", prompt: "Explain ionic and covalent bonding." },
+    { title: "Acids and Bases", desc: "pH, neutralisation, and acid-base behavior in solution.", tag: "Chemistry", prompt: "Explain acids, bases, and pH." },
+    { title: "Electrochemistry", desc: "Redox reactions, cells, and electron flow.", tag: "Chemistry", prompt: "Explain electrochemistry and galvanic cells." },
   ];
 
   if (topicsGrid) {
@@ -203,8 +242,18 @@ function initVectorAI() {
   }
 
   if (window.loadAnimation) {
-    window.loadAnimation("idle");
-    if (window.setActiveAnimButton) window.setActiveAnimButton("idle");
+    const targetAnimation = initialAnimation || "idle";
+    window.loadAnimation(targetAnimation);
+    if (window.setActiveAnimButton) window.setActiveAnimButton(targetAnimation);
+  }
+
+  activateTab(initialTab);
+
+  if (initialQuestion && chatInput) {
+    chatInput.value = initialQuestion;
+  }
+  if (initialQuestion && !initialAnimation) {
+    requestAnimationMatch(initialQuestion);
   }
 
   window.requestAnimationMatch = requestAnimationMatch;
@@ -224,6 +273,77 @@ function initVectorAI() {
   const voiceLaunchBtn = document.getElementById("voice-launch-btn");
   if (voiceLaunchBtn && !("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
     voiceLaunchBtn.style.display = "none";
+  }
+
+  if (voiceSelects.length) {
+    loadVoices();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    fetch('/api/user/preferences')
+      .then(res => res.json())
+      .then(data => {
+        const savedVoice = data.success && data.preferences.voice ? data.preferences.voice : 'default';
+        syncVoiceSelectors(savedVoice);
+        updateVoiceOutput(savedVoice);
+      })
+      .catch(() => {
+        syncVoiceSelectors(localStorage.getItem('preferred_voice') || 'default');
+        updateVoiceOutput(localStorage.getItem('preferred_voice') || 'default');
+      });
+
+    voiceSelects.forEach((select) => {
+      select.addEventListener('change', () => {
+        syncVoiceSelectors(select.value);
+        fetch('/api/user/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voice: select.value })
+        }).catch(() => {});
+        updateVoiceOutput(select.value);
+      });
+    });
+  }
+
+  function loadVoices() {
+    const voices = window.speechSynthesis.getVoices();
+    voiceSelects.forEach((select) => {
+      select.innerHTML = '<option value="default">Default Voice</option>';
+      const added = new Set();
+      voices.forEach((voice, i) => {
+        const key = `${voice.name}-${voice.lang}`;
+        if (!added.has(key)) {
+          added.add(key);
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = `${voice.name} (${voice.lang})`;
+          select.appendChild(option);
+        }
+      });
+    });
+    syncVoiceSelectors(localStorage.getItem('preferred_voice') || 'default');
+  }
+
+  function syncVoiceSelectors(value) {
+    voiceSelects.forEach((select) => {
+      select.value = value;
+    });
+  }
+
+  function updateVoiceOutput(selectedIndex) {
+    const voices = window.speechSynthesis.getVoices();
+    if (selectedIndex !== 'default' && voices[parseInt(selectedIndex)]) {
+      localStorage.setItem('preferred_voice', String(selectedIndex));
+      if (window.voiceOutput) {
+        window.voiceOutput.setVoice(voices[parseInt(selectedIndex)]);
+      }
+    } else {
+      localStorage.removeItem('preferred_voice');
+      if (window.voiceOutput) {
+        window.voiceOutput.setVoice(null);
+      }
+    }
   }
 }
 

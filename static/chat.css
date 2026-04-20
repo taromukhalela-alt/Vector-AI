@@ -1,15 +1,20 @@
 :root {
-  --maroon-900: #3b0f14;
-  --maroon-800: #4d151b;
-  --maroon-700: #6b1e26;
-  --maroon-600: #8a2330;
-  --maroon-500: #a93643;
-  --maroon-200: #f1d8db;
-  --cream-50: #fffaf6;
-  --white: #ffffff;
-  --text-strong: #2a0b10;
-  --text-muted: #6d4a4e;
-  --shadow: 0 18px 36px rgba(59, 15, 20, 0.12);
+  --bg0: #1d2021;
+  --bg1: #282828;
+  --bg2: #3c3836;
+  --bg3: #504945;
+  --fg0: #f8f5f2;
+  --fg1: #ebdbb2;
+  --fg2: #d5c4a1;
+  --fg3: #bdae93;
+  --fg4: #a89984;
+  --red: #fb4934;
+  --green: #b8bb26;
+  --yellow: #fabd2f;
+  --blue: #83a598;
+  --purple: #d3869b;
+  --aqua: #8ec07c;
+  --orange: #fe8019;
 }
 
 *,
@@ -20,9 +25,9 @@
 
 body {
   margin: 0;
-  font-family: "Source Sans 3", "Segoe UI", sans-serif;
-  color: var(--text-strong);
-  background: radial-gradient(circle at top left, #fff, var(--cream-50) 38%, #f3e0e3 100%);
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  color: var(--fg0);
+  background: var(--bg0);
   min-height: 100vh;
 }
 
@@ -47,56 +52,70 @@ body {
 .brand-mark {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--maroon-600), var(--maroon-800));
-  box-shadow: 0 10px 20px rgba(59, 15, 20, 0.2);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--green), var(--aqua));
+  box-shadow: 0 4px 12px rgba(184, 187, 38, 0.25);
+}
+
+.brand-mark::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url("data:image/svg+xml,%3Csvg width='24' height='24' fill='none' stroke='%231d2021' stroke-width='2.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2L2 7l10 5 10-5-10-5z'/%3E%3Cpath d='M2 17l10 5 10-5'/%3E%3Cpath d='M2 12l10 5 10-5'/%3E%3C/svg%3E") no-repeat center;
+  background-size: 24px;
 }
 
 .brand-kicker {
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   font-size: 0.65rem;
-  color: var(--maroon-600);
+  color: var(--green);
 }
 
 .brand-title {
-  margin: 6px 0 0;
-  font-family: "Playfair Display", "Georgia", serif;
-  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
-  color: var(--maroon-800);
+  margin: 4px 0 0;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  color: var(--fg0);
+  font-weight: 700;
 }
 
 .topnav {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .topnav a {
   text-decoration: none;
-  color: var(--maroon-700);
+  color: var(--fg2);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  border: 1px solid rgba(107, 30, 38, 0.2);
-  padding: 6px 12px;
-  border-radius: 999px;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--bg1);
+  border: 1px solid var(--bg3);
+  transition: all 0.2s;
+}
+
+.topnav a:hover {
+  background: var(--bg2);
+  border-color: var(--green);
+  color: var(--fg0);
 }
 
 .chat-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 2.4fr);
-  gap: 22px;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2.4fr);
+  gap: 20px;
 }
 
 .chat-side {
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 20px;
+  background: var(--bg1);
+  border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(107, 30, 38, 0.12);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--bg3);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -104,17 +123,19 @@ body {
 
 .chat-side h2 {
   margin: 0;
-  color: var(--maroon-800);
+  color: var(--fg1);
+  font-size: 1.1rem;
 }
 
 .muted {
-  color: var(--text-muted);
+  color: var(--fg4);
   margin: 0;
   line-height: 1.5;
+  font-size: 0.9rem;
 }
 
 .btn {
-  border-radius: 999px;
+  border-radius: 8px;
   border: none;
   padding: 10px 18px;
   font-weight: 600;
@@ -123,51 +144,97 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s;
 }
 
 .btn.primary {
-  background: var(--maroon-700);
-  color: var(--white);
+  background: var(--green);
+  color: var(--bg0);
+}
+
+.btn.primary:hover {
+  background: #a3b122;
 }
 
 .btn.ghost {
-  background: var(--white);
-  color: var(--maroon-700);
-  border: 1px solid rgba(107, 30, 38, 0.2);
+  background: transparent;
+  color: var(--fg1);
+  border: 1px solid var(--bg3);
+}
+
+.btn.ghost:hover {
+  background: var(--bg2);
+  border-color: var(--fg4);
 }
 
 .btn.subtle {
-  background: rgba(107, 30, 38, 0.08);
-  color: var(--maroon-700);
-  border: 1px solid rgba(107, 30, 38, 0.14);
+  background: var(--bg2);
+  color: var(--fg2);
+  border: 1px solid var(--bg3);
 }
 
 .btn.full {
   width: 100%;
 }
 
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  color: var(--fg3);
+  font-weight: 500;
+}
+
+.voice-select {
+  background: var(--bg2);
+  color: var(--fg0);
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.voice-select:focus {
+  outline: none;
+  border-color: var(--aqua);
+}
+
 .hint-card {
   margin-top: auto;
-  background: rgba(241, 216, 219, 0.6);
-  border-radius: 16px;
+  background: var(--bg2);
+  border-radius: 12px;
   padding: 14px;
+  border: 1px solid var(--bg3);
 }
 
 .hint-title {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-weight: 700;
-  color: var(--maroon-700);
+  color: var(--yellow);
+  font-size: 0.85rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--fg2);
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .chat-panel {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 24px;
-  padding: 18px;
-  border: 1px solid rgba(107, 30, 38, 0.12);
-  box-shadow: var(--shadow);
+  background: var(--bg1);
+  border-radius: 20px;
+  padding: 16px;
+  border: 1px solid var(--bg3);
   display: flex;
   flex-direction: column;
-  min-height: 68vh;
+  min-height: 65vh;
 }
 
 .chat-box {
@@ -182,21 +249,22 @@ body {
 .message {
   max-width: 75%;
   padding: 12px 16px;
-  border-radius: 16px;
+  border-radius: 14px;
   animation: fadeIn 0.3s ease;
+  line-height: 1.5;
 }
 
 .user-message {
   align-self: flex-end;
-  background: var(--maroon-700);
-  color: var(--white);
+  background: var(--green);
+  color: var(--bg0);
   border-bottom-right-radius: 4px;
 }
 
 .bot-message {
   align-self: flex-start;
-  background: rgba(241, 216, 219, 0.5);
-  color: var(--text-strong);
+  background: var(--bg2);
+  color: var(--fg0);
   border-bottom-left-radius: 4px;
 }
 
@@ -205,14 +273,26 @@ body {
   grid-template-columns: 1fr auto;
   gap: 12px;
   padding: 12px;
-  border-top: 1px solid rgba(107, 30, 38, 0.12);
+  border-top: 1px solid var(--bg3);
+  margin-top: 8px;
 }
 
 .chat-input input {
-  border-radius: 999px;
-  border: 1px solid rgba(107, 30, 38, 0.2);
+  border-radius: 10px;
+  border: 1px solid var(--bg3);
   padding: 12px 16px;
   font-size: 0.95rem;
+  background: var(--bg2);
+  color: var(--fg0);
+}
+
+.chat-input input::placeholder {
+  color: var(--fg4);
+}
+
+.chat-input input:focus {
+  outline: none;
+  border-color: var(--aqua);
 }
 
 .animation-prompt {
@@ -220,10 +300,21 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: rgba(241, 216, 219, 0.8);
-  border-radius: 16px;
-  padding: 10px 14px;
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 12px 16px;
   margin: 10px 12px;
+  border: 1px solid var(--bg3);
+}
+
+.animation-prompt p {
+  margin: 0;
+  color: var(--fg2);
+  font-size: 0.9rem;
+}
+
+.animation-prompt .btn {
+  padding: 8px 16px;
 }
 
 .hidden {
@@ -241,8 +332,8 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--maroon-600);
-  opacity: 0.3;
+  background: var(--green);
+  opacity: 0.4;
   animation: typingPulse 1s infinite ease-in-out;
 }
 
@@ -269,7 +360,7 @@ body {
   0%,
   80%,
   100% {
-    opacity: 0.3;
+    opacity: 0.4;
     transform: translateY(0);
   }
   40% {
@@ -281,5 +372,14 @@ body {
 @media (max-width: 900px) {
   .chat-layout {
     grid-template-columns: 1fr;
+  }
+  
+  .chat-side {
+    order: 1;
+  }
+  
+  .chat-panel {
+    order: 0;
+    min-height: 50vh;
   }
 }

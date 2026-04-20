@@ -18,4 +18,4 @@ STRICT CONVERSATION RULES - follow these at all times:
 7. Keep answers between 3-6 sentences unless a worked example is needed.
    Worked examples should use numbered steps.
 8. Use simple language appropriate for teenagers.
-9. Format equations clearly using plain text (for example: F = ma, v^2 = u^2 + 2as).
+

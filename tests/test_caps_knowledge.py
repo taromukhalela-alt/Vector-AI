@@ -26,3 +26,13 @@ def test_training_corpus_contains_caps_topics():
     assert len(texts) == len(labels)
     assert "electricity" in labels
     assert "kinematics" in labels
+
+
+def test_formula_symbol_definition_does_not_crash():
+    answer = caps_knowledge.answer_caps_question(
+        "What is i in refraction?",
+        predicted_intent="optics",
+    )
+    assert answer is not None
+    assert answer["kind"] == "definition"
+    assert "angle of incidence" in answer["response"].lower()

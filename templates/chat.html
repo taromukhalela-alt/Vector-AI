@@ -18,8 +18,7 @@
       <nav class="topnav">
         <a href="/">Home</a>
         <a href="/animations">Animations</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/history">History</a>
+        <a href="/notes">Notes</a>
       </nav>
     </header>
 
@@ -31,9 +30,18 @@
         </p>
         <button id="new-session" class="btn ghost full">Start New Session</button>
         <button id="logout-btn" class="btn subtle full">Logout</button>
+        
+        <!-- Voice Settings -->
+        <div class="control-group">
+          <label for="voice-select" class="control-label">TTS Voice</label>
+          <select id="voice-select" class="voice-select">
+            <option value="default">Default</option>
+          </select>
+        </div>
+        
         <div class="hint-card">
           <p class="hint-title">Try a prompt</p>
-          <p class="hint">“Projectile range for v0=40 m/s at 30 degrees.”</p>
+          <p class="hint">"Projectile range for v0=40 m/s at 30 degrees."</p>
         </div>
       </aside>
 

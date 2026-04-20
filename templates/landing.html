@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector AI - Your CAPS Physics and Chemistry Tutor</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --bg0: #1d2021;
+            --bg1: #282828;
+            --bg2: #3c3836;
+            --bg3: #504945;
+            --fg0: #f8f5f2;
+            --fg1: #ebdbb2;
+            --fg2: #d5c4a1;
+            --fg3: #bdae93;
+            --fg4: #a89984;
+            --red: #fb4934;
+            --green: #b8bb26;
+            --yellow: #fabd2f;
+            --blue: #83a598;
+            --purple: #d3869b;
+            --aqua: #8ec07c;
+            --orange: #fe8019;
+            --gray: #928374;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg0);
+            color: var(--fg0);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        a {
+            transition: color 0.2s, background 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--green);
+            color: var(--bg0);
+            border-radius: 8px;
+            padding: 0.875rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary:hover {
+            background: #a3b122;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--fg1);
+            border: 1px solid var(--bg3);
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg2);
+            border-color: var(--fg4);
+        }
+        
+        .feature-card {
+            background: var(--bg1);
+            border: 1px solid var(--bg3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--aqua);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }
+        
+        .logo-accent {
+            background: linear-gradient(135deg, var(--green) 0%, var(--aqua) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-mascot {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--green), var(--aqua));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2.5rem;
+        }
+        
+        .hero-mascot svg {
+            color: var(--bg0);
+        }
+        
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--fg3);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+        
+        .topic-tag {
+            background: var(--bg2);
+            border: 1px solid var(--bg3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        
+        .topic-tag span {
+            display: block;
+            font-weight: 600;
+            color: var(--fg1);
+        }
+        
+        .topic-tag small {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--fg4);
+            margin-top: 0.25rem;
+        }
+        
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--bg2);
+            border: 2px solid var(--green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--green);
+            flex-shrink: 0;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--bg3);
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <nav class="px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: var(--green);">
+                <svg width="24" height="24" fill="none" stroke="#1d2021" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <span class="font-bold text-xl" style="color: var(--fg0);">Vector AI</span>
+        </div>
+        <div class="flex gap-4">
+            <a href="{{ url_for('auth.login') }}" class="btn-secondary text-sm">
+                Sign In
+            </a>
+            <a href="{{ url_for('auth.register') }}" class="btn-primary text-sm" style="padding: 0.5rem 1.25rem;">
+                Get Started
+            </a>
+        </div>
+    </nav>
+
+    <section class="max-w-5xl mx-auto px-6 py-16 text-center">
+        <div class="hero-mascot">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+        </div>
+        <h1 class="hero-title mb-4">
+            <span class="logo-accent">Vector AI</span> — Your CAPS Tutor
+        </h1>
+        <p class="hero-subtitle">
+            Master South African physics and chemistry with interactive animations,
+            voice guidance, and intelligent tutoring aligned to CAPS Physical Sciences.
+        </p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+            <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                Start Learning Free
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </a>
+            <a href="#features" class="btn-secondary">
+                Learn More
+            </a>
+        </div>
+
+        <div id="features" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mt-8">
+            <div class="feature-card">
+                <div class="text-2xl mb-2">🎯</div>
+                <h3 class="font-bold text-lg mb-2" style="color: var(--fg1);">CAPS-Aligned</h3>
+                <p class="text-sm" style="color: var(--fg3);">
+                    Focused CAPS support for physics and chemistry topics that matter most in Physical Sciences.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="text-2xl mb-2">🎬</div>
+                <h3 class="font-bold text-lg mb-2" style="color: var(--fg1);">Animations</h3>
+                <p class="text-sm" style="color: var(--fg3);">
+                    Interactive simulations for physics and chemistry, from projectile motion to gas laws and electrochemistry.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="text-2xl mb-2">🤖</div>
+                <h3 class="font-bold text-lg mb-2" style="color: var(--fg1);">AI Notes</h3>
+                <p class="text-sm" style="color: var(--fg3);">
+                    Ask Vector to create study notes. Save and organize. Access offline anytime.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto px-6 py-12">
+        <h2 class="text-2xl font-bold text-center mb-8" style="color: var(--fg1);">How It Works</h2>
+        
+        <div class="space-y-6">
+            <div class="flex flex-col md:flex-row gap-4 items-start">
+                <div class="step-number">1</div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-1" style="color: var(--fg1);">Ask a question or pick a topic</h3>
+                    <p style="color: var(--fg3);">Type or speak your physics or chemistry question. Vector understands CAPS terms and exam-style phrasing.</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4 items-start">
+                <div class="step-number">2</div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-1" style="color: var(--fg1);">Watch animations or read explanations</h3>
+                    <p style="color: var(--fg3);">Visualize physics and chemistry processes with interactive simulations. Tweak variables and see changes.</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-4 items-start">
+                <div class="step-number">3</div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-1" style="color: var(--fg1);">Save AI-generated notes</h3>
+                    <p style="color: var(--fg3);">Get structured summaries with formulas and examples. Revise anytime.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto px-6 py-12">
+        <h2 class="text-2xl font-bold text-center mb-8" style="color: var(--fg1);">Topics Covered</h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="topic-tag">
+                <span>Mechanics</span>
+                <small>Forces, Motion</small>
+            </div>
+            <div class="topic-tag">
+                <span>Waves</span>
+                <small>Sound, Light</small>
+            </div>
+            <div class="topic-tag">
+                <span>Electricity</span>
+                <small>Circuits, Fields</small>
+            </div>
+            <div class="topic-tag">
+                <span>Magnetism</span>
+                <small>EM Induction</small>
+            </div>
+            <div class="topic-tag">
+                <span>Optics</span>
+                <small>Lenses, Mirrors</small>
+            </div>
+            <div class="topic-tag">
+                <span>Thermodynamics</span>
+                <small>Gas Laws, Heat</small>
+            </div>
+            <div class="topic-tag">
+                <span>Electrochemistry</span>
+                <small>Cells, Redox</small>
+            </div>
+            <div class="topic-tag">
+                <span>Chemistry</span>
+                <small>Reactions, Gases</small>
+            </div>
+        </div>
+    </section>
+
+    <section class="max-w-3xl mx-auto px-6 py-12 text-center">
+        <h2 class="text-2xl font-bold mb-4" style="color: var(--fg1);">Ready to Ace Physical Sciences?</h2>
+        <p class="mb-8" style="color: var(--fg3);">
+            Join South African learners mastering CAPS physics and chemistry with Vector AI.
+        </p>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary text-lg px-8 py-3">
+            Get Started Free
+        </a>
+        
+        <div class="divider my-12"></div>
+        
+        <div class="text-sm" style="color: var(--fg4);">
+            <p>© 2026 Vector AI. Built for SA learners.</p>
+        </div>
+    </section>
+</body>
+</html>

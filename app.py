@@ -1,6 +1,15 @@
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    render_template,
+    session,
+    redirect,
+    url_for,
+)
 from flask_cors import CORS
 from flask_caching import Cache
+from flask_login import login_required, LoginManager, current_user, logout_user
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -18,13 +27,12 @@ import time
 from model.generator import MAX_HISTORY, normalize_history
 from dotenv import load_dotenv
 
+# Import Groq
 try:
-    import google.generativeai as genai
+    from groq import Groq
 except ImportError:
-try:
-    import google.generativeai as genai
-except ImportError:
-    genai = None
+    Groq = None
+
 import physics_engine  # Import the new module
 from caps_knowledge import (
     PHYSICS_INTENTS,
@@ -41,14 +49,24 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
-CORS(app, origins=[os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")])
+
+# Configure CORS
+cors_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")
+if isinstance(cors_origins, str):
+    cors_origins = [cors_origins]
+CORS(app, origins=cors_origins)
+
+# Initialize Auth
+from auth import init_auth, login_manager
+
+init_auth(app)
 
 # Log API key status on startup for debugging
-gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-if gemini_key:
-    logger.info("Gemini API key loaded (length: %d)", len(gemini_key))
+groq_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
+if groq_key:
+    logger.info("Groq API key loaded (length: %d)", len(groq_key))
 else:
-    logger.warning("Gemini API key NOT found. Set GEMINI_API_KEY environment variable.")
+    logger.warning("Groq API key NOT found. Set GROQ_API_KEY environment variable.")
 
 # Configure Caching
 cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
@@ -58,17 +76,17 @@ USERS_FILE = "users.json"
 # ============================================================
 # SYSTEM PROMPTS
 # ============================================================
-PHYSICS_SYSTEM_PROMPT = """You are Vector AI, a knowledgeable and friendly tutor for South African high school students following the CAPS curriculum for Grades 10 to 12.
+PHYSICS_SYSTEM_PROMPT = """You are Vector AI, a knowledgeable and friendly tutor for South African high school students following the CAPS Physical Sciences curriculum for Grades 10 to 12, covering physics and chemistry.
 If the student says yes, sure, okay, or ja, immediately do what you last offered and do not ask again.
 Do not repeat the same response twice in a row.
-For a single word topic such as electricity, start explaining immediately.
+For a single word topic such as electricity, projectile motion, gas laws, or acids, start explaining immediately.
 Provide thorough, educational answers with clear step-by-step explanations and worked examples where relevant.
 Use clear CAPS aligned explanations and correct technical terms.
-When a student asks a non physics question, answer helpfully and naturally.
-For maths questions, provide full working because maths supports physics.
+Stay centered on physics and chemistry. If a learner asks something unrelated, gently redirect them back to Physical Sciences.
+For maths questions, provide full working because maths supports physical sciences learning.
 """
 
-VOICE_SYSTEM_PROMPT = """You are Vector AI in voice mode for a South African CAPS physics learner.
+VOICE_SYSTEM_PROMPT = """You are Vector AI in voice mode for a South African CAPS Physical Sciences learner.
 Your answer will be spoken by text to speech.
 Use clear, descriptive sentences that are easy to understand.
 Do not use bullet points, numbered lists, markdown, emojis, brackets, slashes, stars, arrows, or special symbols.
@@ -183,6 +201,57 @@ AFFIRMATIVES = {
 
 INTENT_KEYWORDS = build_keyword_map()
 
+SCIENCE_TOPIC_LIBRARY = {
+    "gas_laws": {
+        "keywords": ["gas laws", "ideal gas", "boyle", "charles", "pressure", "volume", "temperature"],
+        "response": "Gas laws explain how pressure, volume, and temperature are linked. In CAPS chemistry, Boyle's law links pressure and volume at constant temperature, while Charles's law links volume and temperature at constant pressure.",
+    },
+    "reaction_rates": {
+        "keywords": ["reaction rate", "collision theory", "rate of reaction", "activation energy", "catalyst"],
+        "response": "Reaction rate depends on how often particles collide and whether those collisions have enough energy. Higher temperature, greater concentration, and catalysts increase the rate by making successful collisions more likely.",
+    },
+    "bonding": {
+        "keywords": ["bonding", "ionic bond", "covalent bond", "electronegativity", "chemical bond"],
+        "response": "Chemical bonding explains how atoms become more stable. Ionic bonding involves electron transfer, while covalent bonding involves sharing electrons between atoms.",
+    },
+    "acid_base": {
+        "keywords": ["acid", "base", "ph", "neutralisation", "neutralization"],
+        "response": "Acids release hydrogen ions in solution, bases accept hydrogen ions or release hydroxide ions, and pH shows how acidic or basic a solution is. Neutralisation happens when an acid reacts with a base to form salt and water.",
+    },
+    "electrochemistry": {
+        "keywords": ["electrochemistry", "electrolysis", "galvanic cell", "redox", "cell potential"],
+        "response": "Electrochemistry links chemical reactions to electricity. Redox reactions transfer electrons, galvanic cells produce electrical energy from chemical change, and electrolysis uses electrical energy to drive a chemical change.",
+    },
+}
+
+ANIMATION_KEYWORD_MAP = [
+    {
+        "animation_id": "gas_laws",
+        "animation_label": "Gas Laws",
+        "keywords": ["gas laws", "boyle", "charles", "pressure", "volume", "temperature of gas", "ideal gas"],
+    },
+    {
+        "animation_id": "reaction_rates",
+        "animation_label": "Reaction Rates",
+        "keywords": ["reaction rate", "collision theory", "rate of reaction", "catalyst", "activation energy"],
+    },
+    {
+        "animation_id": "bonding",
+        "animation_label": "Chemical Bonding",
+        "keywords": ["bonding", "ionic", "covalent", "electronegativity", "chemical bond"],
+    },
+    {
+        "animation_id": "acid_base",
+        "animation_label": "Acids and Bases",
+        "keywords": ["acid", "base", "ph", "neutralisation", "neutralization"],
+    },
+    {
+        "animation_id": "electrochemistry",
+        "animation_label": "Electrochemistry",
+        "keywords": ["electrochemistry", "electrolysis", "galvanic", "cell potential", "redox cell"],
+    },
+]
+
 
 def classify_intent(message):
     try:
@@ -240,33 +309,29 @@ def make_voice_friendly(text):
     return cleaned.strip()
 
 
-def _gemini_generate_with_timeout(prompt, api_key, timeout_seconds):
+def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
     result_queue = queue.Queue(maxsize=1)
 
     def worker():
         try:
-            from google import genai
-            from google.genai import types as genai_types
-            
-            client = genai.Client(api_key=api_key)
-            
-            # Format prompt as Content object with proper structure
-            contents = [
-                genai_types.Content(
-                    role="user",
-                    parts=[genai_types.Part.from_text(prompt)]
-                )
-            ]
-            
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=contents
+            client = Groq(api_key=api_key)
+
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",  # Fast, high-quality model
+                messages=[
+                    {"role": "system", "content": "You are a helpful physics tutor."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+                top_p=0.95,
+                max_tokens=2048,
             )
-            
-            text = response.text or ''
+
+            text = response.choices[0].message.content or ""
             result_queue.put(("ok", text.strip()))
         except Exception as exc:
             import traceback
+
             tb = traceback.format_exc()
             result_queue.put(("error", (str(exc), tb)))
 
@@ -275,10 +340,10 @@ def _gemini_generate_with_timeout(prompt, api_key, timeout_seconds):
     try:
         status, payload = result_queue.get(timeout=timeout_seconds)
     except queue.Empty:
-        raise TimeoutError("Gemini request timed out")
+        raise TimeoutError("Groq request timed out")
     if status == "error":
         exc_msg, tb = payload if isinstance(payload, tuple) else (str(payload), "")
-        print(f"\n[GEMINI ERROR]\n{tb}")
+        print(f"\n[GROQ ERROR]\n{tb}")
         raise Exception(exc_msg)
     return payload
 
@@ -289,37 +354,45 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
     if system_prompt is None:
         system_prompt = PHYSICS_SYSTEM_PROMPT
 
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if not api_key or genai is None:
+    api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
+    if not api_key or Groq is None:
         logger.error(
-            "Gemini API not available: key=%s, genai=%s",
-            bool(api_key),
-            genai is not None,
+            "Groq API not available: key=%s, groq=%s", bool(api_key), Groq is not None
         )
-        return local_hint or "I'm ready to help with CAPS physics. Ask me anything!"
+        fallback = local_hint or get_local_science_response(user_message)
+        return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
 
     try:
         prompt = build_prompt(history, user_message, system_prompt)
-        # Longer timeout for hinted questions still not enough; use 4s hinted, 8s full
-        timeout_seconds = 4.0 if local_hint else 8.0
-        text = _gemini_generate_with_timeout(prompt, api_key, timeout_seconds)
+        # Give the model a bit more room before falling back to local explanations.
+        timeout_seconds = 6.0 if local_hint else 10.0
+        text = _groq_generate_with_timeout(prompt, api_key, timeout_seconds)
         if text:
             return text
-        # Gemini returned empty - fall back
+        # If Groq returned empty, try once more with a shorter prompt (no history) as fallback
+        logger.info("Groq returned empty, retrying without history")
+        simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+        text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds)
+        if text:
+            return text
+        # Still empty, use local hint if available
         if local_hint:
-            logger.info("Gemini returned empty, using local hint")
+            logger.info("Groq empty again, using local hint")
             return local_hint
-        return "I couldn't generate a response. Please try rephrasing your question."
+        fallback = get_local_science_response(user_message)
+        return fallback or "I couldn't generate a response. Could you try asking differently?"
     except TimeoutError:
-        logger.error("Gemini timeout after %.1fs", timeout_seconds)
+        logger.error("Groq timeout after %.1fs", timeout_seconds)
         if local_hint:
             return local_hint
-        return "I'm taking too long. Could you ask a simpler question?"
+        fallback = get_local_science_response(user_message)
+        return fallback or "I'm taking too long. Could you ask a simpler question?"
     except Exception as e:
         logger.error("Generation error: %s", e)
         if local_hint:
             return local_hint
-        return "I hit a temporary issue. Please try again."
+        fallback = get_local_science_response(user_message)
+        return fallback or "I hit a temporary issue. Please try again."
 
 
 # -------------------------------
@@ -332,7 +405,7 @@ responses = {
     "trends": "I analyze trends based on user interest and public data.",
     "jokes": "Why did the developer go broke? Because he used up all his cache! 😂",
     "greeting": "Hello! I'm Vector AI. How can I assist you today?",
-    "capabilities": "I can chat about AI, Physics, Python, tell jokes, and analyze trends.",
+    "capabilities": "I can explain CAPS physics and chemistry with text, voice, worked steps, and interactive animations.",
     "unit_conversion": "I can convert units for you. Try 'Convert 10 meters to feet'.",
     "unknown": "I'm still learning 🤖. Could you try rephrasing?",
 }
@@ -363,6 +436,42 @@ PHYSICS_KEYWORDS = {
 def get_local_physics_response(message, intent=None):
     answer = answer_caps_question(message, predicted_intent=intent)
     return answer["response"] if answer else None
+
+
+def get_local_science_response(message, intent=None):
+    physics_answer = get_local_physics_response(message, intent=intent)
+    if physics_answer:
+        return physics_answer
+
+    text = normalize_text(message or "")
+    if not text:
+        return None
+
+    for topic in SCIENCE_TOPIC_LIBRARY.values():
+        if any(keyword in text for keyword in topic["keywords"]):
+            return topic["response"]
+    return None
+
+
+def match_animation_from_keywords(question):
+    text = normalize_text(question or "")
+    if not text:
+        return None
+
+    best_match = None
+    best_score = 0
+    for item in ANIMATION_KEYWORD_MAP:
+        score = sum(1 for keyword in item["keywords"] if keyword in text)
+        if score > best_score:
+            best_match = item
+            best_score = score
+
+    if best_match and best_score > 0:
+        return {
+            "animation_id": best_match["animation_id"],
+            "animation_label": best_match["animation_label"],
+        }
+    return None
 
 
 # -------------------------------
@@ -648,7 +757,7 @@ def ml_detect_intent(message):
 
 
 def get_physics_info(message):
-    local = get_local_physics_response(message, intent="physics")
+    local = get_local_science_response(message, intent="physics")
     if local:
         return local
     for key in physics_facts:
@@ -675,6 +784,7 @@ def save_users(users):
 def save_user_data(
     message, topic, username=None, confidence=None, chat_id=None, reply=None
 ):
+    """Save user conversation data to data.json and also update per-user JSON"""
     try:
         with open("data.json", "r") as file:
             data = json.load(file)
@@ -696,8 +806,30 @@ def save_user_data(
     with open("data.json", "w") as file:
         json.dump(data, file, indent=4)
 
+    # Also update user-specific conversation history
+    if current_user.is_authenticated:
+        users = load_users()
+        user_data = users.get(current_user.id, {})
+        user_conversations = user_data.get("conversations", [])
+        user_conversations.append(
+            {
+                "message": message,
+                "reply": reply,
+                "topic": topic,
+                "time": datetime.now().isoformat(),
+            }
+        )
+        # Keep only last 100 messages
+        user_conversations = user_conversations[-100:]
+        user_data["conversations"] = user_conversations
+        users[current_user.id] = user_data
+        save_users(users)
+
 
 def get_user_key():
+    """Get unique user key for data storage - uses Flask-Login current_user if authenticated"""
+    if current_user.is_authenticated:
+        return current_user.id
     if "session_id" not in session:
         session["session_id"] = os.urandom(8).hex()
     return session.get("user", session["session_id"])
@@ -784,7 +916,8 @@ def metrics():
 
 def _generate_dashboard_payload():
     now = datetime.now()
-    history = load_user_history(session.get("user")) if "user" in session else []
+    username = current_user.id if current_user.is_authenticated else session.get("user")
+    history = load_user_history(username) if username else []
     sessions = build_sessions(history)
     questions_asked = len(history)
     confidences = [
@@ -847,24 +980,26 @@ def dashboard_data():
 
 
 # -------------------------------
-# Science Expo / Dashboard Routes
+# Dashboard / History
 # -------------------------------
 
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
-    """Renders the main Science Expo Dashboard."""
-    return render_template("dashboard.html")
+    return redirect(url_for("chat_page", tab="topics"))
 
 
-@app.route("/api/train_physics", methods=["POST"])
-def train_physics():
-    """Triggers the ML model to retrain on new simulation data."""
-    try:
-        metrics = physics_engine.learner.train()
-        return jsonify({"success": True, "metrics": metrics})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+@app.route("/history")
+@login_required
+def history_notes():
+    return redirect(url_for("chat_page"))
+
+
+@app.route("/history/<chat_id>")
+@login_required
+def history_detail(chat_id):
+    return redirect(url_for("chat_page"))
 
 
 @app.route("/api/simulate", methods=["POST"])
@@ -963,11 +1098,9 @@ def simulate_physics():
 # -------------------------------
 @app.route("/")
 def home():
-    # Ensure session tracking
-    user_key = get_user_key()
-    ensure_chat_id()
-    user_conversations.setdefault(user_key, [])
-    return render_template("index.html")
+    if current_user.is_authenticated:
+        return redirect(url_for("chat_page"))
+    return redirect(url_for("auth.landing"))
 
 
 @app.route("/assistant")
@@ -975,119 +1108,69 @@ def assistant():
     return redirect(url_for("chat_page"))
 
 
+@app.route("/logout", methods=["GET", "POST"])
+def logout_alias():
+    logout_user()
+    session.clear()
+    if request.is_json or request.method == "POST":
+        return jsonify({"success": True, "redirect": url_for("auth.landing")})
+    return redirect(url_for("auth.landing"))
+
+
 @app.route("/chat", methods=["GET"])
+@login_required
 def chat_page():
+    session["user"] = current_user.id
     get_user_key()
     ensure_chat_id()
-    return render_template("chat.html")
+    return render_template("index.html", user=current_user)
+
+
+@app.route("/notes")
+@login_required
+def notes_page():
+    session["user"] = current_user.id
+    return render_template("notes.html", user=current_user)
 
 
 @app.route("/animations")
+@login_required
 def animations():
-    get_user_key()
-    ensure_chat_id()
-    return render_template("animations.html")
-
-
-@app.route("/register", methods=["POST"])
-def register():
-    username = request.json.get("username")
-    password = request.json.get("password")
-    users = load_users()
-
-    if username in users:
-        return jsonify({"success": False, "message": "User already exists"})
-
-    users[username] = generate_password_hash(password)
-    save_users(users)
-    session["user"] = username
-    return jsonify({"success": True, "username": username})
-
-
-@app.route("/login", methods=["POST"])
-def login():
-    username = request.json.get("username")
-    password = request.json.get("password")
-    users = load_users()
-
-    if username in users and check_password_hash(users[username], password):
-        session["user"] = username
-        return jsonify({"success": True, "username": username})
-
-    return jsonify({"success": False, "message": "Invalid credentials"})
-
-
-@app.route("/logout", methods=["POST"])
-def logout():
-    session.pop("user", None)
-    session.pop("chat_id", None)
-    return jsonify({"success": True})
+    args = {"tab": "animations"}
+    anim = request.args.get("anim")
+    q = request.args.get("q")
+    if anim:
+        args["anim"] = anim
+    if q:
+        args["q"] = q
+    return redirect(url_for("chat_page", **args))
 
 
 @app.route("/check_auth")
 def check_auth():
-    if "user" in session:
-        return jsonify({"authenticated": True, "username": session["user"]})
+    if current_user.is_authenticated:
+        return jsonify(
+            {
+                "authenticated": True,
+                "user": {
+                    "id": current_user.id,
+                    "email": current_user.email,
+                    "name": current_user.name,
+                    "avatar": current_user.avatar,
+                },
+            }
+        )
     return jsonify({"authenticated": False})
 
 
-@app.route("/history")
-def history_page():
-    if "user" not in session:
-        return redirect(url_for("home"))
-    history = load_user_history(session["user"])
-    sessions = build_sessions(history)
-    return render_template(
-        "history.html", sessions=sessions, active_chat_id=None, active_session=None
-    )
-
-
-@app.route("/history/<chat_id>")
-def history_detail(chat_id):
-    if "user" not in session:
-        return redirect(url_for("home"))
-    history = load_user_history(session["user"])
-    sessions = build_sessions(history)
-    active_session = next((s for s in sessions if s["chat_id"] == chat_id), None)
-    if active_session:
-        messages = []
-        for entry in active_session["messages"]:
-            messages.append(
-                {
-                    "role": "user",
-                    "message": entry.get("message", ""),
-                    "time": _format_time(entry.get("time", "")),
-                    "topic": entry.get("topic", "unknown"),
-                    "confidence": f"{entry.get('confidence', 0)}%",
-                }
-            )
-            if entry.get("reply"):
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "message": entry.get("reply", ""),
-                        "time": _format_time(entry.get("time", "")),
-                        "topic": entry.get("topic", "assistant"),
-                        "confidence": f"{entry.get('confidence', 0)}%",
-                    }
-                )
-        active_session["messages"] = messages
-    return render_template(
-        "history.html",
-        sessions=sessions,
-        active_chat_id=chat_id,
-        active_session=active_session,
-    )
-
-
 @app.route("/api/history")
+@login_required
 def api_history():
-    if "user" not in session:
-        return jsonify([])
-    return jsonify(load_user_history(session["user"]))
+    return jsonify(load_user_history(current_user.id))
 
 
 @app.route("/api/new_session", methods=["POST"])
+@login_required
 def new_session():
     session["chat_id"] = os.urandom(6).hex()
     user_key = get_user_key()
@@ -1096,12 +1179,17 @@ def new_session():
 
 
 @app.route("/match-animation", methods=["POST"])
+@login_required
 def match_animation():
     try:
         payload = request.get_json(silent=True) or {}
         question = (payload.get("question") or "").strip()
         if not question:
             return jsonify({"animation_id": None})
+
+        keyword_match = match_animation_from_keywords(question)
+        if keyword_match:
+            return jsonify(keyword_match)
 
         intent, confidence = classify_intent(question)
         conf_value = float(confidence)
@@ -1118,8 +1206,8 @@ def match_animation():
                 "animation_label": "Momentum and Collisions",
             },
             "energy": {
-                "animation_id": "energy",
-                "animation_label": "Conservation of Energy",
+                "animation_id": "thermodynamics",
+                "animation_label": "Energy Transfers",
             },
             "gravitation": {
                 "animation_id": "orbit",
@@ -1150,6 +1238,10 @@ def match_animation():
                 "animation_id": "electricity",
                 "animation_label": "Electric Fields",
             },
+            "chemistry": {
+                "animation_id": "reaction_rates",
+                "animation_label": "Chemistry Reactions",
+            },
         }
 
         if conf_value >= 35.0 and intent in intent_to_animation:
@@ -1174,9 +1266,7 @@ def chat():
     history = normalize_history(payload.get("history", []))
     user_key = get_user_key()
     if not history:
-        history = normalize_history(session.get("history", [])) or list(
-            user_conversations.get(user_key, [])
-        )
+        history = list(user_conversations.get(user_key, []))
     intent = "unknown"
     confidence = 30.0
 
@@ -1188,6 +1278,8 @@ def chat():
             deterministic_hint = perform_unit_conversion(user_message)
         elif intent in PHYSICS_INTENTS or intent == "physics":
             deterministic_hint = solve_physics_problem(user_message)
+        if not deterministic_hint:
+            deterministic_hint = get_local_science_response(user_message, intent=intent)
 
         system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
         prompt = user_message
@@ -1231,7 +1323,6 @@ def chat():
 
         # Keep server-side copy for existing analytics/history pages
         user_conversations[user_key] = list(history)
-        session["history"] = list(history)
         ensure_chat_id()
     except Exception as e:
         logger.error("Chat Error: %s", e)
@@ -1240,7 +1331,7 @@ def chat():
     save_user_data(
         user_message,
         intent,
-        session.get("user"),
+        current_user.id if current_user.is_authenticated else session.get("user"),
         confidence=confidence,
         chat_id=session.get("chat_id"),
         reply=reply,
@@ -1248,6 +1339,262 @@ def chat():
 
     return jsonify(
         {"reply": reply, "history": history, "confidence": confidence, "intent": intent}
+    )
+
+
+# ============ NOTES API ============
+
+
+@app.route("/api/notes", methods=["GET"])
+@login_required
+def get_notes():
+    """Get all notes for current user"""
+    users = load_users()
+    user_notes = users.get(current_user.id, {}).get("notes", [])
+    return jsonify({"success": True, "notes": user_notes})
+
+
+@app.route("/api/notes", methods=["POST"])
+@login_required
+def create_note():
+    """Create a new AI-assisted note"""
+    data = request.get_json() or {}
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    topic = data.get("topic", "").strip()
+
+    if not title or not content:
+        return jsonify({"success": False, "message": "Title and content required"}), 400
+
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    note_id = f"note_{datetime.now().timestamp()}"
+    new_note = {
+        "id": note_id,
+        "title": title,
+        "content": content,
+        "topic": topic,
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+        "tags": data.get("tags", []),
+        "source": "ai" if data.get("ai_generated") else "user",
+    }
+
+    notes.append(new_note)
+    user_data["notes"] = notes
+    users[current_user.id] = user_data
+    save_users(users)
+
+    return jsonify({"success": True, "note": new_note})
+
+
+@app.route("/api/notes/<note_id>", methods=["PUT"])
+@login_required
+def update_note(note_id):
+    """Update an existing note"""
+    data = request.get_json() or {}
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    for note in notes:
+        if note["id"] == note_id:
+            note["title"] = data.get("title", note["title"])
+            note["content"] = data.get("content", note["content"])
+            note["topic"] = data.get("topic", note["topic"])
+            note["updated_at"] = datetime.now().isoformat()
+            users[current_user.id] = user_data
+            save_users(users)
+            return jsonify({"success": True, "note": note})
+
+    return jsonify({"success": False, "message": "Note not found"}), 404
+
+
+@app.route("/api/notes/<note_id>", methods=["DELETE"])
+@login_required
+def delete_note(note_id):
+    """Delete a note"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    notes = [n for n in notes if n["id"] != note_id]
+    user_data["notes"] = notes
+    users[current_user.id] = user_data
+    save_users(users)
+
+    return jsonify({"success": True})
+
+
+@app.route("/api/notes/<note_id>", methods=["GET"])
+@login_required
+def get_note(note_id):
+    """Get single note"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    for note in notes:
+        if note["id"] == note_id:
+            return jsonify({"success": True, "note": note})
+
+    return jsonify({"success": False, "message": "Note not found"}), 404
+
+
+@app.route("/api/notes/search", methods=["POST"])
+@login_required
+def search_notes():
+    """Search notes by topic or content"""
+    data = request.get_json() or {}
+    query = data.get("query", "").lower().strip()
+
+    if not query:
+        return jsonify({"success": False, "message": "Query required"}), 400
+
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    results = []
+    for note in notes:
+        if (
+            query in note["title"].lower()
+            or query in note["content"].lower()
+            or query in note.get("topic", "").lower()
+        ):
+            results.append(note)
+
+    return jsonify({"success": True, "notes": results, "count": len(results)})
+
+
+@app.route("/api/notes/sync", methods=["GET"])
+@login_required
+def sync_notes():
+    """Get all notes with timestamp for offline sync"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+    last_sync = request.args.get("since", "1970-01-01")
+
+    # Filter notes updated after last_sync
+    updated_notes = [
+        n for n in notes if n.get("updated_at", n.get("created_at", "")) > last_sync
+    ]
+
+    return jsonify(
+        {
+            "success": True,
+            "notes": updated_notes,
+            "last_sync": datetime.now().isoformat(),
+        }
+    )
+
+
+@app.route("/api/notes/sync", methods=["POST"])
+@login_required
+def push_notes():
+    """Receive offline changes and merge"""
+    data = request.get_json() or {}
+    client_notes = data.get("notes", [])
+
+    if not isinstance(client_notes, list):
+        return jsonify({"success": False, "message": "Invalid notes data"}), 400
+
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    server_notes = user_data.get("notes", [])
+
+    # Simple merge: client wins on conflict (by updated_at)
+    note_map = {n["id"]: n for n in server_notes}
+
+    for client_note in client_notes:
+        note_id = client_note.get("id")
+        if note_id:
+            if note_id in note_map:
+                client_updated = client_note.get("updated_at", "")
+                server_updated = note_map[note_id].get("updated_at", "")
+                if client_updated > server_updated:
+                    note_map[note_id] = client_note
+            else:
+                note_map[note_id] = client_note
+
+    merged_notes = list(note_map.values())
+    merged_notes.sort(
+        key=lambda x: x.get("updated_at", x.get("created_at", "")), reverse=True
+    )
+
+    user_data["notes"] = merged_notes
+    users[current_user.id] = user_data
+    save_users(users)
+
+    return jsonify({"success": True, "notes": merged_notes, "count": len(merged_notes)})
+
+
+@app.route("/api/notes/export", methods=["GET"])
+@login_required
+def export_notes():
+    """Export notes for offline use (text corpus for intent classifier)"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    notes = user_data.get("notes", [])
+
+    # Build text corpus from notes
+    corpus = []
+    for note in notes:
+        corpus.append(f"Title: {note.get('title', '')}")
+        corpus.append(f"Topic: {note.get('topic', '')}")
+        corpus.append(note.get("content", ""))
+        corpus.append("---")
+
+    text_corpus = "\n".join(corpus)
+
+    return jsonify({"success": True, "corpus": text_corpus, "notes_count": len(notes)})
+
+
+@app.route("/api/user/preferences", methods=["GET"])
+@login_required
+def get_preferences():
+    """Get user preferences"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    prefs = user_data.get("preferences", {})
+    return jsonify({"success": True, "preferences": prefs})
+
+
+@app.route("/api/user/preferences", methods=["POST"])
+@login_required
+def update_preferences():
+    """Update user preferences (voice, etc)"""
+    data = request.get_json() or {}
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    prefs = user_data.get("preferences", {})
+    prefs.update(data)
+    user_data["preferences"] = prefs
+    users[current_user.id] = user_data
+    save_users(users)
+    return jsonify({"success": True, "preferences": prefs})
+
+
+@app.route("/api/user/profile", methods=["GET"])
+@login_required
+def get_profile():
+    """Get user profile"""
+    users = load_users()
+    user_data = users.get(current_user.id, {})
+    return jsonify(
+        {
+            "success": True,
+            "profile": {
+                "name": current_user.name,
+                "email": current_user.email,
+                "avatar": current_user.avatar,
+                "created_at": user_data.get("created_at"),
+                "notes_count": len(user_data.get("notes", [])),
+            },
+        }
     )
 
 

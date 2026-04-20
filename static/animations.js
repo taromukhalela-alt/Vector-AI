@@ -1427,7 +1427,581 @@ function renderDoppler3D() {
   });
 }
 
-// === ANIMATION REGISTRY ===
+// === CHEMISTRY ANIMATION RENDERERS (Placeholders) ===
+
+function createBox(color) {
+  if (!window.THREE) {
+    console.error("THREE.js not loaded");
+    return null;
+  }
+  const geometry = new THREE.BoxGeometry(6, 4, 4);
+  const material = new THREE.MeshBasicMaterial({ 
+    color, 
+    transparent: true, 
+    opacity: 0.7,
+    wireframe: true
+  });
+  return new THREE.Mesh(geometry, material);
+}
+
+function createSphere(color, radius = 1) {
+  if (!window.THREE) return null;
+  const geometry = new THREE.SphereGeometry(radius, 16, 16);
+  const material = new THREE.MeshBasicMaterial({ 
+    color,
+    transparent: true,
+    opacity: 0.85
+  });
+  const sphere = new THREE.Mesh(geometry, material);
+  sphere.userData = { type: 'particle' };
+  return sphere;
+}
+
+function createCylinder(color) {
+  if (!window.THREE) return null;
+  const geometry = new THREE.CylinderGeometry(2, 2, 6, 16);
+  const material = new THREE.MeshBasicMaterial({ 
+    color,
+    transparent: true,
+    opacity: 0.7,
+    wireframe: true
+  });
+  const cylinder = new THREE.Mesh(geometry, material);
+  return cylinder;
+}
+
+function createMovingParticles(count, color) {
+  if (!window.THREE) return new THREE.Group();
+  const group = new THREE.Group();
+  for (let i = 0; i < count; i++) {
+    const sphere = createSphere(color, 0.15);
+    sphere.position.set(
+      (Math.random() - 0.5) * 5,
+      (Math.random() - 0.5) * 3,
+      (Math.random() - 0.5) * 3
+    );
+    sphere.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.02
+    );
+    group.add(sphere);
+  }
+  
+  function move() {
+    if (!window.currentAnim) return;
+    group.children.forEach(p => {
+      if (p.userData.react) {
+        p.position.add(p.userData.velocity);
+        ['x','y','z'].forEach(axis => {
+          if (Math.abs(p.position[axis]) > 2.5) p.userData.velocity[axis] *= -1;
+        });
+      }
+    });
+    requestAnimationFrame(move);
+  }
+  move();
+  
+  return group;
+}
+
+function renderGasLaws3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "PV = nRT", variable: "Ideal Gas Law" });
+  
+  scene.add(createBox(0x6b1e26));
+  scene.add(createMovingParticles(50, 0x8a2330));
+  setActiveAnimButton("gas_laws");
+}
+
+function renderReactionRates3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "Rate = k[A]^m[B]^n", variable: "Reaction Rate" });
+  
+  scene.add(createSphere(0x6b1e26));
+  const particles = createMovingParticles(30, 0xb8bb26);
+  particles.children.forEach(p => p.userData.react = true);
+  scene.add(particles);
+  setActiveAnimButton("reaction_rates");
+}
+
+function renderBonding3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "Na + Cl → NaCl", variable: "Ionic Bonding" });
+  
+  const atom1 = createSphere(0x4d151b, 1);
+  const atom2 = createSphere(0x98971a, 1);
+  atom1.position.set(-2, 0, 0);
+  atom2.position.set(2, 0, 0);
+  scene.add(atom1, atom2);
+  
+  let t = 0;
+  function animateBond() {
+    if (!window.currentAnim || window.currentAnim !== "bonding") return;
+    t += 0.01;
+    atom1.position.x = -2 + Math.sin(t) * 0.5;
+    atom2.position.x = 2 - Math.sin(t) * 0.5;
+    requestAnimationFrame(animateBond);
+  }
+  animateBond();
+  
+  setActiveAnimButton("bonding");
+}
+
+function renderAcidBase3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "pH = -log[H⁺]", variable: "Acid-Base" });
+  
+  scene.add(createBox(0x8ec07c));
+  setActiveAnimButton("acid_base");
+}
+
+function renderElectrochemistry3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "E°cell = E°cathode - E°anode", variable: "Electrochemistry" });
+  
+  scene.add(createCylinder(0x83a598));
+  setActiveAnimButton("electrochemistry");
+}
+
+function renderReactionRates3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "Rate = k[A]^m[B]^n", variable: "Reaction Rate" });
+  
+  // Colliding particles animation
+  scene.add(createSphere(0x6b1e26));
+  const particles = createMovingParticles(30, 0xb8bb26);
+  particles.forEach(p => p.userData.react = true);
+  scene.add(particles);
+  setActiveAnimButton("reaction_rates");
+}
+
+function renderBonding3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "Na + Cl → NaCl", variable: "Ionic Bonding" });
+  
+  // Two spheres approaching each other
+  const atom1 = createSphere(0x4d151b, 1);
+  const atom2 = createSphere(0x98971a, 1);
+  atom1.position.set(-2, 0, 0);
+  atom2.position.set(2, 0, 0);
+  scene.add(atom1, atom2);
+  
+  // Animate bond formation
+  let t = 0;
+  function animateBond() {
+    if (!window.currentAnim || window.currentAnim !== "bonding") return;
+    t += 0.01;
+    atom1.position.x = -2 + Math.sin(t) * 0.5;
+    atom2.position.x = 2 - Math.sin(t) * 0.5;
+    requestAnimationFrame(animateBond);
+  }
+  animateBond();
+  
+  setActiveAnimButton("bonding");
+}
+
+function renderAcidBase3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "pH = -log[H⁺]", variable: "Acid-Base" });
+  
+  // pH scale visualization
+  scene.add(createBox(0x8ec07c));
+  setActiveAnimButton("acid_base");
+}
+
+function renderElectrochemistry3D() {
+  const scene = window.scene;
+  if (!scene) return;
+  
+  clearScene();
+  updateReadout({ equation: "E°cell = E°cathode - E°anode", variable: "Electrochemistry" });
+  
+  // Simple cell visualization
+  scene.add(createCylinder(0x83a598));
+  setActiveAnimButton("electrochemistry");
+}
+
+// Helper functions for chemistry visuals
+function createBox(color) {
+  const geometry = new THREE.BoxGeometry(6, 4, 4);
+  const material = new THREE.MeshBasicMaterial({ 
+    color, 
+    transparent: true, 
+    opacity: 0.7,
+    wireframe: true
+  });
+  return new THREE.Mesh(geometry, material);
+}
+
+function createSphere(color, radius = 1) {
+  const geometry = new THREE.SphereGeometry(radius, 16, 16);
+  const material = new THREE.MeshBasicMaterial({ 
+    color,
+    transparent: true,
+    opacity: 0.85
+  });
+  const sphere = new THREE.Mesh(geometry, material);
+  sphere.userData = { type: 'particle' };
+  return sphere;
+}
+
+function createCylinder(color) {
+  const geometry = new THREE.CylinderGeometry(2, 2, 6, 16);
+  const material = new THREE.MeshBasicMaterial({ 
+    color,
+    transparent: true,
+    opacity: 0.7,
+    wireframe: true
+  });
+  const cylinder = new THREE.Mesh(geometry, material);
+  return cylinder;
+}
+
+function createMovingParticles(count, color) {
+  const group = new THREE.Group();
+  for (let i = 0; i < count; i++) {
+    const sphere = createSphere(color, 0.15);
+    sphere.position.set(
+      (Math.random() - 0.5) * 5,
+      (Math.random() - 0.5) * 3,
+      (Math.random() - 0.5) * 3
+    );
+    sphere.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.02,
+      (Math.random() - 0.5) * 0.02
+    );
+    group.add(sphere);
+  }
+  
+  // Animate particles
+  function move() {
+    if (!window.currentAnim) return;
+    group.children.forEach(p => {
+      if (p.userData.react) {
+        p.position.add(p.userData.velocity);
+        ['x','y','z'].forEach(axis => {
+          if (Math.abs(p.position[axis]) > 2.5) p.userData.velocity[axis] *= -1;
+        });
+      }
+    });
+    requestAnimationFrame(move);
+  }
+  move();
+  
+  return group;
+}
+
+// Clean overrides for chemistry visuals.
+// These appear after the placeholder implementations above so the final
+// function definitions used by the registry are the stable ones below.
+
+function makeScienceParticle(color, radius = 0.15) {
+  return new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 12, 12),
+    new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.18 })
+  );
+}
+
+function makeGlassBox(width, height, depth, color) {
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    new THREE.MeshPhongMaterial({
+      color,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+    })
+  );
+  const outline = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(width, height, depth)),
+    MAT.line(color, 0.55)
+  );
+  box.add(outline);
+  return box;
+}
+
+function makeScienceTube(points, color) {
+  const curve = new THREE.CatmullRomCurve3(points, true);
+  const tube = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 100, 0.12, 10, true),
+    new THREE.MeshPhongMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.1,
+      transparent: true,
+      opacity: 0.82,
+    })
+  );
+  return { curve, tube };
+}
+
+function renderGasLaws3D() {
+  clearScene();
+  updateHUD("Gas Laws", "PV = nRT");
+
+  const chamber = makeGlassBox(7, 5, 5, GRV.red);
+  scene.add(chamber);
+
+  const piston = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.2, 4.8), MAT.dim());
+  scene.add(piston);
+
+  const particles = [];
+  for (let i = 0; i < 42; i++) {
+    const particle = makeScienceParticle(GRV.yellow, 0.12);
+    particle.position.set(
+      (Math.random() - 0.5) * 5.4,
+      (Math.random() - 0.5) * 3,
+      (Math.random() - 0.5) * 3.6
+    );
+    particle.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.09,
+      (Math.random() - 0.5) * 0.09,
+      (Math.random() - 0.5) * 0.09
+    );
+    particles.push(particle);
+    scene.add(particle);
+  }
+
+  throttledLoop((delta) => {
+    const temperature = animConfig?.params?.temperature ?? 300;
+    const volume = animConfig?.params?.volume ?? 1;
+    const moles = animConfig?.params?.moles ?? 1;
+    const halfHeight = 1.3 + volume * 0.9;
+    piston.position.y = halfHeight;
+    const speedScale = (temperature / 260) * (animConfig.speed || 1);
+
+    particles.forEach((particle) => {
+      particle.position.addScaledVector(particle.userData.velocity, speedScale * delta * 8);
+      ["x", "y", "z"].forEach((axis) => {
+        const limit = axis === "x" ? 3 : axis === "y" ? halfHeight - 0.25 : 2.2;
+        if (particle.position[axis] > limit || particle.position[axis] < -limit) {
+          particle.userData.velocity[axis] *= -1;
+        }
+      });
+    });
+
+    const pressure = (moles * temperature) / Math.max(volume * 95, 1);
+    updateReadout({
+      Temperature: `${temperature.toFixed(0)} K`,
+      Volume: `${volume.toFixed(2)} L`,
+      Pressure: `${pressure.toFixed(2)} a.u.`,
+    });
+  });
+}
+
+function renderReactionRates3D() {
+  clearScene();
+  updateHUD("Reaction Rates", "rate depends on collision frequency and energy");
+
+  const particles = [];
+  let collisions = 0;
+  const flash = new THREE.PointLight(GRV.yellow, 0, 10);
+  scene.add(flash);
+
+  for (let i = 0; i < 34; i++) {
+    const particle = makeScienceParticle(i % 2 === 0 ? GRV.green : GRV.orange, 0.18);
+    particle.position.set(
+      (Math.random() - 0.5) * 8,
+      (Math.random() - 0.5) * 4,
+      (Math.random() - 0.5) * 4
+    );
+    particle.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.06,
+      (Math.random() - 0.5) * 0.06,
+      (Math.random() - 0.5) * 0.06
+    );
+    particles.push(particle);
+    scene.add(particle);
+  }
+
+  throttledLoop((delta) => {
+    const temperature = animConfig?.params?.temperature ?? 50;
+    const concentration = animConfig?.params?.concentration ?? 1;
+    const catalyst = !!animConfig?.params?.catalyst;
+    const speedScale = (0.8 + temperature / 60) * (animConfig.speed || 1);
+    flash.intensity *= 0.92;
+
+    particles.forEach((particle, index) => {
+      particle.position.addScaledVector(particle.userData.velocity, speedScale * delta * 10);
+      ["x", "y", "z"].forEach((axis) => {
+        const limit = axis === "x" ? 4.2 : 2.4;
+        if (particle.position[axis] > limit || particle.position[axis] < -limit) {
+          particle.userData.velocity[axis] *= -1;
+        }
+      });
+
+      for (let j = index + 1; j < particles.length; j++) {
+        const other = particles[j];
+        const threshold = catalyst ? 0.55 : 0.42;
+        if (particle.position.distanceTo(other.position) < threshold) {
+          particle.userData.velocity.multiplyScalar(-1);
+          other.userData.velocity.multiplyScalar(-1);
+          collisions += 1;
+          flash.position.copy(particle.position);
+          flash.intensity = 1.3;
+        }
+      }
+    });
+
+    updateReadout({
+      Temperature: `${temperature.toFixed(0)} C`,
+      Concentration: `${concentration.toFixed(1)} mol/dm3`,
+      Catalyst: catalyst ? "active" : "off",
+      Collisions: `${collisions}`,
+    });
+  });
+}
+
+function renderBonding3D() {
+  clearScene();
+  updateHUD("Chemical Bonding", "ionic transfer and covalent sharing");
+
+  const left = makeScienceParticle(GRV.orange, 0.75);
+  const right = makeScienceParticle(GRV.aqua, 0.75);
+  left.position.set(-2.4, 0, 0);
+  right.position.set(2.4, 0, 0);
+  scene.add(left, right);
+
+  const bondLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([left.position, right.position]),
+    MAT.line(GRV.fg, 0.7)
+  );
+  scene.add(bondLine);
+
+  const electron = makeScienceParticle(GRV.yellow, 0.14);
+  scene.add(electron);
+
+  throttledLoop(() => {
+    const electroneg = animConfig?.params?.electroneg ?? 1.5;
+    const ionic = !!animConfig?.params?.ionic;
+    const covalent = !!animConfig?.params?.covalent;
+    const t = performance.now() * 0.001 * (animConfig.speed || 1);
+    const offset = Math.sin(t) * 0.4;
+    left.position.x = -2.2 + offset * 0.4;
+    right.position.x = 2.2 - offset * 0.4;
+    bondLine.geometry.setFromPoints([left.position, right.position]);
+
+    const mix = ionic ? 0.82 : covalent ? 0.5 : 0.68;
+    electron.position.lerpVectors(left.position, right.position, mix + Math.sin(t * 1.6) * 0.08);
+    electron.position.y = Math.cos(t * 2) * 0.5;
+
+    updateReadout({
+      Bond: ionic ? "Ionic" : covalent ? "Covalent" : "Polar",
+      DeltaEN: `${electroneg.toFixed(1)}`,
+      Electron: ionic ? "transfer" : "shared pair",
+    });
+  });
+}
+
+function renderAcidBase3D() {
+  clearScene();
+  updateHUD("Acids and Bases", "pH = -log[H+]");
+
+  const scale = new THREE.Group();
+  const colors = [GRV.red, GRV.orange, GRV.yellow, GRV.green, GRV.aqua, GRV.blue];
+  for (let i = 0; i < 14; i++) {
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.18, 1),
+      new THREE.MeshPhongMaterial({
+        color: colors[Math.min(colors.length - 1, Math.floor((i / 14) * colors.length))],
+      })
+    );
+    bar.position.set(-3.4 + i * 0.52, 0, 0);
+    scale.add(bar);
+  }
+  scene.add(scale);
+
+  const indicator = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28, 18, 18),
+    new THREE.MeshPhongMaterial({ color: GRV.fg })
+  );
+  scene.add(indicator);
+
+  throttledLoop(() => {
+    const ph = animConfig?.params?.ph ?? 7;
+    const strength = animConfig?.params?.strength ?? 0.5;
+    indicator.position.set(-3.4 + (ph / 14) * 7.2, 0.55 + strength * 0.5, 0);
+    updateReadout({
+      pH: `${ph.toFixed(1)}`,
+      Character: ph < 7 ? "Acidic" : ph > 7 ? "Basic" : "Neutral",
+      Strength: `${(strength * 100).toFixed(0)}%`,
+    });
+  });
+}
+
+function renderElectrochemistry3D() {
+  clearScene();
+  updateHUD("Electrochemistry", "Ecell = Ecathode - Eanode");
+
+  const beakerLeft = makeGlassBox(2.5, 3.2, 2.5, GRV.blue);
+  const beakerRight = makeGlassBox(2.5, 3.2, 2.5, GRV.orange);
+  beakerLeft.position.x = -3;
+  beakerRight.position.x = 3;
+  scene.add(beakerLeft, beakerRight);
+
+  const bridge = new THREE.Mesh(
+    new THREE.TorusGeometry(3, 0.12, 10, 50, Math.PI),
+    new THREE.MeshPhongMaterial({
+      color: GRV.fg,
+      transparent: true,
+      opacity: 0.7,
+    })
+  );
+  bridge.rotation.z = Math.PI;
+  bridge.position.y = 1.2;
+  scene.add(bridge);
+
+  const electrons = [];
+  for (let i = 0; i < 8; i++) {
+    const electron = makeScienceParticle(GRV.aqua, 0.12);
+    electrons.push(electron);
+    scene.add(electron);
+  }
+
+  throttledLoop(() => {
+    const voltage = animConfig?.params?.voltage ?? 1.5;
+    const concentration = animConfig?.params?.concentration ?? 1;
+    electrons.forEach((electron, index) => {
+      const t = ((performance.now() * 0.0004 * voltage * (animConfig.speed || 1)) + index / electrons.length) % 1;
+      electron.position.set(-3 + t * 6, 2 + Math.sin(t * Math.PI) * 0.8, 0);
+    });
+    updateReadout({
+      Voltage: `${voltage.toFixed(2)} V`,
+      Anode: `${concentration.toFixed(2)} M`,
+      Flow: "electrons to cathode",
+    });
+  });
+}
+
+// ======================
+// ANIMATION REGISTRY
+// ======================
 const ANIMATIONS = [
   {
     id: "idle",
@@ -1567,6 +2141,60 @@ const ANIMATIONS = [
     render: renderDoppler3D,
     controls: [
       { type: "slider", id: "speed", label: "Speed", min: 0.5, max: 4, step: 0.1, value: 2 },
+    ],
+  },
+  // === CHEMISTRY ANIMATIONS ===
+  {
+    id: "gas_laws",
+    label: "Gas Laws",
+    icon: "GL",
+    render: renderGasLaws3D,
+    controls: [
+      { type: "slider", id: "temperature", label: "Temp (K)", min: 100, max: 600, step: 10, value: 300 },
+      { type: "slider", id: "volume", label: "Volume (L)", min: 0.5, max: 3, step: 0.1, value: 1 },
+      { type: "slider", id: "moles", label: "Moles (n)", min: 0.5, max: 3, step: 0.1, value: 1 },
+    ],
+  },
+  {
+    id: "reaction_rates",
+    label: "Reaction Rates",
+    icon: "RR",
+    render: renderReactionRates3D,
+    controls: [
+      { type: "slider", id: "temperature", label: "Temp", min: 20, max: 100, step: 5, value: 50 },
+      { type: "slider", id: "concentration", label: "Conc", min: 0.1, max: 2, step: 0.1, value: 1 },
+      { type: "toggle", id: "catalyst", label: "Catalyst", value: false },
+    ],
+  },
+  {
+    id: "bonding",
+    label: "Bonding",
+    icon: "BD",
+    render: renderBonding3D,
+    controls: [
+      { type: "toggle", id: "ionic", label: "Ionic", value: true },
+      { type: "toggle", id: "covalent", label: "Covalent", value: false },
+      { type: "slider", id: "electroneg", label: "Electroneg diff", min: 0, max: 3, step: 0.1, value: 1.5 },
+    ],
+  },
+  {
+    id: "acid_base",
+    label: "Acid-Base",
+    icon: "pH",
+    render: renderAcidBase3D,
+    controls: [
+      { type: "slider", id: "ph", label: "pH", min: 0, max: 14, step: 0.5, value: 7 },
+      { type: "slider", id: "strength", label: "Acid Strength", min: 0, max: 1, step: 0.1, value: 0.5 },
+    ],
+  },
+  {
+    id: "electrochemistry",
+    label: "Electrochemistry",
+    icon: "EC",
+    render: renderElectrochemistry3D,
+    controls: [
+      { type: "slider", id: "voltage", label: "Cell Voltage (V)", min: 0.5, max: 3, step: 0.1, value: 1.5 },
+      { type: "slider", id: "concentration", label: "Anode Conc", min: 0.01, max: 2, step: 0.1, value: 1 },
     ],
   },
 ];
