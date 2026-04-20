@@ -1,29 +1,89 @@
-# Vector AI — CAPS Physics & Chemistry Tutor
+# Vector AI — My CAPS Physics & Chemistry Tutor
 
-An intelligent, multi-modal tutoring platform for South African high school students (Grades 10-12) following the CAPS curriculum. Combines AI chat, interactive 3D animations, voice interaction, smart notes, and secure user accounts.
+I'm Vector AI, an intelligent tutoring platform built specifically for South African high school students studying Physics and Chemistry under the CAPS curriculum (Grades 10-12). I combine multiple learning modalities — chat, voice, interactive 3D animations, and smart notes — into one seamless experience.
 
-## Features
+## How I Work Together
 
-### Core Functionality
-- **AI Chat Tutor** — Powered by Groq's LLaMA 3.3 70B for instant, detailed explanations in Physics & Chemistry
-- **3D Animations** — Interactive simulations for mechanics, waves, electromagnetism, optics, thermodynamics, modern physics, and chemistry topics
-- **Voice Mode** — Speech recognition + TTS with multiple voice options for hands-free learning
-- **Smart Notes** — AI-assisted note creation, editing, organization, and offline export
-- **User Accounts** — Secure authentication via local registration, Google OAuth, GitHub OAuth
-- **Intent Classifier** — ML-based topic detection that works offline using your saved notes
+### The Core Architecture
 
-### CAPS Topics Covered
-**Physics:** Kinematics, Dynamics, Forces, Momentum, Energy, Gravitation, Waves, Sound, Electricity, Electrostatics, Magnetism, Electromagnetism, Optics, Thermodynamics, Nuclear Physics, Photoelectric Effect, SHM
+I'm built as a Flask web application with several interconnected systems:
 
-**Chemistry:** Gas Laws, Reaction Rates, Chemical Bonding, Acid-Base, Electrochemistry
+1. **The Flask Server (app.py)** - I'm the central hub that handles all HTTP requests, manages user sessions, routes traffic between components, and orchestrates responses. When you send me a message, I receive it here, classify your intent, generate a response, and send it back.
 
-## Tech Stack
+2. **Authentication System (auth.py)** - I handle user registration and login through both local accounts (email/password) and OAuth (Google and GitHub). User data is stored in users.json, with each user's notes, preferences, and conversation history isolated by their user ID.
 
-- **Backend**: Flask, Flask-Login, Flask-CORS, Flask-Caching
-- **AI/ML**: Groq API (llama-3.3-70b-versatile), scikit-learn intent classifier, joblib
-- **Frontend**: Vanilla JavaScript, Three.js (3D), Web Speech API
-- **Auth**: Authlib (OAuth 2.0), Werkzeug (password hashing)
-- **Storage**: JSON file-based per-user data (ready for DB migration)
+3. **Knowledge Base (caps_knowledge.py)** - I contain a comprehensive physics and chemistry knowledge base covering all CAPS topics. This includes topic summaries, definitions, formulas, worked examples, and a local solver for standard problems like force calculations, momentum, kinetic energy, wave speed, and Ohm's law.
+
+4. **Physics Engine (physics_engine.py)** - I run real-time physics simulations for projectile motion. I'm made of three parts: a simulator that calculates ground-truth physics using numerical integration, a machine learning learner (Ridge regression) that predicts trajectories from data, and an explainer that compares physics results with ML predictions and generates educational explanations.
+
+### The Conversation Flow
+
+When you ask me a question:
+
+1. **Intent Classification** - I first use an ML model (TF-IDF + SGDClassifier) to detect what topic you're asking about. This runs locally and works offline. If the ML model isn't available, I fall back to keyword matching.
+
+2. **Local Knowledge Check** - Before calling the AI, I check my local CAPS knowledge base for deterministic answers to standard physics/chemistry problems. If I find a match, I use it as a hint.
+
+3. **AI Generation** - I send your message, the conversation history, and a system prompt to Groq's LLaMA 3.3 70B model. The system prompt tells the AI to act as a CAPS-aligned tutor, provide step-by-step explanations, and use correct technical terms.
+
+4. **Response Formatting** - If you're in voice mode, I strip out markdown, bullet points, and special symbols, converting everything to speakable text. Your response then goes through text-to-speech.
+
+### Animations System
+
+I include interactive 3D animations built with Three.js. When you ask about topics like projectile motion, waves, forces, electricity, or chemistry concepts like gas laws or reaction rates, I can match your question to a relevant animation and launch it.
+
+The animations are configured in `static/animations.js` and include:
+- Projectile motion with adjustable velocity, angle, and drag
+- Wave motion visualizations
+- Newton's laws demonstrations
+- Electric and magnetic field simulations
+- Thermodynamics and gas laws
+- Chemistry reactions and bonding
+
+### Notes System
+
+I let you create, edit, search, and delete notes. Each note has a title, content, topic, tags, and timestamps. You can create notes manually or save them directly from my chat responses using the "Save as Note" button.
+
+Notes are stored in your user profile in users.json and support:
+- Full-text search
+- Export for offline use
+- Synchronization for offline-first scenarios
+- Training data for the local intent classifier
+
+### Voice Mode
+
+I support hands-free learning through:
+- **Speech Recognition** - Using the Web Speech API (Chrome/Edge), I convert your voice to text
+- **Text-to-Speech** - I read responses aloud using the SpeechSynthesis API
+- **Voice Selection** - You can choose from available system voices, and your preference is saved
+
+### Data Flow
+
+```
+User Input (Text/Voice)
+        ↓
+    Flask Route (app.py)
+        ↓
+Intent Classification (ml_train.py)
+        ↓
+Local Knowledge Check (caps_knowledge.py)
+        ↓
+AI Generation (Groq API)
+        ↓
+Response Formatting (voice/chat modes)
+        ↓
+Save to History (data.json)
+        ↓
+User Response + Optional Animation
+```
+
+## What I Cover
+
+### Physics (CAPS)
+Kinematics, Dynamics, Forces, Momentum, Energy, Gravitation, Waves, Sound, Electricity, Electrostatics, Magnetism, Electromagnetism, Optics, Thermodynamics, Nuclear Physics, Photoelectric Effect, Simple Harmonic Motion
+
+### Chemistry (CAPS)
+Gas Laws, Reaction Rates, Chemical Bonding, Acid-Base, Electrochemistry
 
 ## Quick Start
 
@@ -33,27 +93,14 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment
-```bash
-cp .env.example .env
+Create a `.env` file:
 ```
-
-Edit `.env`:
-```
-# Required
-GROQ_API_KEY=gsk_your_actual_key_here
-SECRET_KEY=random-32-char-string-at-least
-
-# Optional OAuth (for Google/GitHub login)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
-
-# Allowed origin for CORS
+GROQ_API_KEY=gsk_your_key_here
+SECRET_KEY=your-random-32-char-string
 ALLOWED_ORIGIN=http://localhost:5000
 ```
 
-### 3. Run the App
+### 3. Run Me
 ```bash
 python app.py
 ```
@@ -63,226 +110,67 @@ python app.py
 http://localhost:5000
 ```
 
-Visit `/auth/landing` for the landing page, create an account, and start learning.
-
 ## Project Structure
 
 ```
 Vector-AI/
-├── app.py                      # Main Flask application + routes
-├── auth.py                     # Authentication blueprint (OAuth, sessions)
-├── caps_knowledge.py           # Physics/chemistry knowledge base + solver
-├── physics_engine.py           # Simulation engine for projectile motion
-├── model/                      # ML intent classifier (TF-IDF + SGD)
-├── requirements.txt            # Python dependencies
-├── .env.example               # Environment template
-├── users.json                 # User database (auto-created)
-├── data.json                  # Conversation logs
-├── intent_model.pkl           # Trained ML model (auto-generated)
+├── app.py                      # Main Flask application
+├── auth.py                     # Authentication blueprint
+├── caps_knowledge.py           # Physics/chemistry knowledge base
+├── physics_engine.py           # Simulation engine + ML learner
+├── model/
+│   ├── __init__.py
+│   └── generator.py            # Prompt building utilities
+├── prompts/
+│   ├── __init__.py
+│   ├── system_prompt.txt
+│   └── intent_prompts.py
+├── ml_train.py                 # Intent classifier training
+├── users.json                  # User database (auto-created)
+├── data.json                   # Conversation logs
 ├── templates/
-│   ├── landing.html           # Public landing page
-│   ├── login.html             # Login/register modal page
-│   ├── chat.html              # Main chat interface
-│   ├── animations.html        # 3D animation viewer
-│   ├── notes.html             # Notes management
-│   └── profile.html           # User profile & settings
+│   ├── landing.html            # Public landing page
+│   ├── login.html              # Login/register
+│   ├── chat.html               # Main chat interface
+│   ├── animations.html         # 3D animation viewer
+│   ├── notes.html              # Notes management
+│   ├── profile.html            # User profile
+│   ├── dashboard.html          # Analytics dashboard
+│   └── history.html            # Conversation history
 ├── static/
-│   ├── chat.css               # Main styles
-│   ├── style.css              # Animation styles
-│   ├── main.js                # Chat UI + voice selector + note saving
-│   ├── voice.js               # Speech recognition & TTS
-│   ├── config.js              # Animation config
-│   ├── animations.js          # Three.js physics + chemistry scenes
-│   ├── notes.js               # Notes CRUD UI
-│   ├── anim-lib.js            # Reusable 3D helpers
-│   └── physics-lib.js         # Math utilities
-└── prompts/                   # AI prompt templates
+│   ├── chat.css                # Main styles
+│   ├── style.css               # Animation styles
+│   ├── main.js                 # Chat UI logic
+│   ├── voice.js                # Speech recognition & TTS
+│   ├── animations.js           # Three.js scenes
+│   ├── notes.js                # Notes CRUD
+│   ├── dashboard.js            # Dashboard charts
+│   └── ...                     # Other assets
+└── models/
+    ├── ridge_x.joblib          # Trained ML model (x)
+    └── ridge_y.joblib          # Trained ML model (y)
 ```
 
-## API Reference
+## Key Features
 
-### Public Endpoints
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/auth/landing` | GET | Landing page explaining Vector AI |
-| `/auth/login` | GET/POST | Login page + local auth |
-| `/auth/register` | POST | Create local account |
-| `/auth/oauth/<provider>` | GET | OAuth login (google/github) |
-| `/auth/oauth/<provider>/callback` | GET | OAuth callback |
-| `/auth/check` | GET | Session status check |
-
-### Authenticated Endpoints
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/` | GET | Redirects to `/chat` |
-| `/chat` | GET | Chat interface |
-| `/animations` | GET | Animation studio |
-| `/notes` | GET | Notes manager |
-| `/profile` | GET | User profile |
-| `/logout` | POST | End session |
-
-### JSON API (Authenticated)
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/chat` | POST | Send message (returns AI reply) |
-| `/match-animation` | POST | Match question to animation |
-| `/api/notes` | GET/POST | List/create notes |
-| `/api/notes/<id>` | PUT/DELETE | Update/delete note |
-| `/api/notes/search` | POST | Search notes |
-| `/api/notes/export` | GET | Export notes as text |
-| `/api/notes/sync` | GET/POST | Offline sync |
-| `/api/user/preferences` | GET/POST | User settings |
-| `/api/user/profile` | GET | User info |
-| `/api/train_physics` | POST | Retrain ML model |
-
-## Key Features Explained
-
-### AI Chat
-- Sends user message + conversation history to Groq LLaMA 3.3
-- Includes CAPS-aligned system prompts for educational tone
-- Physics questions get detailed step-by-step explanations
-- Chemistry questions include balanced equations and concepts
-- Voice mode uses special prompt without markdown/symbols for TTS
-
-### Voice Interaction
-- **Speech Recognition**: Web Speech API (Chrome/Edge)
-- **Text-to-Speech**: `SpeechSynthesis` with voice selection dropdown
-- **Voice preference** saved per user in `preferences.voice`
-- **Offline-capable**: Recognizer works without internet (browser-dependent)
-
-### Animations
-- Built with **Three.js** for WebGL rendering
-- Each animation has configurable sliders (angle, velocity, temperature, etc.)
-- Animations linked to intent categories — ask relevant questions to auto-launch related animation
-- Includes both Physics and Chemistry simulations
-
-### Notes System
-- Create notes manually or from AI responses ("📝 Save as Note" button)
-- Each note has: title, topic, content, tags, timestamps
-- Full CRUD via REST API
-- Export endpoint provides plain-text corpus for offline classifier
-- Sync endpoints support offline-first usage
-
-### Authentication & Security
-- **Flask-Login** manages sessions with persistent "remember me" cookies
-- **Passwords**: Werkzeug `generate_password_hash` + `check_password_hash` (PBKDF2-SHA256)
-- **OAuth**: Authlib with Google & GitHub providers
-- User data isolated by `current_user.id`
-- No plaintext credentials stored
-
-### Intent Classifier Offline Fallback
-- Uses TF-IDF + n-grams + SGDClassifier (lightweight)
-- Trained on CAPS topic examples
-- Can be updated with user notes via `/api/notes/export`
-- Runs entirely locally, no API calls needed
-
-## Configuration
-
-### Changing AI Model
-In `app.py:263`, change:
-```python
-model="llama-3.3-70b-versatile"
-```
-to any Groq-supported model like `llama-3.1-8b`, `mixtral-8x7b`, etc.
-
-### Adjusting Response Detail
-Edit system prompts in `app.py`:
-- `PHYSICS_SYSTEM_PROMPT` (lines 58-69)
-- `VOICE_SYSTEM_PROMPT` (lines 71-79)
-
-Increase timeout in `_groq_generate_with_timeout` if responses get cut (default 8s full, 4s hinted).
-
-### Adding New Chemistry Animation
-1. Define `renderChemistryX3D()` in `static/animations.js` before ANIMATIONS array
-2. Add entry:
-```javascript
-{
-  id: "chemistry_x",
-  label: "Chemistry X",
-  icon: "⚗",
-  render: renderChemistryX3D,
-  controls: [
-    { type: "slider", id: "temp", label: "Temp", min: 0, max: 100, step: 5, value: 25 },
-  ],
-}
-```
-3. Implement `renderChemistryX3D()` using `THREE` primitives (`createBox`, `createSphere`, etc.)
-
-## Deployment (Production)
-
-1. **Set strong secrets** in `.env`:
-   ```bash
-   SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
-   GROQ_API_KEY=your_production_key
-   ```
-
-2. **Use Gunicorn** with multiple workers:
-   ```bash
-   gunicorn -w 4 -b 0.0.0.0:5000 app:app
-   ```
-
-3. **Enable HTTPS** (required for OAuth in production):
-   Use Nginx + Let's Encrypt or cloud load balancer.
-
-4. **Set allowed origins**:
-   ```env
-   ALLOWED_ORIGIN=https://vector-ai.edu.za
-   ```
-
-5. **Database migration** (recommended for scale):
-   Replace `users.json` + `data.json` with PostgreSQL/SQLite + SQLAlchemy
-
-6. **Logging**:
-   Configure production logging to file/monitoring service.
+- **AI Chat** - Groq-powered LLaMA 3.3 for detailed CAPS-aligned explanations
+- **3D Animations** - Interactive Three.js simulations for physics and chemistry
+- **Voice Mode** - Speech recognition and text-to-speech for hands-free learning
+- **Smart Notes** - Create, search, and export AI-assisted notes
+- **Offline Intent Detection** - Local ML classifier that works without internet
+- **Physics Simulation** - Real-time projectile motion with ML comparison
+- **Secure Authentication** - Local accounts and OAuth (Google/GitHub)
 
 ## Troubleshooting
 
-### "Gemini/Groq API key NOT found"
-- Ensure `.env` file exists in project root
-- Confirm key is spelled `GROQ_API_KEY` (not `GEMINI_API_KEY`)
-- Restart Flask after editing `.env`
+- **"Groq API key NOT found"** - Ensure `.env` has `GROQ_API_KEY` set
+- **Voice not working** - Use Chrome or Edge, grant microphone permission
+- **Animations not loading** - Ensure WebGL is enabled in your browser
 
-### OAuth not working
-- Verify client IDs/secrets are correct
-- Check redirect URIs match exactly (including trailing slash/no trailing slash)
-- Google OAuth requires "External" user type if testing outside G Suite
-- Some corporate networks block OAuth ports
+## Tech Stack
 
-### Voice recognition not working
-- Requires Chrome or Edge browser
-- Must serve over HTTPS for microphone access (except localhost)
-- User must grant microphone permission
-
-### Animations not loading
-- Check browser console for Three.js errors
-- Ensure WebGL is enabled (check `chrome://gpu`)
-- Clear browser cache
-
-## Roadmap (Post-September Deploy)
-
-- [ ] Database backend (PostgreSQL + SQLAlchemy)
-- [ ] Real-time collaborative notes sharing
-- [ ] Image/diagram upload + analysis
-- [ ] Student progress tracking + achievements
-- [ ] Notes export to PDF/Anki
-- [ ] Advanced chemistry reaction engines
-- [ ] PWA offline mode with service worker
-- [ ] Additional languages: isiZulu, Afrikaans, Xhosa
-
-## Contributing
-
-This is a South African educational project. Contributions welcome:
-- Add more CAPS topics
-- Improve animation fidelity
-- Add worked examples
-- Translate content
-- Optimize for low-bandwidth users
-
-## License
-
-Proprietary — For South African educational use only.
-
-## Support
-
-Issues: [GitHub Issues](https://github.com/Vector-AI/vector-ai/issues)
-Email: support@vector-ai.edu.za
+- **Backend**: Flask, Flask-Login, Flask-CORS, Flask-Caching
+- **AI/ML**: Groq API (LLaMA 3.3), scikit-learn, joblib
+- **Frontend**: Vanilla JavaScript, Three.js, Web Speech API
+- **Auth**: Authlib (OAuth 2.0), Werkzeug (password hashing)
+- **Storage**: JSON file-based (ready for database migration)
