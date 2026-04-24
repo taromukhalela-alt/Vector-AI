@@ -701,7 +701,7 @@ def _safe_compute(formula: Dict, target: str, values: Dict[str, float]) -> Optio
         return None
     try:
         result = solver(values)
-    except (ZeroDivisionError, ValueError):
+    except (ZeroDivisionError, ValueError, KeyError):
         return None
     if result is None or not math.isfinite(result):
         return None

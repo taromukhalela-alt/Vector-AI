@@ -82,7 +82,7 @@ Do not repeat the same response twice in a row.
 For a single word topic such as electricity, projectile motion, gas laws, or acids, start explaining immediately.
 Provide thorough, educational answers with clear step-by-step explanations and worked examples where relevant.
 Use clear CAPS aligned explanations and correct technical terms.
-Stay centered on physics and chemistry. If a learner asks something unrelated, gently redirect them back to Physical Sciences.
+Your specialty is CAPS Physical Sciences (physics and chemistry for Grades 10-12). You can help with related topics like maths, general science, and study tips. For unrelated questions, you can give brief helpful answers before gently steering back to Physical Sciences.
 For maths questions, provide full working because maths supports physical sciences learning.
 """
 
@@ -271,8 +271,22 @@ def classify_intent(message):
     return (best, round(confidence * 100, 1)) if scores[best] > 0 else ("unknown", 30.0)
 
 
-def build_prompt(history, user_message, system_prompt):
+def build_prompt(history, user_message, system_prompt, user_key=None):
     lines = [system_prompt, ""]
+    if user_key:
+        try:
+            import json
+            from pathlib import Path
+            users_file = Path(USERS_FILE)
+            if users_file.exists():
+                users = json.loads(users_file.read_text(encoding="utf-8"))
+                summary = (users.get(user_key, {}).get("memory_summary") or "").strip()
+                if summary:
+                    lines.append("## What you remember from past sessions with this student:")
+                    lines.append(summary)
+                    lines.append("")
+        except Exception:
+            pass
     for item in normalize_history(history):
         role = "User" if item["role"] == "user" else "Assistant"
         lines.append(f"{role}: {item['content']}")
@@ -348,7 +362,7 @@ def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
     return payload
 
 
-def generate_response(user_message, history=None, system_prompt=None, local_hint=None):
+def generate_response(user_message, history=None, system_prompt=None, local_hint=None, user_key=None):
     if history is None:
         history = []
     if system_prompt is None:
@@ -363,7 +377,7 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
         return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
 
     try:
-        prompt = build_prompt(history, user_message, system_prompt)
+        prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
         # Give the model a bit more room before falling back to local explanations.
         timeout_seconds = 6.0 if local_hint else 10.0
         text = _groq_generate_with_timeout(prompt, api_key, timeout_seconds)
@@ -1299,7 +1313,7 @@ def chat():
             )
 
         reply = generate_response(
-            prompt, history, system_prompt, local_hint=deterministic_hint
+            prompt, history, system_prompt, local_hint=deterministic_hint, user_key=user_key
         )
         if voice_mode:
             reply = make_voice_friendly(reply)
@@ -1316,6 +1330,7 @@ def chat():
                 history[:-1],
                 system_prompt,
                 local_hint=deterministic_hint,
+                user_key=user_key,
             )
             if voice_mode:
                 reply = make_voice_friendly(reply)
@@ -1324,6 +1339,28 @@ def chat():
         # Keep server-side copy for existing analytics/history pages
         user_conversations[user_key] = list(history)
         ensure_chat_id()
+
+        # Auto-save memory summary for next session
+        try:
+            import json
+            from pathlib import Path
+            users_file = Path(USERS_FILE)
+            users = json.loads(users_file.read_text(encoding="utf-8")) if users_file.exists() else {}
+            user_data = users.get(user_key, {})
+            prev = (user_data.get("memory_summary") or "").strip()
+            recent = history[-6:]
+            summary_lines = [f"Topics discussed: {intent}."]
+            for msg in recent:
+                role = "Student" if msg["role"] == "user" else "Tutor"
+                summary_lines.append(f"{role}: {msg['content'][:120]}")
+            new_summary = "\n".join(summary_lines)
+            combined = f"{prev}\n---\n{new_summary}" if prev else new_summary
+            combined = "\n".join(combined.split("\n")[-50:]).strip()
+            user_data["memory_summary"] = combined
+            users[user_key] = user_data
+            users_file.write_text(json.dumps(users, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
     except Exception as e:
         logger.error("Chat Error: %s", e)
         reply = "I hit a temporary issue. Please re-articulate your question."

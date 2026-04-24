@@ -1,292 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Notes - Vector AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .notes-layout {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-            min-height: 100vh;
-        }
-        
-        .notes-sidebar {
-            background: rgba(255,255,255,0.1);
-            border-radius: 16px;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-        }
-        
-        .notes-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .note-card {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: all 0.2s;
-        }
-        
-        .note-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        
-        .note-card h3 {
-            margin: 0 0 0.5rem;
-            font-size: 1.1rem;
-        }
-        
-        .note-meta {
-            font-size: 0.8rem;
-            color: var(--fg-2);
-            margin-bottom: 0.75rem;
-        }
-        
-        .note-content {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: var(--fg-1);
-            max-height: 150px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .note-content::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 40px;
-            background: linear-gradient(transparent, rgba(40,40,36,0.95));
-        }
-        
-        .note-tag {
-            display: inline-block;
-            background: var(--accent-dim);
-            color: var(--bg-hard);
-            padding: 0.25rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            margin-right: 0.25rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .btn-icon {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--fg);
-            padding: 0.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn-icon:hover {
-            background: var(--accent);
-            color: var(--bg-hard);
-        }
-        
-        .create-note-btn {
-            width: 100%;
-            padding: 0.875rem;
-            background: var(--accent);
-            color: var(--bg-hard);
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-bottom: 1.5rem;
-        }
-        
-        .create-note-btn:hover {
-            filter: brightness(1.1);
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: var(--bg-soft);
-            padding: 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .modal-header h2 {
-            margin: 0;
-        }
-        
-        .close-modal {
-            background: none;
-            border: none;
-            color: var(--fg);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-        
-        textarea, input[type="text"] {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-1);
-            border: 1px solid var(--border);
-            color: var(--fg);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
-        
-        textarea:focus, input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        
-        textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-        
-        .modal-footer {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-            margin-top: 1rem;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--fg-2);
-        }
-        
-        .empty-state h3 {
-            margin-bottom: 0.5rem;
-            color: var(--fg);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1d2021">
+  <title>Study Notes - Vector AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .notes-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-lg);
+      padding: var(--space-lg);
+      max-width: 1400px;
+      margin: 0 auto;
+      min-height: calc(100vh - 56px);
+    }
 
-        .muted {
-            color: var(--fg-2);
-        }
+    .notes-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
 
-        .hidden {
-            display: none;
-        }
-        
-        @media (max-width: 768px) {
-            .notes-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    .notes-search {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: var(--font-size-sm);
+    }
+
+    .notes-search:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .create-note-btn {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--accent);
+      color: var(--bg-hard);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+
+    .create-note-btn:hover { filter: brightness(1.15); }
+
+    .sidebar-section-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .quick-prompt-chip {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: var(--font-size-xs);
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: var(--space-xs);
+    }
+
+    .quick-prompt-chip:hover { background: var(--bg-2); }
+
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-md);
+    }
+
+    .note-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      transition: border-color 0.15s, transform 0.15s;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .note-card-title {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: var(--space-xs);
+    }
+
+    .note-card-meta {
+      font-size: var(--font-size-xs);
+      color: var(--text-faint);
+      margin-bottom: var(--space-sm);
+    }
+
+    .note-card-topic {
+      display: inline-block;
+      background: var(--accent-dim);
+      color: var(--bg-hard);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .note-card-content {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+      line-height: 1.5;
+      flex: 1;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 6;
+      -webkit-box-orient: vertical;
+    }
+
+    .note-card-content strong { color: var(--fg); }
+    .note-card-content code {
+      background: var(--bg-2);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 0.8em;
+    }
+
+    .note-card-actions {
+      display: flex;
+      gap: var(--space-xs);
+      margin-top: var(--space-sm);
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--border);
+    }
+
+    .note-action-btn {
+      padding: 4px 10px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: var(--font-size-xs);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .note-action-btn:hover {
+      background: var(--accent);
+      color: var(--bg-hard);
+      border-color: var(--accent);
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: var(--space-xl);
+      color: var(--text-faint);
+    }
+
+    .empty-state h3 { color: var(--text); margin-bottom: var(--space-sm); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: var(--space-lg);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-md);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: var(--font-size-lg);
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: var(--accent); }
+
+    .form-input {
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-sm);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    textarea.form-input { min-height: 160px; resize: vertical; font-family: var(--font-mono); font-size: 0.85rem; }
+
+    .ai-toggle {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+    }
+
+    .ai-toggle input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: var(--space-sm);
+      justify-content: flex-end;
+      margin-top: var(--space-md);
+    }
+
+    @media (max-width: 768px) {
+      .notes-layout { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="topbar-logo">Vector AI</div>
-        <nav class="tab-nav">
-            <a class="tab-btn tab-link" href="/chat">Tutor</a>
-            <a class="tab-btn tab-link" href="/chat?tab=animations">Visual Lab</a>
-            <a class="tab-btn tab-link" href="/chat?tab=topics">CAPS Tracks</a>
-            <a class="tab-btn tab-link active" href="/notes">Notes</a>
-        </nav>
-    </header>
+  <header class="topbar">
+    <div class="topbar-logo">Vector AI</div>
+    <nav class="tab-nav" role="tablist">
+      <a class="tab-btn tab-link" href="/chat">Tutor</a>
+      <a class="tab-btn tab-link" href="/chat?tab=animations">Visual Lab</a>
+      <a class="tab-btn tab-link" href="/chat?tab=topics">CAPS Tracks</a>
+      <a class="tab-btn tab-link active" href="/notes">Notes</a>
+    </nav>
+  </header>
 
-    <main class="notes-layout">
-        <aside class="notes-sidebar">
-            <h2>Study Notes</h2>
-            <p class="muted">Create and organize AI-generated notes for CAPS physics and chemistry.</p>
-            <button id="create-note-btn" class="create-note-btn">
-                + New Note
-            </button>
-            
-            <h3 style="margin-top: 1.5rem; font-size: 0.9rem;">Quick Actions</h3>
-            <div class="quick-prompts">
-                <button class="btn-secondary" onclick="createFromTopic('kinematics')">Kinematics Notes</button>
-                <button class="btn-secondary" onclick="createFromTopic('electricity')">Electricity Notes</button>
-                <button class="btn-secondary" onclick="createFromTopic('chemistry')">Chemistry Notes</button>
-            </div>
-            
-            <div id="search-notes" style="margin-top: 1.5rem;">
-                <input type="text" id="note-search" placeholder="Search notes...">
-            </div>
-        </aside>
+  <main class="notes-layout">
+    <aside class="notes-sidebar">
+      <input type="text" id="note-search" class="notes-search" placeholder="Search notes...">
 
-        <section class="notes-main">
-            <div id="notes-grid" class="notes-grid">
-                <!-- Notes will be loaded here -->
-            </div>
-            <div id="empty-state" class="empty-state hidden">
-                <h3>No notes yet</h3>
-                <p>Create your first AI-assisted study note to get started.</p>
-            </div>
-        </section>
-    </main>
+      <button id="create-note-btn" class="create-note-btn">+ New Note</button>
 
-    <!-- Create/Edit Note Modal -->
-    <div id="note-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Create New Note</h2>
-                <button class="close-modal" onclick="closeModal()">&times;</button>
-            </div>
-            <form id="note-form">
-                <input type="text" id="note-title" placeholder="Note Title" required>
-                <input type="text" id="note-topic" placeholder="Topic (e.g. Projectile Motion)">
-                <div style="margin-bottom: 1rem;">
-                    <label class="control-label">Generating Options</label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                        <input type="checkbox" id="ai-generated" checked>
-                        <span>Let AI help generate content</span>
-                    </label>
-                </div>
-                <textarea id="note-content" placeholder="Write your note or ask AI to generate one..."></textarea>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Note</button>
-                </div>
-            </form>
+      <div>
+        <div class="sidebar-section-label">Quick AI Notes</div>
+        <button class="quick-prompt-chip" onclick="createFromTopic('kinematics')">Kinematics</button>
+        <button class="quick-prompt-chip" onclick="createFromTopic('electricity')">Electricity</button>
+        <button class="quick-prompt-chip" onclick="createFromTopic('waves')">Waves & Sound</button>
+        <button class="quick-prompt-chip" onclick="createFromTopic('chemistry')">Chemistry</button>
+        <button class="quick-prompt-chip" onclick="createFromTopic('energy')">Energy</button>
+        <button class="quick-prompt-chip" onclick="createFromTopic('forces')">Newton's Laws</button>
+      </div>
+    </aside>
+
+    <section>
+      <div id="notes-grid" class="notes-grid"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <h3>No notes yet</h3>
+        <p>Create your first AI-assisted study note to get started.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div id="note-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title">Create New Note</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="note-form">
+        <input type="text" id="note-title" class="form-input" placeholder="Note Title" required>
+        <input type="text" id="note-topic" class="form-input" placeholder="Topic (e.g. Projectile Motion)">
+        <div class="ai-toggle">
+          <input type="checkbox" id="ai-generated" checked>
+          <span>Let AI help generate content</span>
         </div>
+        <textarea id="note-content" class="form-input" placeholder="Write your note or ask AI to generate one..."></textarea>
+        <div class="modal-footer">
+          <button type="button" class="note-action-btn" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="create-note-btn" style="width:auto;">Save Note</button>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
-    <script src="{{ url_for('static', filename='notes.js') }}"></script>
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+  <script src="{{ url_for('static', filename='notes.js') }}"></script>
 </body>
 </html>

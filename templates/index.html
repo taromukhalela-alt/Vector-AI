@@ -17,6 +17,7 @@
       <button class="tab-btn active" data-tab="chat"       role="tab">Tutor</button>
       <button class="tab-btn"        data-tab="animations" role="tab">Visual Lab</button>
       <button class="tab-btn"        data-tab="topics"     role="tab">CAPS Tracks</button>
+      <button class="tab-btn"        data-tab="history"    role="tab">History</button>
       <a class="tab-btn tab-link" href="/notes">Notes</a>
     </nav>
   </header>
@@ -80,6 +81,22 @@
         <div class="ke-bar" id="ke-bar"><div class="ke-fill" id="ke-fill"></div></div>
       </div>
     </section>
+
+  <!-- HISTORY TAB -->
+  <section id="tab-history" class="tab-panel" role="tabpanel">
+    <div class="history-panel">
+      <aside class="history-sidebar">
+        <div class="sidebar-label">Sessions</div>
+        <div id="session-list" class="session-list"></div>
+      </aside>
+      <section class="history-detail" id="history-detail">
+        <div class="empty-state" id="history-empty">
+          <h3>Select a session</h3>
+          <p class="muted">Pick a past chat session to review.</p>
+        </div>
+      </section>
+    </div>
+  </section>
 
   <!-- TOPICS TAB -->
   <section id="tab-topics" class="tab-panel" role="tabpanel">

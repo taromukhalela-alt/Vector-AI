@@ -64,14 +64,27 @@ PHYSICS_SNIPPETS = {
 }
 
 
-def load_system_prompt():
+def load_system_prompt(user_key=None):
     try:
-        return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
+        base = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
     except Exception:
-        return (
+        base = (
             "You are Vector AI, a CAPS-aligned physics tutor for South African high school students. "
             "Use simple explanations, stay on physics topics, and ask one follow-up question."
         )
+    if not user_key:
+        return base
+    try:
+        users_file = BASE_DIR / "users.json"
+        if users_file.exists():
+            users = json.loads(users_file.read_text(encoding="utf-8"))
+            user_data = users.get(user_key, {})
+            summary = (user_data.get("memory_summary") or "").strip()
+            if summary:
+                return f"{base}\n\n## What you remember from past sessions with this student:\n{summary}"
+    except Exception:
+        pass
+    return base
 
 
 def _get_local_generator():
@@ -126,8 +139,8 @@ def is_off_topic(intent, confidence):
     return normalize_confidence(confidence) < OFF_TOPIC_THRESHOLD
 
 
-def build_prompt(history, user_message, intent):
-    system_prompt = load_system_prompt()
+def build_prompt(history, user_message, intent, user_key=None):
+    system_prompt = load_system_prompt(user_key)
     intent_hint = INTENT_PROMPTS.get(intent, INTENT_PROMPTS.get("unknown", ""))
     lines = [system_prompt, "", f"Intent hint: {intent_hint}"]
 
@@ -213,7 +226,7 @@ def _sanitize_generated_reply(reply):
     return cleaned
 
 
-def generate_response(prompt, intent, user_message, confidence, deterministic_hint=None):
+    return reply
     if is_off_topic(intent, confidence):
         if intent != "unknown":
             brief = _rule_based_non_physics_reply(intent, deterministic_hint=deterministic_hint)

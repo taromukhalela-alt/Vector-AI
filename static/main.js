@@ -19,26 +19,26 @@ function initVectorAI() {
     return d.innerHTML;
   }
 
-   function appendMessage(text, role) {
-     if (!chatMessages) return;
-     const msg = document.createElement("div");
-     msg.className = `message ${role}`;
-     msg.innerHTML = sanitize(text || "")
-       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-       .replace(/`([^`]+)`/g, "<code>$1</code>")
-       .replace(/\n/g, "<br>");
-     chatMessages.appendChild(msg);
-     msg.scrollIntoView({ behavior: "smooth", block: "end" });
-     
-     // Add "Save as Note" button for assistant messages
-     if (role === 'assistant') {
-       const noteBtn = document.createElement('button');
-       noteBtn.className = 'note-action-btn';
-       noteBtn.textContent = 'Save as Note';
-       noteBtn.onclick = () => saveResponseAsNote(text);
-       msg.appendChild(noteBtn);
-     }
-   }
+    function appendMessage(text, role) {
+      if (!chatMessages) return;
+      const msg = document.createElement("div");
+      msg.className = `message ${role}`;
+      msg.innerHTML = sanitize(text || "")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\n/g, "<br>");
+      chatMessages.appendChild(msg);
+      msg.scrollIntoView({ behavior: "smooth", block: "end" });
+      
+      // Add "Save as Note" button for assistant messages
+      if (role === 'assistant') {
+        const noteBtn = document.createElement('button');
+        noteBtn.className = 'note-action-btn';
+        noteBtn.textContent = 'Save as Note';
+        noteBtn.onclick = () => saveResponseAsNote(text);
+        msg.appendChild(noteBtn);
+      }
+    }
 
   function showTypingIndicator() {
     if (!chatMessages || typingNode) return;
@@ -55,30 +55,30 @@ function initVectorAI() {
     typingNode = null;
   }
 
-  async function saveResponseAsNote(content) {
-    // Try to infer topic from conversation history
-    const lastUserMsg = conversationHistory.slice(-2)[0]?.content || '';
-    const topic = lastUserMsg.split(' ').slice(0, 3).join(' ') || 'General';
-    
-    try {
-      const res = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `Note: ${topic}`,
-          content: content,
-          topic: topic,
-          ai_generated: true
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        appendMessage('Note saved to your collection!', 'system');
-      }
-    } catch (err) {
-      console.error('Failed to save note:', err);
-    }
-  }
+   async function saveResponseAsNote(content) {
+     // Try to infer topic from conversation history
+     const lastUserMsg = conversationHistory.slice(-2)[0]?.content || '';
+     const topic = lastUserMsg.split(' ').slice(0, 3).join(' ') || 'General';
+     
+     try {
+       const res = await fetch('/api/notes', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           title: `Note: ${topic}`,
+           content: content,
+           topic: topic,
+           ai_generated: true
+         })
+       });
+       const data = await res.json();
+       if (data.success) {
+         appendMessage('Note saved to your collection!', 'system');
+       }
+     } catch (err) {
+       console.error('Failed to save note:', err);
+     }
+   }
 
    async function requestAnimationMatch(question) {
     try {
@@ -263,12 +263,76 @@ function initVectorAI() {
     appendMessage("Something went wrong. Please refresh if issues continue.", "assistant");
   });
 
+  // --- History tab ---
+  loadHistorySessions();
+
   window.addEventListener("error", (e) => {
     console.warn("Frontend error:", e.message);
     if (e.filename && e.filename.includes("animations.js") && window.clearScene) {
       window.clearScene();
     }
   });
+
+  function loadHistorySessions() {
+    const listEl = document.getElementById("session-list");
+    if (!listEl) return;
+    fetch("/api/history")
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        // Group into sessions by chat_id
+        const sessions = {};
+        data.forEach(entry => {
+          const cid = entry.chat_id || "legacy";
+          if (!sessions[cid]) sessions[cid] = [];
+          sessions[cid].push(entry);
+        });
+        listEl.innerHTML = "";
+        Object.entries(sessions).forEach(([chatId, msgs]) => {
+          const firstMsg = msgs[0]?.message || "Session";
+          const lastTime = msgs[msgs.length - 1]?.time || "";
+          const btn = document.createElement("div");
+          btn.className = "session-item";
+          btn.innerHTML = `
+            <div class="session-item-title">${escapeHtml(firstMsg.slice(0, 40))}</div>
+            <div class="session-item-meta">${msgs.length} messages · ${formatHistoryTime(lastTime)}</div>
+          `;
+          btn.onclick = () => showHistorySession(chatId, msgs, btn);
+          listEl.appendChild(btn);
+        });
+      })
+      .catch(e => console.error("History load error:", e));
+  }
+
+  function showHistorySession(chatId, messages, btnEl) {
+    document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
+    if (btnEl) btnEl.classList.add("active");
+
+    const detail = document.getElementById("history-detail");
+    const empty = document.getElementById("history-empty");
+    if (!detail) return;
+    if (empty) empty.style.display = "none";
+
+    detail.innerHTML = "";
+    messages.forEach(entry => {
+      const role = entry.username ? "user" : "assistant";
+      const msg = document.createElement("div");
+      msg.className = `history-msg ${role}`;
+      msg.innerHTML = `
+        <div>${escapeHtml(entry.message || entry.reply || "").replace(/\n/g, "<br>")}</div>
+        <div class="msg-meta">${formatHistoryTime(entry.time)} · ${entry.topic || ""}</div>
+      `;
+      detail.appendChild(msg);
+    });
+  }
+
+  function formatHistoryTime(isoStr) {
+    if (!isoStr) return "";
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    } catch { return isoStr; }
+  }
 
   const voiceLaunchBtn = document.getElementById("voice-launch-btn");
   if (voiceLaunchBtn && !("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
