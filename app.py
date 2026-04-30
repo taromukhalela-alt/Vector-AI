@@ -24,6 +24,7 @@ import threading
 import numpy as np
 import logging
 import time
+import requests
 from model.generator import MAX_HISTORY, normalize_history
 from dotenv import load_dotenv
 
@@ -407,7 +408,8 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
             return local_hint
         fallback = get_local_science_response(user_message)
         return fallback or "I hit a temporary issue. Please try again."
-
+    if len(history) > 0 and len(history) % 3 == 0:
+        user_message += "\n\n[SYSTEM INSTRUCTION:End your response with 3 specific questions that you think would help the student understand the concepts you are doing,If student doesn't return answers, then keep politely telling them to solve your questions before you move on further.]"
 
 # -------------------------------
 # Responses
@@ -1456,13 +1458,54 @@ def delete_note(note_id):
     users = load_users()
     user_data = users.get(current_user.id, {})
     notes = user_data.get("notes", [])
-
-    notes = [n for n in notes if n["id"] != note_id]
-    user_data["notes"] = notes
+    
+    user_data["notes"] = [n for n in notes if n["id"] != note_id]
     users[current_user.id] = user_data
     save_users(users)
-
     return jsonify({"success": True})
+
+
+@app.route("/api/tts", methods=["POST"])
+@login_required
+def elevenlabs_tts():
+    """Fetch TTS audio from ElevenLabs"""
+    data = request.get_json() or {}
+    text = data.get("text", "").strip()
+    voice_id = data.get("voice_id", "pNInz6obpgDQGcFmaJgB") # Default to Adam
+    
+    if not text:
+        return jsonify({"success": False, "message": "Text required"}), 400
+        
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not api_key:
+        return jsonify({"success": False, "message": "ElevenLabs API key not configured"}), 500
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": api_key
+    }
+    payload = {
+        "text": text,
+        "model_id": "eleven_monolingual_v1",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, stream=True)
+        if response.status_code == 200:
+            from flask import Response
+            return Response(response.iter_content(chunk_size=1024), mimetype="audio/mpeg")
+        else:
+            logger.error(f"ElevenLabs error: {response.text}")
+            return jsonify({"success": False, "message": "ElevenLabs API error"}), 500
+    except Exception as e:
+        logger.error(f"ElevenLabs exception: {str(e)}")
+        return jsonify({"success": False, "message": "Internal server error"}), 500
 
 
 @app.route("/api/notes/<note_id>", methods=["GET"])
@@ -1644,4 +1687,4 @@ def handle_exception(error):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000, ssl_context="adhoc")

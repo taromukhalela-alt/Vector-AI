@@ -1,24 +1,15 @@
 // ============================================================
-// VECTOR AI — 3D Physics Animations (Three.js r128)
+// VECTOR AI — Refined 2D Physics Animations
 // ============================================================
 
 let canvas = null;
+let ctx = null;
 let canvasContainer = null;
-let renderer = null;
-let scene = null;
-let camera = null;
 let resizeObserver = null;
-let debugCube = null;
 
 const PERF = {
-  MAX_FPS: 30,
-  MAX_PARTICLES: 250,
-  SPHERE_DETAIL: 12,
-  PLANE_DETAIL: 28,
-  PIXEL_RATIO: Math.min(window.devicePixelRatio, window.innerWidth <= 768 ? 1 : 1.5),
-  USE_SHADOWS: false,
-  USE_FOG: true,
-  FRAME_INTERVAL: 1000 / 30,
+  PIXEL_RATIO: Math.min(window.devicePixelRatio || 1, 2),
+  FRAME_INTERVAL: 1000 / 60,
 };
 
 const animConfig = window.animConfig || {
@@ -30,38 +21,21 @@ window.animConfig = animConfig;
 
 let currentAnim = "idle";
 let animId = null;
-let currentAnimCleanup = null;
 
 // === GRUVBOX COLORS ===
 const GRV = {
-  green: 0xb8bb26,
-  aqua: 0x8ec07c,
-  yellow: 0xfabd2f,
-  orange: 0xfe8019,
-  red: 0xfb4934,
-  purple: 0xd3869b,
-  blue: 0x83a598,
-  bg: 0x282828,
-  bgHard: 0x1d2021,
-  fg: 0xebdbb2,
-  dim: 0x665c54,
+  green: "#b8bb26",
+  aqua: "#8ec07c",
+  yellow: "#fabd2f",
+  orange: "#fe8019",
+  red: "#fb4934",
+  purple: "#d3869b",
+  blue: "#83a598",
+  bg: "#282828",
+  bgHard: "#1d2021",
+  fg: "#ebdbb2",
+  dim: "#665c54",
 };
-
-const MAT = {
-  ground: () => new THREE.MeshLambertMaterial({ color: GRV.bg }),
-  dim: () => new THREE.MeshLambertMaterial({ color: GRV.dim }),
-  green: () => new THREE.MeshPhongMaterial({ color: GRV.green, emissive: GRV.green, emissiveIntensity: 0.3 }),
-  aqua: () => new THREE.MeshPhongMaterial({ color: GRV.aqua, emissive: GRV.aqua, emissiveIntensity: 0.2 }),
-  orange: () => new THREE.MeshPhongMaterial({ color: GRV.orange, emissive: GRV.orange, emissiveIntensity: 0.25 }),
-  yellow: () => new THREE.MeshPhongMaterial({ color: GRV.yellow, emissive: GRV.yellow, emissiveIntensity: 0.2 }),
-  red: () => new THREE.MeshPhongMaterial({ color: GRV.red, emissive: GRV.red, emissiveIntensity: 0.2 }),
-  blue: () => new THREE.MeshPhongMaterial({ color: GRV.blue, emissive: GRV.blue, emissiveIntensity: 0.2 }),
-  wire: (c) => new THREE.MeshBasicMaterial({ color: c, wireframe: true, transparent: true, opacity: 0.12 }),
-  line: (c, op = 1) => new THREE.LineBasicMaterial({ color: c, transparent: op < 1, opacity: op }),
-  points: (c, size = 0.07) => new THREE.PointsMaterial({ color: c, size, transparent: true, opacity: 0.8 }),
-};
-
-const persistentNodes = [];
 
 function getCanvasSize() {
   const containerRect = canvasContainer?.getBoundingClientRect();
@@ -79,106 +53,20 @@ function getCanvasSize() {
   return { width, height };
 }
 
-function addDebugHelpers() {
-  if (!scene) return;
-  const grid = addGrid();
-  persistentNodes.push(grid);
-
-  debugCube = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 1.2, 1.2),
-    new THREE.MeshPhongMaterial({
-      color: GRV.orange,
-      emissive: GRV.orange,
-      emissiveIntensity: 0.18,
-    })
-  );
-  debugCube.position.set(0, -1.4, 0);
-  scene.add(debugCube);
-  persistentNodes.push(debugCube);
-}
-
 function initScene() {
   canvas = document.getElementById("physics-canvas");
   canvasContainer = document.getElementById("canvas-container") || canvas?.parentElement || null;
 
-  if (!canvas || typeof THREE === "undefined") {
-    console.warn("Physics canvas or Three.js missing.");
+  if (!canvas) {
+    console.warn("Physics canvas missing.");
     return false;
   }
 
-  renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: false,
-    powerPreference: "low-power",
-  });
+  ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return false;
 
-  const { width, height } = getCanvasSize();
-  renderer.setPixelRatio(PERF.PIXEL_RATIO);
-  renderer.setSize(width, height, false);
-  renderer.shadowMap.enabled = PERF.USE_SHADOWS;
-  renderer.setClearColor(0x1d2021);
-  renderer.domElement.addEventListener(
-    "webglcontextlost",
-    (e) => {
-      e.preventDefault();
-      if (animId) {
-        cancelAnimationFrame(animId);
-        animId = null;
-      }
-    },
-    false
-  );
-  renderer.domElement.addEventListener(
-    "webglcontextrestored",
-    () => {
-      if (window.loadAnimation) window.loadAnimation(currentAnim);
-    },
-    false
-  );
-
-  scene = new THREE.Scene();
-  scene.fog = PERF.USE_FOG ? new THREE.FogExp2(0x1d2021, 0.04) : null;
-
-  camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 500);
-  camera.position.set(0, 4, 14);
-
-  setupLights();
-  addDebugHelpers();
-  updateOrbitCamera();
-  renderer.render(scene, camera);
+  handleAnimResize();
   return true;
-}
-
-// === LIGHTS (shared) ===
-function setupLights() {
-  const ambient = new THREE.AmbientLight(0xffffff, 0.25);
-  scene.add(ambient);
-
-  const keyLight = new THREE.DirectionalLight(GRV.fg, 0.8);
-  keyLight.position.set(6, 12, 8);
-  keyLight.castShadow = false;
-  scene.add(keyLight);
-
-  const rimLight = new THREE.DirectionalLight(GRV.aqua, 0.3);
-  rimLight.position.set(-8, 4, -6);
-  scene.add(rimLight);
-
-  const fillLight = new THREE.PointLight(GRV.green, 0.4, 30);
-  fillLight.position.set(0, 8, 0);
-  scene.add(fillLight);
-
-  persistentNodes.push(ambient, keyLight, rimLight, fillLight);
-}
-
-// === GRID FLOOR ===
-function addGrid() {
-  const grid = new THREE.GridHelper(40, 40, GRV.dim, GRV.bg);
-  grid.position.y = -3;
-  grid.material.opacity = 0.35;
-  grid.material.transparent = true;
-  scene.add(grid);
-  return grid;
 }
 
 // === HELPERS ===
@@ -276,22 +164,6 @@ function clearScene() {
     cancelAnimationFrame(animId);
     animId = null;
   }
-  if (currentAnimCleanup) {
-    currentAnimCleanup();
-    currentAnimCleanup = null;
-  }
-  scene.traverse((obj) => {
-    if (!persistentNodes.includes(obj)) {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-        else obj.material.dispose();
-      }
-    }
-  });
-  scene.children.slice().forEach((child) => {
-    if (!persistentNodes.includes(child)) scene.remove(child);
-  });
   updateReadout({});
   const keBar = document.getElementById("ke-bar");
   if (keBar) keBar.style.display = "none";
@@ -300,364 +172,354 @@ window.clearScene = clearScene;
 
 let lastFrame = 0;
 function throttledLoop(updateFn) {
-  if (!renderer || !scene || !camera) return;
+  if (!ctx || !canvas) return;
   lastFrame = 0;
   function loop(now) {
     animId = requestAnimationFrame(loop);
     if (lastFrame && now - lastFrame < PERF.FRAME_INTERVAL) return;
     const delta = lastFrame ? (now - lastFrame) / 1000 : PERF.FRAME_INTERVAL / 1000;
     lastFrame = now;
-    if (!animConfig.paused) updateFn(delta);
-    if (debugCube) debugCube.rotation.y += delta * 0.6;
-    updateOrbitCamera();
-    renderer.render(scene, camera);
+    
+    // Clear background
+    ctx.fillStyle = GRV.bgHard;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Setup drawing context center
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    // Scale so we have a consistent coordinate system, e.g. -10 to +10
+    const scale = Math.min(canvas.width, canvas.height) / 20; 
+    ctx.scale(scale, -scale); // Flip Y to match standard math coordinates
+    
+    if (!animConfig.paused) updateFn(delta, scale);
+    else updateFn(0, scale); // Call with 0 delta to just render
+    
+    ctx.restore();
   }
   animId = requestAnimationFrame(loop);
 }
 
-// === TOUCH/MOUSE ORBIT ===
-let isDragging = false;
-let prevX = 0;
-let prevY = 0;
-let orbitTheta = 0;
-let orbitPhi = 0.3;
-let orbitRadius = 14;
-
-function setupOrbit() {
-  if (!canvas) return;
-  const el = canvas;
-
-  el.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    prevX = e.clientX;
-    prevY = e.clientY;
-  });
-  window.addEventListener("mouseup", () => {
-    isDragging = false;
-  });
-  window.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    orbitTheta -= (e.clientX - prevX) * 0.008;
-    orbitPhi = Math.max(0.1, Math.min(Math.PI / 2, orbitPhi - (e.clientY - prevY) * 0.008));
-    prevX = e.clientX;
-    prevY = e.clientY;
-  });
-
-  el.addEventListener(
-    "touchstart",
-    (e) => {
-      isDragging = true;
-      prevX = e.touches[0].clientX;
-      prevY = e.touches[0].clientY;
-    },
-    { passive: true }
-  );
-  el.addEventListener(
-    "touchend",
-    () => {
-      isDragging = false;
-    },
-    { passive: true }
-  );
-  el.addEventListener(
-    "touchmove",
-    (e) => {
-      if (!isDragging) return;
-      orbitTheta -= (e.touches[0].clientX - prevX) * 0.008;
-      orbitPhi = Math.max(0.1, Math.min(Math.PI / 2, orbitPhi - (e.touches[0].clientY - prevY) * 0.008));
-      prevX = e.touches[0].clientX;
-      prevY = e.touches[0].clientY;
-    },
-    { passive: true }
-  );
-
-  el.addEventListener(
-    "wheel",
-    (e) => {
-      orbitRadius = Math.max(5, Math.min(30, orbitRadius + e.deltaY * 0.02));
-    },
-    { passive: true }
-  );
-}
-function updateOrbitCamera() {
-  if (!camera) return;
-  camera.position.x = orbitRadius * Math.sin(orbitTheta) * Math.cos(orbitPhi);
-  camera.position.y = orbitRadius * Math.sin(orbitPhi) + 2;
-  camera.position.z = orbitRadius * Math.cos(orbitTheta) * Math.cos(orbitPhi);
-  camera.lookAt(0, 0, 0);
-}
-
 function handleAnimResize() {
-  if (!canvas || !renderer) return;
+  if (!canvas || !ctx) return;
   const { width: w, height: h } = getCanvasSize();
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-  renderer.render(scene, camera);
+  canvas.width = w * PERF.PIXEL_RATIO;
+  canvas.height = h * PERF.PIXEL_RATIO;
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
 }
 
 window.handleAnimResize = handleAnimResize;
 
+// === DRAWING HELPERS ===
+function drawCircle(x, y, radius, color, glow = false) {
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  if (glow) {
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = color;
+  } else {
+    ctx.shadowBlur = 0;
+  }
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawLine(x1, y1, x2, y2, color, width = 0.1, dashed = false) {
+  ctx.beginPath();
+  if (dashed) ctx.setLineDash([0.2, 0.2]);
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+  if (dashed) ctx.setLineDash([]);
+}
+
+function drawArrow(x1, y1, x2, y2, color, width = 0.1, dashed = false) {
+  drawLine(x1, y1, x2, y2, color, width, dashed);
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
 // === ANIMATIONS ===
-function renderIdleParticles3D() {
+
+function renderIdleParticles2D() {
   clearScene();
-  updateHUD("Idle Field", "Particle Drift | Φ = ∮B·dA");
+  updateHUD("Idle Field", "Particle Drift | 2D Simulation");
 
-  const core = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.aqua()
-  );
-  scene.add(core);
-  const coreLight = new THREE.PointLight(GRV.aqua, 1.5, 20);
-  core.add(coreLight);
-
-  const count = Math.min(200, PERF.MAX_PARTICLES);
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const angles = new Float32Array(count);
-  const radii = new Float32Array(count);
-  const speeds = new Float32Array(count);
+  const count = 100;
+  const particles = [];
   const colorOptions = [GRV.green, GRV.aqua, GRV.yellow, GRV.orange, GRV.blue];
 
   for (let i = 0; i < count; i++) {
-    const radius = 2 + Math.random() * 8;
-    const angle = Math.random() * Math.PI * 2;
-    const height = (Math.random() - 0.5) * 4;
-    radii[i] = radius;
-    angles[i] = angle;
-    speeds[i] = 0.004 + Math.random() * 0.006;
-
-    positions[i * 3] = Math.cos(angle) * radius;
-    positions[i * 3 + 1] = height;
-    positions[i * 3 + 2] = Math.sin(angle) * radius;
-
-    const color = new THREE.Color(colorOptions[i % colorOptions.length]);
-    colors[i * 3] = color.r;
-    colors[i * 3 + 1] = color.g;
-    colors[i * 3 + 2] = color.b;
+    particles.push({
+      angle: Math.random() * Math.PI * 2,
+      radius: 2 + Math.random() * 8,
+      speed: 0.002 + Math.random() * 0.004,
+      color: colorOptions[i % colorOptions.length],
+      size: 0.05 + Math.random() * 0.05,
+      yOffset: Math.random() * Math.PI * 2
+    });
   }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-
-  const mat = new THREE.PointsMaterial({ size: 0.08, vertexColors: true, transparent: true, opacity: 0.85 });
-  const points = new THREE.Points(geo, mat);
-  scene.add(points);
 
   let t = 0;
   throttledLoop((delta) => {
     t += delta * (animConfig.speed || 1);
-    for (let i = 0; i < count; i++) {
-      angles[i] += speeds[i] * (animConfig.speed || 1);
-      positions[i * 3] = Math.cos(angles[i]) * radii[i];
-      positions[i * 3 + 2] = Math.sin(angles[i]) * radii[i];
-      positions[i * 3 + 1] += Math.sin(t + i) * 0.002;
-    }
-    geo.attributes.position.needsUpdate = true;
+    
+    // Core
+    drawCircle(0, 0, 0.8, GRV.bg, true);
+    ctx.strokeStyle = GRV.aqua;
+    ctx.lineWidth = 0.05;
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.8 + Math.sin(t*2)*0.1, 0, Math.PI*2);
+    ctx.stroke();
+
+    particles.forEach((p, i) => {
+      p.angle += p.speed * (animConfig.speed || 1) * 60 * delta;
+      const x = Math.cos(p.angle) * p.radius;
+      const y = Math.sin(p.angle) * p.radius * 0.4 + Math.sin(t + p.yOffset) * 0.5;
+      
+      ctx.globalAlpha = 0.8;
+      drawCircle(x, y, p.size, p.color, true);
+    });
+    ctx.globalAlpha = 1.0;
   });
 }
 
-function renderProjectile3D() {
+function renderProjectile2D() {
   clearScene();
   updateHUD("Projectile Motion", "v² = u² + 2as  |  Range = v₀²sin(2θ)/g");
 
   let angle = animConfig?.params?.angle ?? 45;
-  let v0 = animConfig?.params?.velocity ?? 12;
+  let v0 = animConfig?.params?.velocity ?? 14;
+  let e = animConfig?.params?.bounciness ?? 0.6; // restitution
+  let h = animConfig?.params?.height ?? 0;
   const g = 9.8;
 
-  const ball = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.orange()
-  );
-  scene.add(ball);
+  let rad = (angle * Math.PI) / 180;
+  let vx = v0 * Math.cos(rad) * 0.3;
+  let vy = v0 * Math.sin(rad) * 0.3;
+  
+  let x = -8;
+  const startY = -4;
+  let y = startY + h;
+  
+  const trail = [];
+  let isStopped = false;
 
-  const ballLight = new THREE.PointLight(GRV.orange, 1.2, 6);
-  ball.add(ballLight);
-  const velArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), ball.position, 1, GRV.aqua);
-  scene.add(velArrow);
+  throttledLoop((delta) => {
+    const newAngle = animConfig?.params?.angle ?? 45;
+    const newV0 = animConfig?.params?.velocity ?? 14;
+    const newE = animConfig?.params?.bounciness ?? 0.6;
+    const newH = animConfig?.params?.height ?? 0;
+    
+    if (angle !== newAngle || v0 !== newV0 || e !== newE || h !== newH) {
+      angle = newAngle; v0 = newV0; e = newE; h = newH;
+      rad = (angle * Math.PI) / 180;
+      vx = v0 * Math.cos(rad) * 0.3;
+      vy = v0 * Math.sin(rad) * 0.3;
+      x = -8;
+      y = startY + h;
+      trail.length = 0;
+      isStopped = false;
+    }
 
-  const trailMax = 60;
-  const trailPositions = new Float32Array(trailMax * 3);
-  const trailGeo = new THREE.BufferGeometry();
-  trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
-  const trail = new THREE.Line(trailGeo, MAT.line(GRV.yellow, 0.5));
-  scene.add(trail);
+    const dt = delta * (animConfig?.speed ?? 1);
 
-  const platform = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 1.5), MAT.dim());
-  platform.position.set(-6, -2.85, 0);
-  scene.add(platform);
+    if (!isStopped && dt > 0) {
+      vy -= (g * 0.3) * dt;
+      x += vx * dt;
+      y += vy * dt;
 
-  let t = 0;
-  let trailCount = 0;
-  const rad = (angle * Math.PI) / 180;
-  const vx = v0 * Math.cos(rad) * 0.25;
-  const vy = v0 * Math.sin(rad) * 0.25;
-
-  throttledLoop(() => {
-      angle = animConfig?.params?.angle ?? angle;
-      v0 = animConfig?.params?.velocity ?? v0;
-      const radNow = (angle * Math.PI) / 180;
-      const vxNow = v0 * Math.cos(radNow) * 0.25;
-      const vyNow = v0 * Math.sin(radNow) * 0.25;
-
-      t += 0.016 * (animConfig?.speed ?? 1);
-      const x = vxNow * t - 6;
-      const y = vyNow * t - 0.5 * (g * 0.25) * t * t - 2.5;
-
-      if (y < -3) {
-        t = 0;
-        trailCount = 0;
+      if (y < startY) {
+        y = startY;
+        vy = -vy * e;
+        vx = vx * 0.98; // ground friction
+        
+        if (Math.abs(vy) < 0.5) {
+          vy = 0;
+        }
+        if (vy === 0 && Math.abs(vx) < 0.1) {
+          vx = 0;
+          isStopped = true;
+        }
       }
 
-      ball.position.set(x, y, 0);
-      velArrow.position.copy(ball.position);
-      const showVectors = !!animConfig?.params?.vectors;
-      velArrow.visible = showVectors;
-      if (showVectors) {
-        velArrow.setDirection(new THREE.Vector3(vxNow, vyNow - g * 0.25 * t, 0).normalize());
-        velArrow.setLength(1.5);
+      if (trail.length === 0 || Math.hypot(trail[trail.length-1].x - x, trail[trail.length-1].y - y) > 0.2) {
+        trail.push({x, y});
+        if (trail.length > 150) trail.shift();
       }
+    }
 
-      if (trailCount < trailMax) {
-        trailPositions.set([x, y, 0], trailCount * 3);
-        trailGeo.attributes.position.needsUpdate = true;
-        trailGeo.setDrawRange(0, trailCount);
-        trailCount++;
-      } else {
-        for (let i = 0; i < (trailMax - 1) * 3; i++) trailPositions[i] = trailPositions[i + 3];
-        trailPositions.set([x, y, 0], (trailMax - 1) * 3);
-        trailGeo.attributes.position.needsUpdate = true;
-      }
+    // Draw ground
+    drawLine(-10, startY, 10, startY, GRV.dim, 0.1);
+    
+    // Draw trail
+    if (trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.strokeStyle = GRV.yellow;
+      ctx.lineWidth = 0.08;
+      ctx.stroke();
+    }
 
-      const speed = Math.sqrt(vxNow ** 2 + (vyNow - g * 0.25 * t) ** 2);
-      updateReadout({
-        Angle: `${angle.toFixed(0)}°`,
-        "v₀": `${v0.toFixed(1)} m/s`,
-        Speed: `${(speed * 4).toFixed(1)} m/s`,
-        Height: `${Math.max(0, y + 3).toFixed(1)} m`,
-      });
+    // Draw ball
+    drawCircle(x, y, 0.3, GRV.orange, true);
+
+    const showVectors = !!animConfig?.params?.vectors;
+    if (showVectors && !isStopped) {
+      const vScale = 0.3;
+      // Vx
+      drawArrow(x, y, x + vx * vScale, y, GRV.aqua, 0.05, true);
+      // Vy
+      drawArrow(x, y, x, y + vy * vScale, GRV.aqua, 0.05, true);
+      // V total
+      drawArrow(x, y, x + vx * vScale, y + vy * vScale, GRV.green, 0.08);
+      // Gravity
+      if (y > startY) drawArrow(x, y, x, y - 2, GRV.yellow, 0.08);
+    }
+
+    const speed = Math.sqrt(vx ** 2 + vy ** 2);
+    updateReadout({
+      Angle: `${angle.toFixed(0)}°`,
+      "v₀": `${v0.toFixed(1)} m/s`,
+      Speed: `${(speed * 3.33).toFixed(1)} m/s`,
+      Height: `${Math.max(0, y - startY).toFixed(1)} m`,
+      Status: isStopped ? "Stopped" : "Moving"
+    });
+    
+    // Draw height reference if launched from height
+    if (h > 0) {
+      drawLine(-8.5, startY, -7.5, startY, GRV.dim, 0.05, true);
+      drawLine(-8.5, startY + h, -7.5, startY + h, GRV.dim, 0.05, true);
+      drawLine(-8, startY, -8, startY + h, GRV.dim, 0.05, true);
+    }
   });
 }
 
-function renderWave3D() {
+function renderWave2D() {
   clearScene();
   updateHUD("Wave Motion", "v = fλ  |  y = A·sin(kx - ωt)");
 
-  const W = 40;
-  const H = 40;
-  const SEG = PERF.PLANE_DETAIL;
-  const geo = new THREE.PlaneGeometry(W, H, SEG, SEG);
-  geo.rotateX(-Math.PI / 2);
-  const mat = new THREE.MeshPhongMaterial({
-    color: GRV.blue,
-    emissive: GRV.blue,
-    emissiveIntensity: 0.15,
-    wireframe: false,
-    side: THREE.DoubleSide,
-    vertexColors: false,
-    transparent: true,
-    opacity: 0.85,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = -1;
-  scene.add(mesh);
-
-  const wireMat = MAT.wire(GRV.aqua);
-  const wireMesh = new THREE.Mesh(geo.clone(), wireMat);
-  scene.add(wireMesh);
-
   let t = 0;
-  const posAttr = geo.attributes.position;
-
-  throttledLoop(() => {
-    t += 0.016 * (animConfig?.speed ?? 1);
-    const freq = animConfig?.params?.frequency ?? 1;
+  throttledLoop((delta) => {
+    t += delta * (animConfig?.speed ?? 1);
+    const freq = animConfig?.params?.frequency ?? 1.2;
     const amp = animConfig?.params?.amplitude ?? 1.5;
+    const useSuper = !!animConfig?.params?.superposition;
+    
     const k = freq * 0.8;
     const w = freq * 2;
-    const useSuper = !!animConfig?.params?.superposition;
 
-    for (let i = 0; i < posAttr.count; i++) {
-      const x = posAttr.getX(i);
-      const z = posAttr.getZ(i);
-      const dist = Math.sqrt(x * x + z * z);
-      const base = amp * Math.sin(k * dist - w * t);
-      const superWave = useSuper ? (amp * 0.6) * Math.sin(k * dist - w * t + Math.PI / 2) : 0;
-      posAttr.setY(i, base + superWave);
+    ctx.beginPath();
+    for (let x = -10; x <= 10; x += 0.1) {
+      const base = amp * Math.sin(k * x - w * t);
+      const superWave = useSuper ? (amp * 0.6) * Math.sin(k * x - w * t + Math.PI / 2) : 0;
+      const y = base + superWave;
+      if (x === -10) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
-    posAttr.needsUpdate = true;
-    geo.computeVertexNormals();
+    
+    ctx.strokeStyle = GRV.blue;
+    ctx.lineWidth = 0.15;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = GRV.blue;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (useSuper) {
+      ctx.beginPath();
+      for (let x = -10; x <= 10; x += 0.2) {
+        const y = amp * Math.sin(k * x - w * t);
+        if (x === -10) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = GRV.dim;
+      ctx.lineWidth = 0.05;
+      ctx.stroke();
+    }
 
     updateReadout({
       Frequency: `${freq.toFixed(1)} Hz`,
       Amplitude: `${amp.toFixed(1)} m`,
-      λ: `${(2 * Math.PI / k).toFixed(1)} m`,
+      "λ": `${(2 * Math.PI / k).toFixed(1)} m`,
       Period: `${(2 * Math.PI / w).toFixed(2)} s`,
     });
   });
 }
 
-function renderPendulum3D() {
+function renderPendulum2D() {
   clearScene();
   updateHUD("Simple Harmonic Motion", "T = 2π√(L/g)  |  F = -kx");
 
-  const L = animConfig?.params?.length ?? 5;
-  const startAngle = ((animConfig?.params?.angle ?? 30) * Math.PI) / 180;
-
-  const pivot = new THREE.Object3D();
-  pivot.position.set(0, 4, 0);
-  scene.add(pivot);
-
-  const rodGeo = new THREE.CylinderGeometry(0.06, 0.06, L, 8);
-  rodGeo.translate(0, -L / 2, 0);
-  const rod = new THREE.Mesh(rodGeo, MAT.dim());
-  pivot.add(rod);
-
-  const bob = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.green()
-  );
-  bob.position.y = -L;
-  pivot.add(bob);
-  bob.add(new THREE.PointLight(GRV.green, 1.5, 8));
-
-  const velArrow = new THREE.ArrowHelper(
-    new THREE.Vector3(1, 0, 0),
-    new THREE.Vector3(0, -L, 0),
-    1,
-    GRV.orange,
-    0.3,
-    0.2
-  );
-  pivot.add(velArrow);
-
-  const trailPts = [];
-  const trailGeo = new THREE.BufferGeometry();
-  const trailLine = new THREE.Line(trailGeo, MAT.line(GRV.yellow, 0.4));
-  scene.add(trailLine);
-
   let t = 0;
   const g = 9.8;
-  const omega = Math.sqrt(g / L);
+  const trail = [];
 
   throttledLoop((delta) => {
     t += delta * (animConfig?.speed ?? 1);
+    const L = animConfig?.params?.length ?? 5;
+    const startAngle = ((animConfig?.params?.angle ?? 30) * Math.PI) / 180;
+    
+    const omega = Math.sqrt(g / L);
     const theta = startAngle * Math.cos(omega * t);
     const omegaVal = -startAngle * omega * Math.sin(omega * t);
-    pivot.rotation.z = theta;
+
+    const pivotX = 0;
+    const pivotY = 4;
+    const bobX = pivotX + L * Math.sin(theta);
+    const bobY = pivotY - L * Math.cos(theta);
+
+    if (trail.length === 0 || Math.hypot(trail[trail.length-1].x - bobX, trail[trail.length-1].y - bobY) > 0.1) {
+      trail.push({x: bobX, y: bobY});
+      if (trail.length > 40) trail.shift();
+    }
+
+    // Trail
+    if (trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.strokeStyle = GRV.yellow;
+      ctx.lineWidth = 0.05;
+      ctx.stroke();
+    }
+
+    // Rod
+    drawLine(pivotX, pivotY, bobX, bobY, GRV.dim, 0.1);
+    
+    // Pivot
+    drawCircle(pivotX, pivotY, 0.15, GRV.fg);
+
+    // Bob
+    drawCircle(bobX, bobY, 0.5, GRV.green, true);
+
+    const showVectors = !!animConfig?.params?.vectors;
+    if (showVectors) {
+      // Velocity vector (tangent)
+      const vx = Math.cos(theta) * omegaVal * L;
+      const vy = Math.sin(theta) * omegaVal * L;
+      drawArrow(bobX, bobY, bobX + vx * 0.5, bobY + vy * 0.5, GRV.green, 0.08);
+
+      // Gravity (down)
+      drawArrow(bobX, bobY, bobX, bobY - 2, GRV.yellow, 0.08);
+
+      // Tension (along string)
+      const tx = -Math.sin(theta) * 2;
+      const ty = Math.cos(theta) * 2;
+      drawArrow(bobX, bobY, bobX + tx, bobY + ty, GRV.aqua, 0.08);
+    }
 
     const speed = Math.abs(omegaVal * L);
-    const dir = new THREE.Vector3(Math.sign(omegaVal) * Math.cos(theta), Math.sin(theta), 0).normalize();
-    velArrow.setDirection(dir);
-    velArrow.setLength(speed * 0.3 + 0.2, 0.3, 0.2);
-
-      const bobWorld = new THREE.Vector3();
-      bob.getWorldPosition(bobWorld);
-      trailPts.push(bobWorld.clone());
-      if (trailPts.length > 120) trailPts.shift();
-      trailGeo.setFromPoints(trailPts);
-
     const T = 2 * Math.PI * Math.sqrt(L / g);
     updateReadout({
       Length: `${L.toFixed(1)} m`,
@@ -668,144 +530,123 @@ function renderPendulum3D() {
   });
 }
 
-function renderForces3D() {
+function renderForces2D() {
   clearScene();
   updateHUD("Forces & Friction", "F_net = F_applied - F_friction");
 
-  const ground = new THREE.Mesh(
-    new THREE.BoxGeometry(40, 0.4, 6),
-    new THREE.MeshPhongMaterial({ color: GRV.bg })
-  );
-  ground.position.y = -2.9;
-  scene.add(ground);
-
-  const boxMat = new THREE.MeshPhongMaterial({ color: GRV.aqua, emissive: 0x000000 });
-  const box = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1, 1), boxMat);
-  box.position.set(-6, -2.1, 0);
-  scene.add(box);
-
-  const appliedArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), box.position, 1, GRV.orange);
-  const frictionArrow = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), box.position, 1, GRV.red);
-  const normalArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), box.position, 1, GRV.green);
-  const weightArrow = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), box.position, 1, GRV.yellow);
-  scene.add(appliedArrow, frictionArrow, normalArrow, weightArrow);
-
-  let x = -6;
+  let x = -4;
   let v = 0;
+  const dust = [];
 
-  throttledLoop(() => {
-      const applied = animConfig?.params?.applied ?? 20;
-      const mu = animConfig?.params?.mu ?? 0.3;
-      const mass = animConfig?.params?.mass ?? 5;
-      const g = 9.8;
-      const normal = mass * g;
-      const frictionLimit = mu * normal;
-      const dt = 0.016 * (animConfig.speed || 1);
+  throttledLoop((delta) => {
+    const applied = animConfig?.params?.applied ?? 20;
+    const mu = animConfig?.params?.mu ?? 0.3;
+    const mass = animConfig?.params?.mass ?? 5;
+    const g = 9.8;
+    const normal = mass * g;
+    const frictionLimit = mu * normal;
+    const dt = delta * (animConfig.speed || 1);
 
-      let friction = 0;
-      let net = 0;
-      if (Math.abs(v) < 0.01 && Math.abs(applied) <= frictionLimit) {
-        friction = applied;
-        net = 0;
-        v = 0;
-      } else {
-        const dir = v !== 0 ? Math.sign(v) : Math.sign(applied) || 1;
-        friction = frictionLimit * dir;
-        net = applied - friction;
-        v += (net / mass) * dt;
-      }
+    let friction = 0;
+    let net = 0;
+    if (Math.abs(v) < 0.01 && Math.abs(applied) <= frictionLimit) {
+      friction = applied;
+      net = 0;
+      v = 0;
+    } else {
+      const dir = v !== 0 ? Math.sign(v) : Math.sign(applied) || 1;
+      friction = frictionLimit * dir;
+      net = applied - friction;
+      v += (net / mass) * dt;
+    }
 
-      x += v * dt;
-      if (x > 8) {
-        x = 8;
-        v = 0;
-      } else if (x < -8) {
-        x = -8;
-        v = 0;
-      }
-      box.position.x = x;
+    x += v * dt;
+    if (x > 6) { x = 6; v = 0; }
+    else if (x < -6) { x = -6; v = 0; }
 
-      const scale = 0.03;
-      appliedArrow.position.copy(box.position);
-      appliedArrow.setLength(Math.abs(applied) * scale + 0.2);
-      appliedArrow.setDirection(new THREE.Vector3(applied >= 0 ? 1 : -1, 0, 0));
-
-      frictionArrow.position.copy(box.position);
-      frictionArrow.setLength(Math.abs(friction) * scale + 0.2);
-      frictionArrow.setDirection(new THREE.Vector3(friction >= 0 ? 1 : -1, 0, 0));
-
-      normalArrow.position.copy(box.position);
-      normalArrow.setLength(normal * scale + 0.2);
-      normalArrow.setDirection(new THREE.Vector3(0, 1, 0));
-
-      weightArrow.position.copy(box.position);
-      weightArrow.setLength(normal * scale + 0.2);
-      weightArrow.setDirection(new THREE.Vector3(0, -1, 0));
-
-      const equilibrium = Math.abs(net) < 0.2 && Math.abs(v) < 0.02;
-      boxMat.emissive.setHex(equilibrium ? GRV.green : 0x000000);
-
-      const accel = mass > 0 ? net / mass : 0;
-      updateReadout({
-        F_net: `${net.toFixed(1)} N`,
-        Accel: `${accel.toFixed(2)} m/s²`,
-        Velocity: `${v.toFixed(2)} m/s`,
+    if (Math.abs(v) > 0.1 && Math.random() < 0.4) {
+      dust.push({
+        px: x - Math.sign(v) * 0.8,
+        py: -2 - 0.4 + Math.random() * 0.3,
+        vx: -v * 0.2 + (Math.random() - 0.5) * 0.5,
+        vy: Math.random() * 0.5,
+        life: 1.0
       });
+    }
+
+    const y = -2;
+    // Bumpy Ground
+    ctx.beginPath();
+    ctx.moveTo(-10, y - 0.5);
+    for (let gx = -10; gx <= 10; gx += 0.2) {
+      const bump = mu * 0.12 * Math.sin(gx * 25);
+      ctx.lineTo(gx, y - 0.5 + bump);
+    }
+    ctx.strokeStyle = GRV.dim;
+    ctx.lineWidth = 0.1;
+    ctx.stroke();
+    drawLine(-10, y - 0.6, 10, y - 0.6, GRV.dim, 0.2); // Solid base
+
+    // Dust
+    for (let i = dust.length - 1; i >= 0; i--) {
+      let d = dust[i];
+      d.px += d.vx * dt;
+      d.py += d.vy * dt;
+      d.life -= dt * 1.5;
+      if (d.life <= 0) {
+        dust.splice(i, 1);
+      } else {
+        ctx.globalAlpha = d.life;
+        drawCircle(d.px, d.py, 0.05 + (1 - d.life) * 0.1, GRV.fg);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+    
+    // Crate Box
+    ctx.fillStyle = GRV.bg;
+    ctx.fillRect(x - 1, y - 0.5, 2, 2);
+    
+    const color = Math.abs(net) < 0.2 && Math.abs(v) < 0.02 ? GRV.green : GRV.aqua;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.1;
+    ctx.strokeRect(x - 1, y - 0.5, 2, 2);
+    ctx.lineWidth = 0.05;
+    ctx.strokeRect(x - 0.8, y - 0.3, 1.6, 1.6);
+    drawLine(x - 1, y - 0.5, x + 1, y + 1.5, color, 0.05);
+    drawLine(x - 1, y + 1.5, x + 1, y - 0.5, color, 0.05);
+
+    const showVectors = !!animConfig?.params?.vectors;
+    if (showVectors) {
+      const scale = 0.05;
+      // Vectors
+      if (applied !== 0) drawArrow(x, y+0.5, x + applied * scale * (applied>=0?1:-1), y+0.5, GRV.orange, 0.08); // Applied
+      if (friction !== 0) drawArrow(x, y-0.2, x - friction * scale * Math.sign(v || applied || 1), y-0.2, GRV.red, 0.08); // Friction
+      drawArrow(x, y+1.5, x, y+1.5 + normal * scale, GRV.green, 0.08); // Normal
+      drawArrow(x, y-0.5, x, y-0.5 - normal * scale, GRV.yellow, 0.08); // Weight
+    }
+
+    const accel = mass > 0 ? net / mass : 0;
+    updateReadout({
+      F_net: `${net.toFixed(1)} N`,
+      Accel: `${accel.toFixed(2)} m/s²`,
+      Velocity: `${v.toFixed(2)} m/s`,
+    });
   });
 }
 
-function renderCollision3D() {
+function renderCollision2D() {
   clearScene();
   updateHUD("Momentum & Collisions", "p = mv  |  e = (v2' - v1')/(v1 - v2)");
 
-  const track = new THREE.Mesh(
-    new THREE.BoxGeometry(20, 0.3, 4),
-    MAT.ground()
-  );
-  track.position.y = -2.9;
-  scene.add(track);
-
-  const sphereA = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.orange()
-  );
-  const sphereB = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.blue()
-  );
-  sphereA.position.set(-6, -2.1, 0);
-  sphereB.position.set(6, -2.1, 0);
-  scene.add(sphereA, sphereB);
-
   let v1 = animConfig?.params?.vel1 ?? 4;
-  let v2 = -(animConfig?.params?.vel2 ?? 2.5);
+  let v2 = -(animConfig?.params?.vel1 ?? 4) * 0.6; // initial v2 based on v1
   let lastVel1 = v1;
   let collided = false;
+  
+  let x1 = -5;
+  let x2 = 5;
 
-  const burstCount = 80;
-  const burstPositions = new Float32Array(burstCount * 3);
-  const burstVelocities = new Float32Array(burstCount * 3);
-  const burstGeo = new THREE.BufferGeometry();
-  burstGeo.setAttribute("position", new THREE.BufferAttribute(burstPositions, 3));
-  const burstMat = new THREE.PointsMaterial({ color: GRV.yellow, size: 0.1, transparent: true, opacity: 0.9 });
-  const burstPoints = new THREE.Points(burstGeo, burstMat);
-  burstPoints.visible = false;
-  scene.add(burstPoints);
-  let burstAge = 0;
-
-  function spawnBurst(pos) {
-    burstAge = 0;
-    burstPoints.visible = true;
-    for (let i = 0; i < burstCount; i++) {
-      burstPositions[i * 3] = pos.x;
-      burstPositions[i * 3 + 1] = pos.y;
-      burstPositions[i * 3 + 2] = pos.z;
-      burstVelocities[i * 3] = (Math.random() - 0.5) * 6;
-      burstVelocities[i * 3 + 1] = Math.random() * 4;
-      burstVelocities[i * 3 + 2] = (Math.random() - 0.5) * 6;
-    }
-    burstGeo.attributes.position.needsUpdate = true;
-  }
+  const bursts = [];
 
   throttledLoop((delta) => {
     const dt = delta * (animConfig.speed || 1);
@@ -813,273 +654,236 @@ function renderCollision3D() {
     const m1 = animConfig?.params?.mass1 ?? 3;
     const m2 = animConfig?.params?.mass2 ?? 3;
     const vel1Cfg = animConfig?.params?.vel1 ?? 4;
+
     if (vel1Cfg !== lastVel1) {
       v1 = vel1Cfg;
       v2 = -Math.max(1, vel1Cfg * 0.6);
       lastVel1 = vel1Cfg;
       collided = false;
+      x1 = -5;
+      x2 = 5;
     }
 
-      sphereA.position.x += v1 * dt;
-      sphereB.position.x += v2 * dt;
+    x1 += v1 * dt;
+    x2 += v2 * dt;
 
-      const dist = sphereA.position.distanceTo(sphereB.position);
-      if (!collided && dist <= 1.6) {
-        collided = true;
-        const v1p = ((m1 - e * m2) * v1 + (1 + e) * m2 * v2) / (m1 + m2);
-        const v2p = ((m2 - e * m1) * v2 + (1 + e) * m1 * v1) / (m1 + m2);
-        v1 = v1p;
-        v2 = v2p;
-        spawnBurst(sphereA.position.clone());
-      }
+    const r1 = 0.5 + m1 * 0.1;
+    const r2 = 0.5 + m2 * 0.1;
 
-      if (sphereA.position.x > 8 || sphereA.position.x < -8) {
-        v1 *= -1;
-        collided = false;
+    if (!collided && Math.abs(x1 - x2) <= (r1 + r2)) {
+      collided = true;
+      const v1p = ((m1 - e * m2) * v1 + (1 + e) * m2 * v2) / (m1 + m2);
+      const v2p = ((m2 - e * m1) * v2 + (1 + e) * m1 * v1) / (m1 + m2);
+      v1 = v1p;
+      v2 = v2p;
+      
+      // Spawn burst
+      for(let i=0; i<15; i++) {
+        bursts.push({
+          x: (x1+x2)/2, y: 0,
+          vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+          life: 1.0
+        });
       }
-      if (sphereB.position.x > 8 || sphereB.position.x < -8) {
-        v2 *= -1;
-        collided = false;
-      }
+    }
 
-      if (burstPoints.visible) {
-        burstAge += dt;
-        const pos = burstGeo.attributes.position.array;
-        for (let i = 0; i < pos.length; i += 3) {
-          pos[i] += burstVelocities[i] * dt;
-          pos[i + 1] += burstVelocities[i + 1] * dt;
-          pos[i + 2] += burstVelocities[i + 2] * dt;
-          burstVelocities[i + 1] -= 3 * dt;
-        }
-        burstGeo.attributes.position.needsUpdate = true;
-        burstMat.opacity = Math.max(0, 1 - burstAge / 1.6);
-        if (burstMat.opacity <= 0) burstPoints.visible = false;
-      }
+    if (x1 > 9 || x1 < -9) { v1 *= -1; collided = false; }
+    if (x2 > 9 || x2 < -9) { v2 *= -1; collided = false; }
 
-      const pBefore = m1 * vel1Cfg + m2 * v2;
-      const pAfter = m1 * v1 + m2 * v2;
-      const keBefore = 0.5 * m1 * vel1Cfg * vel1Cfg + 0.5 * m2 * v2 * v2;
-      const keAfter = 0.5 * m1 * v1 * v1 + 0.5 * m2 * v2 * v2;
-      updateReadout({
-        p_before: `${pBefore.toFixed(1)} kg·m/s`,
-        p_after: `${pAfter.toFixed(1)} kg·m/s`,
-        KE_before: `${keBefore.toFixed(1)} J`,
-        KE_after: `${keAfter.toFixed(1)} J`,
-      });
+    // Ground
+    drawLine(-10, -r1 - 0.2, 10, -r1 - 0.2, GRV.dim, 0.1);
+
+    // Objects
+    drawCircle(x1, 0, r1, GRV.orange, true);
+    drawCircle(x2, 0, r2, GRV.blue, true);
+
+    // Bursts
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      let b = bursts[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt * 2;
+      if (b.life <= 0) {
+        bursts.splice(i, 1);
+      } else {
+        ctx.globalAlpha = b.life;
+        drawCircle(b.x, b.y, 0.1, GRV.yellow);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    const pBefore = m1 * vel1Cfg + m2 * (-Math.max(1, vel1Cfg * 0.6));
+    const pAfter = m1 * v1 + m2 * v2;
+    const keBefore = 0.5 * m1 * vel1Cfg ** 2 + 0.5 * m2 * (-Math.max(1, vel1Cfg * 0.6)) ** 2;
+    const keAfter = 0.5 * m1 * v1 ** 2 + 0.5 * m2 * v2 ** 2;
+
+    updateReadout({
+      p_before: `${pBefore.toFixed(1)} kg·m/s`,
+      p_after: `${pAfter.toFixed(1)} kg·m/s`,
+      KE_before: `${keBefore.toFixed(1)} J`,
+      KE_after: `${keAfter.toFixed(1)} J`,
+    });
   });
 }
 
-function renderOrbit3D() {
+function renderOrbit2D() {
   clearScene();
   updateHUD("Gravitation & Orbits", "F = GMm/r²  |  v = √(GM/r)");
 
-  const star = new THREE.Mesh(
-    new THREE.SphereGeometry(1.2, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.yellow()
-  );
-  scene.add(star);
-  star.add(new THREE.PointLight(GRV.yellow, 2.0, 40));
-
-  const planet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.blue()
-  );
-  scene.add(planet);
-
-  const trailMax = 120;
-  const trailPositions = new Float32Array(trailMax * 3);
-  const trailGeo = new THREE.BufferGeometry();
-  trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
-  const trail = new THREE.Line(
-    trailGeo,
-    new THREE.LineBasicMaterial({ color: GRV.aqua, transparent: true, opacity: 0.5 })
-  );
-  scene.add(trail);
-
-  const gravityArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), planet.position, 1, GRV.orange);
-  scene.add(gravityArrow);
-
   let theta = 0;
-  let trailCount = 0;
+  const trail = [];
 
-  throttledLoop(() => {
+  throttledLoop((delta) => {
     const e = animConfig?.params?.eccentricity ?? 0.3;
     const speed = animConfig?.params?.speed ?? 1;
-    const a = 8;
+    const a = 6;
     const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
-    const omega = 0.01 * speed * (1 / Math.max(0.4, r / a));
-    theta += omega * (animConfig.speed || 1);
+    const omega = 0.05 * speed * (1 / Math.max(0.4, (r / a)**2));
+    
+    theta += omega * delta * (animConfig.speed || 1);
 
-      const x = r * Math.cos(theta);
-      const z = r * Math.sin(theta);
-      planet.position.set(x, 0, z);
+    const x = r * Math.cos(theta);
+    const y = r * Math.sin(theta);
 
-      if (trailCount < trailMax) {
-        trailPositions.set([x, 0, z], trailCount * 3);
-        trailGeo.setDrawRange(0, trailCount);
-        trailCount++;
-      } else {
-        for (let i = 0; i < (trailMax - 1) * 3; i++) trailPositions[i] = trailPositions[i + 3];
-        trailPositions.set([x, 0, z], (trailMax - 1) * 3);
-      }
-      trailGeo.attributes.position.needsUpdate = true;
+    if (trail.length === 0 || Math.hypot(trail[trail.length-1].x - x, trail[trail.length-1].y - y) > 0.2) {
+      trail.push({x, y});
+      if (trail.length > 100) trail.shift();
+    }
 
-      gravityArrow.position.copy(planet.position);
-      gravityArrow.setDirection(new THREE.Vector3(-x, 0, -z).normalize());
-      gravityArrow.setLength(Math.max(0.8, 6 / r));
+    // Trail
+    if (trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+      for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.strokeStyle = GRV.aqua;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 0.05;
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    }
+
+    // Star
+    drawCircle(0, 0, 0.8, GRV.yellow, true);
+    
+    // Planet
+    drawCircle(x, y, 0.3, GRV.blue, true);
+
+    // Gravity Vector
+    drawArrow(x, y, x - (x/r)*1.5, y - (y/r)*1.5, GRV.orange, 0.05);
 
     updateReadout({
       Eccentricity: `${e.toFixed(2)}`,
       Radius: `${r.toFixed(2)} AU`,
-      Speed: `${(omega * 100).toFixed(2)} rad/s`,
+      Speed: `${(omega * 10).toFixed(2)} rad/s`,
     });
   });
 }
 
-function renderElectricField3D() {
+function renderElectricField2D() {
   clearScene();
   updateHUD("Electric Fields", "E = kq/r²  |  V = kq/r");
 
-  const separation = animConfig?.params?.separation ?? 6;
-  const posCharge = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.red()
-  );
-  const negCharge = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.blue()
-  );
-  posCharge.position.set(-separation / 2, 0, 0);
-  negCharge.position.set(separation / 2, 0, 0);
-  scene.add(posCharge, negCharge);
-
-  let fieldGroup = new THREE.Group();
-  scene.add(fieldGroup);
-  let lastSep = null;
-
-  function buildFieldLines() {
-    if (fieldGroup) scene.remove(fieldGroup);
-    fieldGroup = new THREE.Group();
-    const sep = animConfig?.params?.separation ?? separation;
-    posCharge.position.set(-sep / 2, 0, 0);
-    negCharge.position.set(sep / 2, 0, 0);
-
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2;
-      const start = new THREE.Vector3(
-        posCharge.position.x + Math.cos(angle) * 0.8,
-        Math.sin(angle) * 0.6,
-        Math.cos(angle + Math.PI / 2) * 0.6
-      );
-      const mid = new THREE.Vector3(0, Math.sin(angle) * 1.2, 0);
-      const end = new THREE.Vector3(
-        negCharge.position.x - Math.cos(angle) * 0.8,
-        Math.sin(angle) * 0.6,
-        Math.cos(angle + Math.PI / 2) * 0.6
-      );
-
-      const curve = new THREE.CatmullRomCurve3([start, mid, end]);
-      const points = curve.getPoints(40);
-      const midIndex = Math.floor(points.length / 2);
-      const firstCurve = new THREE.CatmullRomCurve3(points.slice(0, midIndex + 1));
-      const secondCurve = new THREE.CatmullRomCurve3(points.slice(midIndex));
-
-      const tube1 = new THREE.TubeGeometry(firstCurve, 20, 0.05, 6, false);
-      const tube2 = new THREE.TubeGeometry(secondCurve, 20, 0.05, 6, false);
-      const mat1 = new THREE.MeshBasicMaterial({ color: GRV.red, transparent: true, opacity: 0.6 });
-      const mat2 = new THREE.MeshBasicMaterial({ color: GRV.blue, transparent: true, opacity: 0.6 });
-      fieldGroup.add(new THREE.Mesh(tube1, mat1));
-      fieldGroup.add(new THREE.Mesh(tube2, mat2));
-    }
-    scene.add(fieldGroup);
-  }
-
-  buildFieldLines();
-
   throttledLoop(() => {
-    const currentSep = animConfig?.params?.separation ?? separation;
-    if (currentSep !== lastSep) {
-      lastSep = currentSep;
-      buildFieldLines();
+    const separation = animConfig?.params?.separation ?? 6;
+    const x1 = -separation / 2;
+    const x2 = separation / 2;
+
+    // Field lines
+    ctx.strokeStyle = GRV.dim;
+    ctx.lineWidth = 0.05;
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, 0);
+      
+      // Simple arc representation for 2D dipole
+      const cpX = 0;
+      const cpY = Math.sin(angle) * separation * 1.2;
+      
+      if (Math.abs(Math.sin(angle)) > 0.01) {
+        ctx.quadraticCurveTo(cpX, cpY, x2, 0);
+      } else {
+        ctx.lineTo(x2, 0);
+      }
+      ctx.stroke();
     }
+
+    // Charges
+    drawCircle(x1, 0, 0.6, GRV.red, true);
+    ctx.fillStyle = GRV.bgHard;
+    ctx.font = "0.6px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // Need to scale text properly because we flipped Y
+    ctx.save();
+    ctx.translate(x1, 0);
+    ctx.scale(1, -1);
+    ctx.fillText("+", 0, 0);
+    ctx.restore();
+
+    drawCircle(x2, 0, 0.6, GRV.blue, true);
+    ctx.save();
+    ctx.translate(x2, 0);
+    ctx.scale(1, -1);
+    ctx.fillText("-", 0, 0);
+    ctx.restore();
+
     updateReadout({
-      Separation: `${currentSep.toFixed(1)} m`,
-      Field: "Radial",
-      "ΔV": "High",
+      Separation: `${separation.toFixed(1)} m`,
+      Field: "Dipole",
     });
   });
 }
 
-function renderMagneticField3D() {
+function renderMagneticField2D() {
   clearScene();
   updateHUD("Magnetic Fields", "B = μ₀I/2πr  |  F = qv×B");
 
-  const wire = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2, 0.2, 8, 8),
-    MAT.dim()
-  );
-  scene.add(wire);
-
-  const ringsGroup = new THREE.Group();
-  const arrows = [];
-  for (let i = -3; i <= 3; i++) {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(3, 0.03, 8, 64),
-      new THREE.MeshBasicMaterial({ color: GRV.aqua, transparent: true, opacity: 0.5 })
-    );
-    ring.position.y = i * 0.6;
-    ringsGroup.add(ring);
-
-    const arrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(3, ring.position.y, 0), 0.8, GRV.green);
-    arrows.push(arrow);
-    ringsGroup.add(arrow);
-  }
-  scene.add(ringsGroup);
-
-  const particle = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.yellow()
-  );
-  particle.position.set(4, 0, 0);
-  scene.add(particle);
-
   let theta = 0;
-  throttledLoop(() => {
+  throttledLoop((delta) => {
     const current = animConfig?.params?.current ?? 5;
     const charge = animConfig?.params?.charge ? 1 : -1;
-    theta += 0.02 * (animConfig.speed || 1) * charge * (current / 5);
-    particle.position.x = Math.cos(theta) * 4;
-    particle.position.z = Math.sin(theta) * 4;
-    particle.position.y = Math.sin(theta * 0.5) * 0.8;
+    theta += delta * 2 * (animConfig.speed || 1) * charge * (current / 5);
 
-    arrows.forEach((arrow) => {
-      arrow.setDirection(new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), theta));
-      arrow.setLength(Math.max(0.6, current * 0.08));
-    });
+    // Wire (cross section)
+    drawCircle(0, 0, 0.5, GRV.fg);
+    ctx.save();
+    ctx.scale(1, -1);
+    ctx.fillStyle = GRV.bgHard;
+    ctx.font = "0.5px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("X", 0, 0); // Current going in
+    ctx.restore();
+
+    // B-Field lines
+    ctx.strokeStyle = GRV.aqua;
+    ctx.lineWidth = 0.05;
+    for (let r = 2; r <= 6; r += 2) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Arrow on field line
+      drawArrow(0, r, 0.1, r, GRV.aqua, 0.1);
+    }
+
+    // Particle
+    const px = Math.cos(theta) * 4;
+    const py = Math.sin(theta) * 4;
+    drawCircle(px, py, 0.3, charge > 0 ? GRV.red : GRV.blue, true);
 
     updateReadout({
       Current: `${current.toFixed(1)} A`,
-      Charge: charge > 0 ? "+" : "-",
+      Charge: charge > 0 ? "+ (Red)" : "- (Blue)",
       Radius: "4.0 m",
     });
   });
 }
 
-function renderRefraction3D() {
+function renderRefraction2D() {
   clearScene();
   updateHUD("Refraction", "n₁ sinθ₁ = n₂ sinθ₂");
-
-  const slab = new THREE.Mesh(
-    new THREE.BoxGeometry(6, 2.5, 2.5),
-    new THREE.MeshLambertMaterial({ color: GRV.blue, transparent: true, opacity: 0.25 })
-  );
-  slab.position.x = 1;
-  scene.add(slab);
-
-  const incidentArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-6, 0, 0), 5, GRV.yellow);
-  const refractedArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 4, GRV.aqua);
-  const reflectedArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-2, 0, 0), 4, GRV.red);
-  scene.add(incidentArrow, refractedArrow, reflectedArrow);
 
   throttledLoop(() => {
     const angle = (animConfig?.params?.angle ?? 35) * (Math.PI / 180);
@@ -1089,19 +893,40 @@ function renderRefraction3D() {
     const tir = Math.abs(sin2) > 1;
     const theta2 = tir ? 0 : Math.asin(sin2);
 
-    incidentArrow.setDirection(new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0).normalize());
-    incidentArrow.position.set(-6, -1.2, 0);
+    // Interface
+    ctx.fillStyle = GRV.bg;
+    ctx.fillRect(-10, 0, 20, 10); // Medium 1
+    
+    ctx.fillStyle = GRV.blue;
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(-10, -10, 20, 10); // Medium 2
+    ctx.globalAlpha = 1.0;
+
+    drawLine(-10, 0, 10, 0, GRV.fg, 0.1); // Boundary
+    drawLine(0, -5, 0, 5, GRV.dim, 0.05); // Normal
+
+    // Incident
+    const ix = -Math.sin(angle) * 6;
+    const iy = Math.cos(angle) * 6;
+    drawArrow(ix, iy, 0, 0, GRV.yellow, 0.1);
 
     if (tir) {
-      refractedArrow.visible = false;
-      reflectedArrow.visible = true;
-      reflectedArrow.setDirection(new THREE.Vector3(Math.cos(angle), -Math.sin(angle), 0).normalize());
-      slab.material.color.setHex(GRV.red);
+      // Reflected
+      const rx = Math.sin(angle) * 6;
+      const ry = Math.cos(angle) * 6;
+      drawArrow(0, 0, rx, ry, GRV.red, 0.1);
     } else {
-      refractedArrow.visible = true;
-      reflectedArrow.visible = false;
-      refractedArrow.setDirection(new THREE.Vector3(Math.cos(theta2), Math.sin(theta2), 0).normalize());
-      slab.material.color.setHex(GRV.blue);
+      // Refracted
+      const rx = Math.sin(theta2) * 6;
+      const ry = -Math.cos(theta2) * 6;
+      drawArrow(0, 0, rx, ry, GRV.aqua, 0.1);
+      
+      // Partial Reflection
+      const rlx = Math.sin(angle) * 3;
+      const rly = Math.cos(angle) * 3;
+      ctx.globalAlpha = 0.3;
+      drawArrow(0, 0, rlx, rly, GRV.red, 0.05);
+      ctx.globalAlpha = 1.0;
     }
 
     const critical = n1 > n2 ? Math.asin(n2 / n1) * (180 / Math.PI) : null;
@@ -1114,171 +939,111 @@ function renderRefraction3D() {
   });
 }
 
-function renderNuclear3D() {
+function renderNuclear2D() {
   clearScene();
   updateHUD("Nuclear Decay", "N = N₀(1/2)^(t/T½)");
 
-  const protonMesh = new THREE.InstancedMesh(
-    new THREE.SphereGeometry(0.32, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.red(),
-    6
-  );
-  const neutronMesh = new THREE.InstancedMesh(
-    new THREE.SphereGeometry(0.32, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.yellow(),
-    6
-  );
-  const tempMatrix = new THREE.Matrix4();
-  for (let i = 0; i < 6; i++) {
-    tempMatrix.setPosition(
-      (Math.random() - 0.5) * 1.2,
-      (Math.random() - 0.5) * 1.2,
-      (Math.random() - 0.5) * 1.2
-    );
-    protonMesh.setMatrixAt(i, tempMatrix);
-  }
-  for (let i = 0; i < 6; i++) {
-    tempMatrix.setPosition(
-      (Math.random() - 0.5) * 1.2,
-      (Math.random() - 0.5) * 1.2,
-      (Math.random() - 0.5) * 1.2
-    );
-    neutronMesh.setMatrixAt(i, tempMatrix);
-  }
-  scene.add(protonMesh, neutronMesh);
-
-  const electronOrbits = [];
-  for (let i = 0; i < 3; i++) {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(3 + i * 0.8, 0.02, 8, 64),
-      new THREE.MeshBasicMaterial({ color: GRV.aqua, transparent: true, opacity: 0.3 })
-    );
-    ring.rotation.x = Math.random() * Math.PI;
-    ring.rotation.y = Math.random() * Math.PI;
-    scene.add(ring);
-
-    const electron = new THREE.Mesh(
-      new THREE.SphereGeometry(0.12, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-      MAT.aqua()
-    );
-    scene.add(electron);
-    electronOrbits.push({ ring, electron, angle: Math.random() * Math.PI * 2, speed: 0.01 + Math.random() * 0.01 });
+  const nucleus = [];
+  for(let i=0; i<12; i++) {
+    nucleus.push({
+      x: (Math.random()-0.5)*1.5,
+      y: (Math.random()-0.5)*1.5,
+      type: i < 6 ? 'proton' : 'neutron'
+    });
   }
 
-  const decayParticles = [];
   let decayTimer = 0;
+  const particles = [];
 
-  function spawnDecayParticle() {
-    if (decayParticles.length >= 20) {
-      const old = decayParticles.shift();
-      scene.remove(old);
-    }
-    const particle = new THREE.Mesh(
-      new THREE.SphereGeometry(0.15, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-      MAT.orange()
-    );
-    particle.position.set(0, 0, 0);
-    particle.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 6,
-      (Math.random() - 0.5) * 6,
-      (Math.random() - 0.5) * 6
-    );
-    scene.add(particle);
-    decayParticles.push(particle);
-  }
-
-  throttledLoop(() => {
+  throttledLoop((delta) => {
     const halfLife = animConfig?.params?.halflife ?? 5;
-    decayTimer += 0.016 * (animConfig.speed || 1);
-    if (decayTimer > halfLife * 0.4) {
+    decayTimer += delta * (animConfig.speed || 1);
+
+    if (decayTimer > halfLife * 0.2) {
       decayTimer = 0;
-      spawnDecayParticle();
+      particles.push({
+        x: 0, y: 0,
+        vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+        life: 1.0
+      });
     }
 
-    electronOrbits.forEach((orbit) => {
-      orbit.angle += orbit.speed * (animConfig.speed || 1);
-      const radius = orbit.ring.geometry.parameters.radius;
-      orbit.electron.position.set(
-        Math.cos(orbit.angle) * radius,
-        Math.sin(orbit.angle) * radius,
-        Math.sin(orbit.angle * 0.5) * 0.6
-      );
+    // Draw nucleus
+    nucleus.forEach(n => {
+      drawCircle(n.x, n.y, 0.4, n.type === 'proton' ? GRV.red : GRV.yellow, true);
     });
 
-    decayParticles.forEach((p) => {
-      p.position.addScaledVector(p.userData.velocity, 0.016 * (animConfig.speed || 1));
-      p.material.opacity = Math.max(0, 1 - p.position.length() / 12);
-      p.material.transparent = true;
-    });
+    // Draw decaying particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.life -= delta * 0.5;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+      } else {
+        ctx.globalAlpha = p.life;
+        drawCircle(p.x, p.y, 0.2, GRV.orange, true);
+        ctx.globalAlpha = 1.0;
+      }
+    }
 
     updateReadout({
       "T½": `${halfLife.toFixed(1)} s`,
-      Particles: `${decayParticles.length}`,
-      Energy: "High",
+      Emissions: `${particles.length}`,
     });
   });
 }
 
-function renderPhotoelectric3D() {
+function renderPhotoelectric2D() {
   clearScene();
   updateHUD("Photoelectric Effect", "E = hf  |  KE = hf - Φ");
 
-  const surface = new THREE.Mesh(
-    new THREE.BoxGeometry(8, 0.4, 4),
-    new THREE.MeshPhongMaterial({ color: GRV.dim })
-  );
-  surface.position.y = -2.4;
-  scene.add(surface);
+  let photonX = -8;
+  let electronY = 0;
+  let electronVisible = false;
 
-  const photon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.25, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.aqua()
-  );
-  photon.position.set(-6, -1.5, 0);
-  scene.add(photon);
-
-  const electron = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, PERF.SPHERE_DETAIL, PERF.SPHERE_DETAIL),
-    MAT.aqua()
-  );
-  electron.position.set(0, -1.8, 0);
-  electron.visible = false;
-  scene.add(electron);
-
-  let photonV = 3.5;
-  let electronV = 0;
-  const keBar = document.getElementById("ke-bar");
-  const keFill = document.getElementById("ke-fill");
-
-  throttledLoop(() => {
+  throttledLoop((delta) => {
     const frequency = animConfig?.params?.frequency ?? 6;
     const threshold = animConfig?.params?.threshold ?? 5;
     const ke = Math.max(0, frequency - threshold);
+    const speed = (animConfig.speed || 1);
 
-    photon.position.x += photonV * 0.016 * (animConfig.speed || 1);
-    if (photon.position.x >= -1.5) {
-      if (frequency < threshold) {
-        photonV *= -1;
-      } else {
-        photon.position.x = -6;
-        electron.visible = true;
-        electron.position.set(-1, -1.8, 0);
-        electronV = 1 + ke;
+    photonX += 10 * delta * speed;
+    
+    if (photonX > -2) {
+      if (frequency >= threshold) {
+        electronVisible = true;
+        electronY += (2 + ke * 2) * delta * speed;
       }
-    }
-    if (photon.position.x < -6) photon.position.x = -6;
-
-    if (electron.visible) {
-      electron.position.x += electronV * 0.016 * (animConfig.speed || 1);
-      electron.position.y += electronV * 0.01;
-      if (electron.position.y > 3) {
-        electron.visible = false;
+      if (photonX > 0 || electronY > 8) {
+        photonX = -8;
+        electronY = 0;
+        electronVisible = false;
       }
     }
 
-    if (keBar && keFill) {
-      keBar.style.display = "block";
-      keFill.style.width = `${Math.min(100, ke * 20)}%`;
+    // Metal Surface
+    ctx.fillStyle = GRV.dim;
+    ctx.fillRect(-4, -2, 8, 2);
+
+    // Photon (Wave-like)
+    ctx.beginPath();
+    for (let x = photonX - 2; x <= photonX; x += 0.1) {
+      const y = -1 + Math.sin((x - photonX) * frequency) * 0.5;
+      if (x === photonX - 2) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = GRV.aqua;
+    ctx.lineWidth = 0.1;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = GRV.aqua;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Electron
+    if (electronVisible) {
+      drawCircle(0, electronY, 0.2, GRV.blue, true);
     }
 
     updateReadout({
@@ -1289,132 +1054,96 @@ function renderPhotoelectric3D() {
   });
 }
 
-function renderThermodynamics3D() {
+function renderThermodynamics2D() {
   clearScene();
   updateHUD("Thermodynamics", "PV = nRT  |  ⟨KE⟩ ∝ T");
 
-  const baseSize = 6;
-  let volume = animConfig?.params?.volume ?? 1;
-  let temp = animConfig?.params?.temperature ?? 300;
-
-  const boxGeo = new THREE.BoxGeometry(baseSize, baseSize, baseSize);
-  const edges = new THREE.EdgesGeometry(boxGeo);
-  const box = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: GRV.aqua }));
-  scene.add(box);
-
-  const particleCount = 80;
-  const particleGeo = new THREE.SphereGeometry(0.15, 6, 6);
-  const particleMat = new THREE.MeshLambertMaterial({ color: GRV.blue });
-  const particles = new THREE.InstancedMesh(particleGeo, particleMat, particleCount);
-  scene.add(particles);
-
-  const positions = new Float32Array(particleCount * 3);
-  const velocities = new Float32Array(particleCount * 3);
-  const matrix = new THREE.Matrix4();
-
-  for (let i = 0; i < particleCount; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * baseSize;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * baseSize;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * baseSize;
-    velocities[i * 3] = (Math.random() - 0.5) * 2;
-    velocities[i * 3 + 1] = (Math.random() - 0.5) * 2;
-    velocities[i * 3 + 2] = (Math.random() - 0.5) * 2;
-    matrix.setPosition(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-    particles.setMatrixAt(i, matrix);
+  const particles = [];
+  for (let i = 0; i < 50; i++) {
+    particles.push({
+      x: (Math.random() - 0.5) * 4,
+      y: (Math.random() - 0.5) * 4,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5
+    });
   }
-  particles.instanceMatrix.needsUpdate = true;
 
-  throttledLoop(() => {
-    volume = animConfig?.params?.volume ?? volume;
-    temp = animConfig?.params?.temperature ?? temp;
-    const size = baseSize * volume;
-    box.scale.set(volume, volume, volume);
-    const half = size / 2;
-    const speedScale = Math.max(0.5, temp / 300);
+  throttledLoop((delta) => {
+    const volume = animConfig?.params?.volume ?? 1;
+    const temp = animConfig?.params?.temperature ?? 300;
+    const boxSize = 4 * volume;
+    const half = boxSize / 2;
+    const speedScale = Math.max(0.5, temp / 300) * (animConfig.speed || 1);
 
-    for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] += velocities[i * 3] * 0.016 * (animConfig.speed || 1) * speedScale;
-      positions[i * 3 + 1] += velocities[i * 3 + 1] * 0.016 * (animConfig.speed || 1) * speedScale;
-      positions[i * 3 + 2] += velocities[i * 3 + 2] * 0.016 * (animConfig.speed || 1) * speedScale;
+    // Draw Box
+    ctx.strokeStyle = GRV.aqua;
+    ctx.lineWidth = 0.1;
+    ctx.strokeRect(-half, -half, boxSize, boxSize);
 
-      for (let axis = 0; axis < 3; axis++) {
-        const idx = i * 3 + axis;
-        if (positions[idx] > half || positions[idx] < -half) {
-          velocities[idx] *= -1;
-          positions[idx] = Math.max(Math.min(positions[idx], half), -half);
-        }
+    // Particles
+    particles.forEach(p => {
+      p.x += p.vx * delta * speedScale;
+      p.y += p.vy * delta * speedScale;
+
+      if (p.x > half || p.x < -half) {
+        p.vx *= -1;
+        p.x = Math.max(-half, Math.min(half, p.x));
+      }
+      if (p.y > half || p.y < -half) {
+        p.vy *= -1;
+        p.y = Math.max(-half, Math.min(half, p.y));
       }
 
-      matrix.setPosition(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-      particles.setMatrixAt(i, matrix);
-    }
-    particles.instanceMatrix.needsUpdate = true;
+      drawCircle(p.x, p.y, 0.15, GRV.blue, true);
+    });
 
     updateReadout({
       Temperature: `${temp.toFixed(0)} K`,
       Volume: `${volume.toFixed(2)}x`,
-      Particles: `${particleCount}`,
     });
   });
 }
 
-function renderDoppler3D() {
+function renderDoppler2D() {
   clearScene();
   updateHUD("Doppler Effect", "f' = f (v ± v_o)/(v ∓ v_s)");
 
-  const source = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 24, 24),
-    new THREE.MeshPhongMaterial({ color: GRV.purple, emissive: GRV.purple, emissiveIntensity: 0.4 })
-  );
-  source.position.set(-6, 0, 0);
-  scene.add(source);
-
-  const rings = [];
-  const ringPool = 8;
-  let emitTimer = 0;
+  let sourceX = -6;
   let direction = 1;
-  let ringIndex = 0;
+  let emitTimer = 0;
+  const waves = [];
 
-  for (let i = 0; i < ringPool; i++) {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.6, 0.05, 8, 32),
-      new THREE.MeshBasicMaterial({ color: GRV.blue, transparent: true, opacity: 0.0 })
-    );
-    ring.userData = { scale: 1, active: false };
-    scene.add(ring);
-    rings.push(ring);
-  }
-
-  function emitRing() {
-    const ring = rings[ringIndex % ringPool];
-    ringIndex += 1;
-    ring.position.copy(source.position);
-    ring.userData.scale = 1;
-    ring.userData.active = true;
-    ring.scale.set(1, 1, 1);
-    ring.material.opacity = 0.6;
-  }
-
-  throttledLoop(() => {
+  throttledLoop((delta) => {
     const speed = animConfig?.params?.speed ?? 2;
-    source.position.x += direction * speed * 0.016 * (animConfig.speed || 1);
-    if (source.position.x > 6 || source.position.x < -6) direction *= -1;
+    const s = speed * (animConfig.speed || 1);
+    
+    sourceX += direction * s * delta * 5;
+    if (sourceX > 6 || sourceX < -6) direction *= -1;
 
-    emitTimer += 0.016 * (animConfig.speed || 1);
-    if (emitTimer > 0.25) {
+    emitTimer += delta * (animConfig.speed || 1);
+    if (emitTimer > 0.2) {
       emitTimer = 0;
-      emitRing();
+      waves.push({ x: sourceX, r: 0 });
     }
 
-    rings.forEach((ring) => {
-      if (!ring.userData.active) return;
-      ring.userData.scale += 0.05 * (animConfig.speed || 1);
-      ring.scale.set(ring.userData.scale, ring.userData.scale, ring.userData.scale);
-      const isAhead = ring.position.x > source.position.x;
-      ring.material.color.setHex(isAhead ? GRV.blue : GRV.red);
-      ring.material.opacity = Math.max(0, 1 - ring.userData.scale / 6);
-      if (ring.material.opacity <= 0) ring.userData.active = false;
-    });
+    // Draw waves
+    ctx.strokeStyle = GRV.aqua;
+    ctx.lineWidth = 0.05;
+    for (let i = waves.length - 1; i >= 0; i--) {
+      let w = waves[i];
+      w.r += 10 * delta * (animConfig.speed || 1);
+      
+      ctx.globalAlpha = Math.max(0, 1 - w.r / 10);
+      ctx.beginPath();
+      ctx.arc(w.x, 0, w.r, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      if (w.r > 10) waves.splice(i, 1);
+    }
+    ctx.globalAlpha = 1.0;
+
+    // Draw source
+    drawCircle(sourceX, 0, 0.4, GRV.purple, true);
 
     const vSound = 10;
     const fSource = 1.0;
@@ -1427,574 +1156,220 @@ function renderDoppler3D() {
   });
 }
 
-// === CHEMISTRY ANIMATION RENDERERS (Placeholders) ===
+// === CHEMISTRY ANIMATIONS ===
 
-function createBox(color) {
-  if (!window.THREE) {
-    console.error("THREE.js not loaded");
-    return null;
-  }
-  const geometry = new THREE.BoxGeometry(6, 4, 4);
-  const material = new THREE.MeshBasicMaterial({ 
-    color, 
-    transparent: true, 
-    opacity: 0.7,
-    wireframe: true
-  });
-  return new THREE.Mesh(geometry, material);
-}
-
-function createSphere(color, radius = 1) {
-  if (!window.THREE) return null;
-  const geometry = new THREE.SphereGeometry(radius, 16, 16);
-  const material = new THREE.MeshBasicMaterial({ 
-    color,
-    transparent: true,
-    opacity: 0.85
-  });
-  const sphere = new THREE.Mesh(geometry, material);
-  sphere.userData = { type: 'particle' };
-  return sphere;
-}
-
-function createCylinder(color) {
-  if (!window.THREE) return null;
-  const geometry = new THREE.CylinderGeometry(2, 2, 6, 16);
-  const material = new THREE.MeshBasicMaterial({ 
-    color,
-    transparent: true,
-    opacity: 0.7,
-    wireframe: true
-  });
-  const cylinder = new THREE.Mesh(geometry, material);
-  return cylinder;
-}
-
-function createMovingParticles(count, color) {
-  if (!window.THREE) return new THREE.Group();
-  const group = new THREE.Group();
-  for (let i = 0; i < count; i++) {
-    const sphere = createSphere(color, 0.15);
-    sphere.position.set(
-      (Math.random() - 0.5) * 5,
-      (Math.random() - 0.5) * 3,
-      (Math.random() - 0.5) * 3
-    );
-    sphere.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.02,
-      (Math.random() - 0.5) * 0.02,
-      (Math.random() - 0.5) * 0.02
-    );
-    group.add(sphere);
-  }
-  
-  function move() {
-    if (!window.currentAnim) return;
-    group.children.forEach(p => {
-      if (p.userData.react) {
-        p.position.add(p.userData.velocity);
-        ['x','y','z'].forEach(axis => {
-          if (Math.abs(p.position[axis]) > 2.5) p.userData.velocity[axis] *= -1;
-        });
-      }
-    });
-    requestAnimationFrame(move);
-  }
-  move();
-  
-  return group;
-}
-
-function renderGasLaws3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "PV = nRT", variable: "Ideal Gas Law" });
-  
-  scene.add(createBox(0x6b1e26));
-  scene.add(createMovingParticles(50, 0x8a2330));
-  setActiveAnimButton("gas_laws");
-}
-
-function renderReactionRates3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "Rate = k[A]^m[B]^n", variable: "Reaction Rate" });
-  
-  scene.add(createSphere(0x6b1e26));
-  const particles = createMovingParticles(30, 0xb8bb26);
-  particles.children.forEach(p => p.userData.react = true);
-  scene.add(particles);
-  setActiveAnimButton("reaction_rates");
-}
-
-function renderBonding3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "Na + Cl → NaCl", variable: "Ionic Bonding" });
-  
-  const atom1 = createSphere(0x4d151b, 1);
-  const atom2 = createSphere(0x98971a, 1);
-  atom1.position.set(-2, 0, 0);
-  atom2.position.set(2, 0, 0);
-  scene.add(atom1, atom2);
-  
-  let t = 0;
-  function animateBond() {
-    if (!window.currentAnim || window.currentAnim !== "bonding") return;
-    t += 0.01;
-    atom1.position.x = -2 + Math.sin(t) * 0.5;
-    atom2.position.x = 2 - Math.sin(t) * 0.5;
-    requestAnimationFrame(animateBond);
-  }
-  animateBond();
-  
-  setActiveAnimButton("bonding");
-}
-
-function renderAcidBase3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "pH = -log[H⁺]", variable: "Acid-Base" });
-  
-  scene.add(createBox(0x8ec07c));
-  setActiveAnimButton("acid_base");
-}
-
-function renderElectrochemistry3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "E°cell = E°cathode - E°anode", variable: "Electrochemistry" });
-  
-  scene.add(createCylinder(0x83a598));
-  setActiveAnimButton("electrochemistry");
-}
-
-function renderReactionRates3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "Rate = k[A]^m[B]^n", variable: "Reaction Rate" });
-  
-  // Colliding particles animation
-  scene.add(createSphere(0x6b1e26));
-  const particles = createMovingParticles(30, 0xb8bb26);
-  particles.forEach(p => p.userData.react = true);
-  scene.add(particles);
-  setActiveAnimButton("reaction_rates");
-}
-
-function renderBonding3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "Na + Cl → NaCl", variable: "Ionic Bonding" });
-  
-  // Two spheres approaching each other
-  const atom1 = createSphere(0x4d151b, 1);
-  const atom2 = createSphere(0x98971a, 1);
-  atom1.position.set(-2, 0, 0);
-  atom2.position.set(2, 0, 0);
-  scene.add(atom1, atom2);
-  
-  // Animate bond formation
-  let t = 0;
-  function animateBond() {
-    if (!window.currentAnim || window.currentAnim !== "bonding") return;
-    t += 0.01;
-    atom1.position.x = -2 + Math.sin(t) * 0.5;
-    atom2.position.x = 2 - Math.sin(t) * 0.5;
-    requestAnimationFrame(animateBond);
-  }
-  animateBond();
-  
-  setActiveAnimButton("bonding");
-}
-
-function renderAcidBase3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "pH = -log[H⁺]", variable: "Acid-Base" });
-  
-  // pH scale visualization
-  scene.add(createBox(0x8ec07c));
-  setActiveAnimButton("acid_base");
-}
-
-function renderElectrochemistry3D() {
-  const scene = window.scene;
-  if (!scene) return;
-  
-  clearScene();
-  updateReadout({ equation: "E°cell = E°cathode - E°anode", variable: "Electrochemistry" });
-  
-  // Simple cell visualization
-  scene.add(createCylinder(0x83a598));
-  setActiveAnimButton("electrochemistry");
-}
-
-// Helper functions for chemistry visuals
-function createBox(color) {
-  const geometry = new THREE.BoxGeometry(6, 4, 4);
-  const material = new THREE.MeshBasicMaterial({ 
-    color, 
-    transparent: true, 
-    opacity: 0.7,
-    wireframe: true
-  });
-  return new THREE.Mesh(geometry, material);
-}
-
-function createSphere(color, radius = 1) {
-  const geometry = new THREE.SphereGeometry(radius, 16, 16);
-  const material = new THREE.MeshBasicMaterial({ 
-    color,
-    transparent: true,
-    opacity: 0.85
-  });
-  const sphere = new THREE.Mesh(geometry, material);
-  sphere.userData = { type: 'particle' };
-  return sphere;
-}
-
-function createCylinder(color) {
-  const geometry = new THREE.CylinderGeometry(2, 2, 6, 16);
-  const material = new THREE.MeshBasicMaterial({ 
-    color,
-    transparent: true,
-    opacity: 0.7,
-    wireframe: true
-  });
-  const cylinder = new THREE.Mesh(geometry, material);
-  return cylinder;
-}
-
-function createMovingParticles(count, color) {
-  const group = new THREE.Group();
-  for (let i = 0; i < count; i++) {
-    const sphere = createSphere(color, 0.15);
-    sphere.position.set(
-      (Math.random() - 0.5) * 5,
-      (Math.random() - 0.5) * 3,
-      (Math.random() - 0.5) * 3
-    );
-    sphere.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.02,
-      (Math.random() - 0.5) * 0.02,
-      (Math.random() - 0.5) * 0.02
-    );
-    group.add(sphere);
-  }
-  
-  // Animate particles
-  function move() {
-    if (!window.currentAnim) return;
-    group.children.forEach(p => {
-      if (p.userData.react) {
-        p.position.add(p.userData.velocity);
-        ['x','y','z'].forEach(axis => {
-          if (Math.abs(p.position[axis]) > 2.5) p.userData.velocity[axis] *= -1;
-        });
-      }
-    });
-    requestAnimationFrame(move);
-  }
-  move();
-  
-  return group;
-}
-
-// Clean overrides for chemistry visuals.
-// These appear after the placeholder implementations above so the final
-// function definitions used by the registry are the stable ones below.
-
-function makeScienceParticle(color, radius = 0.15) {
-  return new THREE.Mesh(
-    new THREE.SphereGeometry(radius, 12, 12),
-    new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.18 })
-  );
-}
-
-function makeGlassBox(width, height, depth, color) {
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
-    new THREE.MeshPhongMaterial({
-      color,
-      transparent: true,
-      opacity: 0.16,
-      side: THREE.DoubleSide,
-    })
-  );
-  const outline = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.BoxGeometry(width, height, depth)),
-    MAT.line(color, 0.55)
-  );
-  box.add(outline);
-  return box;
-}
-
-function makeScienceTube(points, color) {
-  const curve = new THREE.CatmullRomCurve3(points, true);
-  const tube = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 100, 0.12, 10, true),
-    new THREE.MeshPhongMaterial({
-      color,
-      emissive: color,
-      emissiveIntensity: 0.1,
-      transparent: true,
-      opacity: 0.82,
-    })
-  );
-  return { curve, tube };
-}
-
-function renderGasLaws3D() {
+function renderGasLaws2D() {
   clearScene();
   updateHUD("Gas Laws", "PV = nRT");
 
-  const chamber = makeGlassBox(7, 5, 5, GRV.red);
-  scene.add(chamber);
-
-  const piston = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.2, 4.8), MAT.dim());
-  scene.add(piston);
-
   const particles = [];
-  for (let i = 0; i < 42; i++) {
-    const particle = makeScienceParticle(GRV.yellow, 0.12);
-    particle.position.set(
-      (Math.random() - 0.5) * 5.4,
-      (Math.random() - 0.5) * 3,
-      (Math.random() - 0.5) * 3.6
-    );
-    particle.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.09,
-      (Math.random() - 0.5) * 0.09,
-      (Math.random() - 0.5) * 0.09
-    );
-    particles.push(particle);
-    scene.add(particle);
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: (Math.random() - 0.5) * 4,
+      y: (Math.random() - 0.5) * 4,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4
+    });
   }
 
   throttledLoop((delta) => {
-    const temperature = animConfig?.params?.temperature ?? 300;
-    const volume = animConfig?.params?.volume ?? 1;
+    const temp = animConfig?.params?.temperature ?? 300;
+    const vol = animConfig?.params?.volume ?? 1;
     const moles = animConfig?.params?.moles ?? 1;
-    const halfHeight = 1.3 + volume * 0.9;
-    piston.position.y = halfHeight;
-    const speedScale = (temperature / 260) * (animConfig.speed || 1);
+    
+    const height = 4 * vol;
+    const width = 6;
+    const speedScale = (temp / 200) * (animConfig.speed || 1);
 
-    particles.forEach((particle) => {
-      particle.position.addScaledVector(particle.userData.velocity, speedScale * delta * 8);
-      ["x", "y", "z"].forEach((axis) => {
-        const limit = axis === "x" ? 3 : axis === "y" ? halfHeight - 0.25 : 2.2;
-        if (particle.position[axis] > limit || particle.position[axis] < -limit) {
-          particle.userData.velocity[axis] *= -1;
-        }
-      });
+    // Chamber
+    ctx.strokeStyle = GRV.red;
+    ctx.lineWidth = 0.1;
+    ctx.strokeRect(-width/2, -4, width, height);
+    
+    // Piston
+    ctx.fillStyle = GRV.dim;
+    ctx.fillRect(-width/2, -4 + height, width, 0.5);
+
+    particles.forEach((p, idx) => {
+      if (idx >= 40 * moles) return; // Show/hide based on moles
+
+      p.x += p.vx * delta * speedScale;
+      p.y += p.vy * delta * speedScale;
+
+      if (p.x > width/2 || p.x < -width/2) {
+        p.vx *= -1;
+        p.x = Math.max(-width/2, Math.min(width/2, p.x));
+      }
+      if (p.y > -4 + height || p.y < -4) {
+        p.vy *= -1;
+        p.y = Math.max(-4, Math.min(-4 + height, p.y));
+      }
+
+      drawCircle(p.x, p.y, 0.15, GRV.yellow, true);
     });
 
-    const pressure = (moles * temperature) / Math.max(volume * 95, 1);
+    const pressure = (moles * temp) / (vol * 100);
     updateReadout({
-      Temperature: `${temperature.toFixed(0)} K`,
-      Volume: `${volume.toFixed(2)} L`,
-      Pressure: `${pressure.toFixed(2)} a.u.`,
+      Temp: `${temp} K`,
+      Vol: `${vol.toFixed(1)} L`,
+      Pressure: `${pressure.toFixed(2)} atm`,
     });
   });
 }
 
-function renderReactionRates3D() {
+function renderReactionRates2D() {
   clearScene();
-  updateHUD("Reaction Rates", "rate depends on collision frequency and energy");
+  updateHUD("Reaction Rates", "Collisions & Energy");
 
   const particles = [];
   let collisions = 0;
-  const flash = new THREE.PointLight(GRV.yellow, 0, 10);
-  scene.add(flash);
-
-  for (let i = 0; i < 34; i++) {
-    const particle = makeScienceParticle(i % 2 === 0 ? GRV.green : GRV.orange, 0.18);
-    particle.position.set(
-      (Math.random() - 0.5) * 8,
-      (Math.random() - 0.5) * 4,
-      (Math.random() - 0.5) * 4
-    );
-    particle.userData.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.06,
-      (Math.random() - 0.5) * 0.06,
-      (Math.random() - 0.5) * 0.06
-    );
-    particles.push(particle);
-    scene.add(particle);
+  
+  for (let i = 0; i < 30; i++) {
+    particles.push({
+      x: (Math.random() - 0.5) * 8,
+      y: (Math.random() - 0.5) * 6,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5,
+      type: i % 2 === 0 ? 'A' : 'B'
+    });
   }
 
   throttledLoop((delta) => {
-    const temperature = animConfig?.params?.temperature ?? 50;
-    const concentration = animConfig?.params?.concentration ?? 1;
-    const catalyst = !!animConfig?.params?.catalyst;
-    const speedScale = (0.8 + temperature / 60) * (animConfig.speed || 1);
-    flash.intensity *= 0.92;
+    const temp = animConfig?.params?.temperature ?? 50;
+    const conc = animConfig?.params?.concentration ?? 1;
+    const cat = animConfig?.params?.catalyst ?? false;
+    
+    const speedScale = (temp / 30) * (animConfig.speed || 1);
+    const activeCount = Math.floor(particles.length * conc);
 
-    particles.forEach((particle, index) => {
-      particle.position.addScaledVector(particle.userData.velocity, speedScale * delta * 10);
-      ["x", "y", "z"].forEach((axis) => {
-        const limit = axis === "x" ? 4.2 : 2.4;
-        if (particle.position[axis] > limit || particle.position[axis] < -limit) {
-          particle.userData.velocity[axis] *= -1;
-        }
-      });
+    for (let i = 0; i < activeCount; i++) {
+      let p = particles[i];
+      p.x += p.vx * delta * speedScale;
+      p.y += p.vy * delta * speedScale;
 
-      for (let j = index + 1; j < particles.length; j++) {
-        const other = particles[j];
-        const threshold = catalyst ? 0.55 : 0.42;
-        if (particle.position.distanceTo(other.position) < threshold) {
-          particle.userData.velocity.multiplyScalar(-1);
-          other.userData.velocity.multiplyScalar(-1);
-          collisions += 1;
-          flash.position.copy(particle.position);
-          flash.intensity = 1.3;
+      if (p.x > 5 || p.x < -5) p.vx *= -1;
+      if (p.y > 4 || p.y < -4) p.vy *= -1;
+
+      // Collision check
+      for (let j = i + 1; j < activeCount; j++) {
+        let p2 = particles[j];
+        if (Math.hypot(p.x - p2.x, p.y - p2.y) < (cat ? 0.6 : 0.4)) {
+          p.vx *= -1; p2.vx *= -1;
+          p.vy *= -1; p2.vy *= -1;
+          collisions++;
+          
+          // Flash
+          drawCircle((p.x+p2.x)/2, (p.y+p2.y)/2, 0.8, GRV.yellow, true);
         }
       }
-    });
+
+      drawCircle(p.x, p.y, 0.2, p.type === 'A' ? GRV.green : GRV.orange, true);
+    }
 
     updateReadout({
-      Temperature: `${temperature.toFixed(0)} C`,
-      Concentration: `${concentration.toFixed(1)} mol/dm3`,
-      Catalyst: catalyst ? "active" : "off",
-      Collisions: `${collisions}`,
+      Temp: `${temp} °C`,
+      Conc: `${conc.toFixed(1)} M`,
+      Collisions: collisions,
     });
   });
 }
 
-function renderBonding3D() {
+function renderBonding2D() {
   clearScene();
-  updateHUD("Chemical Bonding", "ionic transfer and covalent sharing");
+  updateHUD("Chemical Bonding", "Ionic vs Covalent");
 
-  const left = makeScienceParticle(GRV.orange, 0.75);
-  const right = makeScienceParticle(GRV.aqua, 0.75);
-  left.position.set(-2.4, 0, 0);
-  right.position.set(2.4, 0, 0);
-  scene.add(left, right);
+  let t = 0;
+  throttledLoop((delta) => {
+    t += delta * (animConfig.speed || 1);
+    const ionic = animConfig?.params?.ionic ?? true;
+    const en = animConfig?.params?.electroneg ?? 1.5;
 
-  const bondLine = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([left.position, right.position]),
-    MAT.line(GRV.fg, 0.7)
-  );
-  scene.add(bondLine);
+    const offset = Math.sin(t * 2) * 0.2;
+    const x1 = -2 + offset;
+    const x2 = 2 - offset;
 
-  const electron = makeScienceParticle(GRV.yellow, 0.14);
-  scene.add(electron);
+    // Bond line
+    drawLine(x1, 0, x2, 0, GRV.fg, 0.05);
 
-  throttledLoop(() => {
-    const electroneg = animConfig?.params?.electroneg ?? 1.5;
-    const ionic = !!animConfig?.params?.ionic;
-    const covalent = !!animConfig?.params?.covalent;
-    const t = performance.now() * 0.001 * (animConfig.speed || 1);
-    const offset = Math.sin(t) * 0.4;
-    left.position.x = -2.2 + offset * 0.4;
-    right.position.x = 2.2 - offset * 0.4;
-    bondLine.geometry.setFromPoints([left.position, right.position]);
+    // Atoms
+    drawCircle(x1, 0, 1.0, GRV.orange, true);
+    drawCircle(x2, 0, 1.0, GRV.aqua, true);
 
-    const mix = ionic ? 0.82 : covalent ? 0.5 : 0.68;
-    electron.position.lerpVectors(left.position, right.position, mix + Math.sin(t * 1.6) * 0.08);
-    electron.position.y = Math.cos(t * 2) * 0.5;
+    // Electron
+    const mix = ionic ? 0.8 : 0.5;
+    const ex = x1 + (x2 - x1) * mix;
+    const ey = Math.cos(t * 4) * 0.5;
+    drawCircle(ex, ey, 0.2, GRV.yellow, true);
 
     updateReadout({
-      Bond: ionic ? "Ionic" : covalent ? "Covalent" : "Polar",
-      DeltaEN: `${electroneg.toFixed(1)}`,
-      Electron: ionic ? "transfer" : "shared pair",
+      Type: ionic ? "Ionic" : "Covalent",
+      "ΔEN": en.toFixed(1),
     });
   });
 }
 
-function renderAcidBase3D() {
+function renderAcidBase2D() {
   clearScene();
-  updateHUD("Acids and Bases", "pH = -log[H+]");
-
-  const scale = new THREE.Group();
-  const colors = [GRV.red, GRV.orange, GRV.yellow, GRV.green, GRV.aqua, GRV.blue];
-  for (let i = 0; i < 14; i++) {
-    const bar = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.18, 1),
-      new THREE.MeshPhongMaterial({
-        color: colors[Math.min(colors.length - 1, Math.floor((i / 14) * colors.length))],
-      })
-    );
-    bar.position.set(-3.4 + i * 0.52, 0, 0);
-    scale.add(bar);
-  }
-  scene.add(scale);
-
-  const indicator = new THREE.Mesh(
-    new THREE.SphereGeometry(0.28, 18, 18),
-    new THREE.MeshPhongMaterial({ color: GRV.fg })
-  );
-  scene.add(indicator);
+  updateHUD("Acid-Base", "pH Scale");
 
   throttledLoop(() => {
     const ph = animConfig?.params?.ph ?? 7;
     const strength = animConfig?.params?.strength ?? 0.5;
-    indicator.position.set(-3.4 + (ph / 14) * 7.2, 0.55 + strength * 0.5, 0);
+
+    // Scale
+    const colors = [GRV.red, GRV.orange, GRV.yellow, GRV.green, GRV.aqua, GRV.blue];
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = colors[Math.min(5, Math.floor(i / 2.8))];
+      ctx.fillRect(-7 + i, -1, 0.9, 2);
+    }
+
+    // Indicator
+    const ix = -6.5 + ph;
+    const iy = 2 + strength * 2;
+    drawCircle(ix, iy, 0.4, GRV.fg, true);
+    drawLine(ix, iy, ix, -1, GRV.fg, 0.05);
+
     updateReadout({
-      pH: `${ph.toFixed(1)}`,
-      Character: ph < 7 ? "Acidic" : ph > 7 ? "Basic" : "Neutral",
-      Strength: `${(strength * 100).toFixed(0)}%`,
+      pH: ph.toFixed(1),
+      Strength: `${(strength*100).toFixed(0)}%`,
     });
   });
 }
 
-function renderElectrochemistry3D() {
+function renderElectrochemistry2D() {
   clearScene();
-  updateHUD("Electrochemistry", "Ecell = Ecathode - Eanode");
+  updateHUD("Electrochemistry", "E°cell");
 
-  const beakerLeft = makeGlassBox(2.5, 3.2, 2.5, GRV.blue);
-  const beakerRight = makeGlassBox(2.5, 3.2, 2.5, GRV.orange);
-  beakerLeft.position.x = -3;
-  beakerRight.position.x = 3;
-  scene.add(beakerLeft, beakerRight);
+  let t = 0;
+  throttledLoop((delta) => {
+    t += delta * (animConfig.speed || 1);
+    const volts = animConfig?.params?.voltage ?? 1.5;
 
-  const bridge = new THREE.Mesh(
-    new THREE.TorusGeometry(3, 0.12, 10, 50, Math.PI),
-    new THREE.MeshPhongMaterial({
-      color: GRV.fg,
-      transparent: true,
-      opacity: 0.7,
-    })
-  );
-  bridge.rotation.z = Math.PI;
-  bridge.position.y = 1.2;
-  scene.add(bridge);
+    // Beakers
+    ctx.strokeStyle = GRV.fg;
+    ctx.lineWidth = 0.1;
+    ctx.strokeRect(-5, -4, 3, 4); // Left
+    ctx.strokeRect(2, -4, 3, 4); // Right
+    
+    // Solutions
+    ctx.fillStyle = GRV.blue; ctx.globalAlpha = 0.3; ctx.fillRect(-5, -4, 3, 3);
+    ctx.fillStyle = GRV.orange; ctx.globalAlpha = 0.3; ctx.fillRect(2, -4, 3, 3);
+    ctx.globalAlpha = 1.0;
 
-  const electrons = [];
-  for (let i = 0; i < 8; i++) {
-    const electron = makeScienceParticle(GRV.aqua, 0.12);
-    electrons.push(electron);
-    scene.add(electron);
-  }
+    // Electrodes
+    ctx.fillStyle = GRV.dim; ctx.fillRect(-4, -3, 1, 4);
+    ctx.fillStyle = GRV.dim; ctx.fillRect(3, -3, 1, 4);
 
-  throttledLoop(() => {
-    const voltage = animConfig?.params?.voltage ?? 1.5;
-    const concentration = animConfig?.params?.concentration ?? 1;
-    electrons.forEach((electron, index) => {
-      const t = ((performance.now() * 0.0004 * voltage * (animConfig.speed || 1)) + index / electrons.length) % 1;
-      electron.position.set(-3 + t * 6, 2 + Math.sin(t * Math.PI) * 0.8, 0);
-    });
+    // Wire & Salt Bridge
+    drawLine(-3.5, 1, 3.5, 1, GRV.fg, 0.05);
+    ctx.beginPath(); ctx.arc(0, -1, 3.5, 0, Math.PI); ctx.stroke(); // Bridge
+
+    // Electrons
+    const ex = -3.5 + ((t * volts) % 1) * 7;
+    drawCircle(ex, 1.2, 0.2, GRV.yellow, true);
+
     updateReadout({
-      Voltage: `${voltage.toFixed(2)} V`,
-      Anode: `${concentration.toFixed(2)} M`,
-      Flow: "electrons to cathode",
+      Voltage: `${volts.toFixed(2)} V`,
     });
   });
 }
@@ -2003,200 +1378,90 @@ function renderElectrochemistry3D() {
 // ANIMATION REGISTRY
 // ======================
 const ANIMATIONS = [
-  {
-    id: "idle",
-    label: "Idle Field",
-    icon: "◎",
-    render: renderIdleParticles3D,
-    controls: [],
-  },
-  {
-    id: "projectile",
-    label: "Projectile",
-    icon: "↗",
-    render: renderProjectile3D,
-    controls: [
+  { id: "idle", label: "Idle Field", icon: "◎", render: renderIdleParticles2D, controls: [] },
+  { id: "projectile", label: "Projectile", icon: "↗", render: renderProjectile2D, controls: [
       { type: "slider", id: "angle", label: "Angle", min: 10, max: 80, step: 1, value: 45 },
       { type: "slider", id: "velocity", label: "Velocity", min: 6, max: 40, step: 1, value: 14 },
-      { type: "toggle", id: "vectors", label: "Vectors", value: false },
-    ],
-  },
-  {
-    id: "waves",
-    label: "Waves",
-    icon: "≈",
-    render: renderWave3D,
-    controls: [
+      { type: "slider", id: "height", label: "Height", min: 0, max: 10, step: 0.5, value: 0 },
+      { type: "slider", id: "bounciness", label: "Bounciness", min: 0, max: 0.9, step: 0.1, value: 0.6 },
+      { type: "toggle", id: "vectors", label: "Vectors", value: true },
+  ]},
+  { id: "waves", label: "Waves", icon: "≈", render: renderWave2D, controls: [
       { type: "slider", id: "frequency", label: "Freq", min: 0.5, max: 4, step: 0.1, value: 1.2 },
       { type: "slider", id: "amplitude", label: "Amplitude", min: 0.5, max: 3, step: 0.1, value: 1.5 },
       { type: "toggle", id: "superposition", label: "Superposition", value: false },
-    ],
-  },
-  {
-    id: "pendulum",
-    label: "Pendulum",
-    icon: "⟲",
-    render: renderPendulum3D,
-    controls: [
+  ]},
+  { id: "pendulum", label: "Pendulum", icon: "⟲", render: renderPendulum2D, controls: [
       { type: "slider", id: "length", label: "Length", min: 2, max: 8, step: 0.5, value: 5 },
       { type: "slider", id: "angle", label: "Angle", min: 10, max: 80, step: 1, value: 30 },
-    ],
-  },
-  {
-    id: "forces",
-    label: "Forces",
-    icon: "→",
-    render: renderForces3D,
-    controls: [
+      { type: "toggle", id: "vectors", label: "Vectors", value: true },
+  ]},
+  { id: "forces", label: "Forces", icon: "→", render: renderForces2D, controls: [
       { type: "slider", id: "applied", label: "Applied", min: 0, max: 50, step: 1, value: 20 },
       { type: "slider", id: "mu", label: "Friction μ", min: 0, max: 1, step: 0.05, value: 0.3 },
       { type: "slider", id: "mass", label: "Mass", min: 1, max: 20, step: 1, value: 5 },
-    ],
-  },
-  {
-    id: "collision",
-    label: "Collision",
-    icon: "◎◎",
-    render: renderCollision3D,
-    controls: [
+      { type: "toggle", id: "vectors", label: "Vectors", value: true },
+  ]},
+  { id: "collision", label: "Collision", icon: "◎◎", render: renderCollision2D, controls: [
       { type: "slider", id: "mass1", label: "Mass A", min: 1, max: 10, step: 0.5, value: 3 },
       { type: "slider", id: "mass2", label: "Mass B", min: 1, max: 10, step: 0.5, value: 3 },
       { type: "slider", id: "vel1", label: "v A", min: 1, max: 8, step: 0.5, value: 4 },
       { type: "toggle", id: "elastic", label: "Elastic", value: true },
-    ],
-  },
-  {
-    id: "orbit",
-    label: "Orbit",
-    icon: "☉",
-    render: renderOrbit3D,
-    controls: [
+  ]},
+  { id: "orbit", label: "Orbit", icon: "☉", render: renderOrbit2D, controls: [
       { type: "slider", id: "eccentricity", label: "Ecc", min: 0, max: 0.8, step: 0.05, value: 0.3 },
       { type: "slider", id: "speed", label: "Orbital", min: 0.4, max: 2.5, step: 0.1, value: 1, global: false },
-    ],
-  },
-  {
-    id: "electricity",
-    label: "Electric",
-    icon: "⊕",
-    render: renderElectricField3D,
-    controls: [
+  ]},
+  { id: "electricity", label: "Electric", icon: "⊕", render: renderElectricField2D, controls: [
       { type: "slider", id: "separation", label: "Separation", min: 2, max: 10, step: 0.5, value: 6 },
-    ],
-  },
-  {
-    id: "magnetism",
-    label: "Magnetic",
-    icon: "⟳",
-    render: renderMagneticField3D,
-    controls: [
+  ]},
+  { id: "magnetism", label: "Magnetic", icon: "⟳", render: renderMagneticField2D, controls: [
       { type: "slider", id: "current", label: "Current", min: 1, max: 10, step: 0.5, value: 5 },
       { type: "toggle", id: "charge", label: "+ Charge", value: true },
-    ],
-  },
-  {
-    id: "optics",
-    label: "Refraction",
-    icon: "⤢",
-    render: renderRefraction3D,
-    controls: [
+  ]},
+  { id: "optics", label: "Refraction", icon: "⤢", render: renderRefraction2D, controls: [
       { type: "slider", id: "angle", label: "Angle", min: 10, max: 70, step: 1, value: 35 },
       { type: "slider", id: "n1", label: "n1", min: 1, max: 1.5, step: 0.05, value: 1.0 },
       { type: "slider", id: "n2", label: "n2", min: 1, max: 2, step: 0.05, value: 1.5 },
-    ],
-  },
-  {
-    id: "nuclear",
-    label: "Nuclear",
-    icon: "☢",
-    render: renderNuclear3D,
-    controls: [
+  ]},
+  { id: "nuclear", label: "Nuclear", icon: "☢", render: renderNuclear2D, controls: [
       { type: "slider", id: "halflife", label: "Half-life", min: 1, max: 12, step: 0.5, value: 5 },
-    ],
-  },
-  {
-    id: "photoelectric",
-    label: "Photoelectric",
-    icon: "λ",
-    render: renderPhotoelectric3D,
-    controls: [
+  ]},
+  { id: "photoelectric", label: "Photoelectric", icon: "λ", render: renderPhotoelectric2D, controls: [
       { type: "slider", id: "frequency", label: "Frequency", min: 2, max: 10, step: 0.2, value: 6 },
       { type: "slider", id: "threshold", label: "Threshold", min: 2, max: 8, step: 0.2, value: 5 },
-    ],
-  },
-  {
-    id: "thermodynamics",
-    label: "Thermo",
-    icon: "℃",
-    render: renderThermodynamics3D,
-    controls: [
+  ]},
+  { id: "thermodynamics", label: "Thermo", icon: "℃", render: renderThermodynamics2D, controls: [
       { type: "slider", id: "temperature", label: "Temp", min: 100, max: 800, step: 10, value: 300 },
       { type: "slider", id: "volume", label: "Volume", min: 0.6, max: 1.8, step: 0.05, value: 1 },
-    ],
-  },
-  {
-    id: "doppler",
-    label: "Doppler",
-    icon: "⇄",
-    render: renderDoppler3D,
-    controls: [
+  ]},
+  { id: "doppler", label: "Doppler", icon: "⇄", render: renderDoppler2D, controls: [
       { type: "slider", id: "speed", label: "Speed", min: 0.5, max: 4, step: 0.1, value: 2 },
-    ],
-  },
-  // === CHEMISTRY ANIMATIONS ===
-  {
-    id: "gas_laws",
-    label: "Gas Laws",
-    icon: "GL",
-    render: renderGasLaws3D,
-    controls: [
+  ]},
+  // CHEMISTRY
+  { id: "gas_laws", label: "Gas Laws", icon: "GL", render: renderGasLaws2D, controls: [
       { type: "slider", id: "temperature", label: "Temp (K)", min: 100, max: 600, step: 10, value: 300 },
       { type: "slider", id: "volume", label: "Volume (L)", min: 0.5, max: 3, step: 0.1, value: 1 },
       { type: "slider", id: "moles", label: "Moles (n)", min: 0.5, max: 3, step: 0.1, value: 1 },
-    ],
-  },
-  {
-    id: "reaction_rates",
-    label: "Reaction Rates",
-    icon: "RR",
-    render: renderReactionRates3D,
-    controls: [
+  ]},
+  { id: "reaction_rates", label: "Reaction Rates", icon: "RR", render: renderReactionRates2D, controls: [
       { type: "slider", id: "temperature", label: "Temp", min: 20, max: 100, step: 5, value: 50 },
       { type: "slider", id: "concentration", label: "Conc", min: 0.1, max: 2, step: 0.1, value: 1 },
       { type: "toggle", id: "catalyst", label: "Catalyst", value: false },
-    ],
-  },
-  {
-    id: "bonding",
-    label: "Bonding",
-    icon: "BD",
-    render: renderBonding3D,
-    controls: [
+  ]},
+  { id: "bonding", label: "Bonding", icon: "BD", render: renderBonding2D, controls: [
       { type: "toggle", id: "ionic", label: "Ionic", value: true },
       { type: "toggle", id: "covalent", label: "Covalent", value: false },
       { type: "slider", id: "electroneg", label: "Electroneg diff", min: 0, max: 3, step: 0.1, value: 1.5 },
-    ],
-  },
-  {
-    id: "acid_base",
-    label: "Acid-Base",
-    icon: "pH",
-    render: renderAcidBase3D,
-    controls: [
+  ]},
+  { id: "acid_base", label: "Acid-Base", icon: "pH", render: renderAcidBase2D, controls: [
       { type: "slider", id: "ph", label: "pH", min: 0, max: 14, step: 0.5, value: 7 },
       { type: "slider", id: "strength", label: "Acid Strength", min: 0, max: 1, step: 0.1, value: 0.5 },
-    ],
-  },
-  {
-    id: "electrochemistry",
-    label: "Electrochemistry",
-    icon: "EC",
-    render: renderElectrochemistry3D,
-    controls: [
+  ]},
+  { id: "electrochemistry", label: "Electrochemistry", icon: "EC", render: renderElectrochemistry2D, controls: [
       { type: "slider", id: "voltage", label: "Cell Voltage (V)", min: 0.5, max: 3, step: 0.1, value: 1.5 },
       { type: "slider", id: "concentration", label: "Anode Conc", min: 0.01, max: 2, step: 0.1, value: 1 },
-    ],
-  },
+  ]},
 ];
 
 function setActiveAnimButton(id) {
@@ -2230,9 +1495,6 @@ window.currentAnim = currentAnim;
 
 function bootAnimations() {
   if (!initScene()) return;
-
-  setupOrbit();
-  handleAnimResize();
 
   if (typeof ResizeObserver !== "undefined") {
     resizeObserver = new ResizeObserver(() => handleAnimResize());

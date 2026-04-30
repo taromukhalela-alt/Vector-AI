@@ -314,21 +314,27 @@
     </section>
   </main>
 
-  <!-- Modal -->
+    <!-- Modal -->
   <div id="note-modal" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
         <h2 id="modal-title">Create New Note</h2>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div>
+          <button id="toggle-view-btn" class="note-action-btn hidden" onclick="toggleViewEdit()" type="button">Edit</button>
+          <button class="note-action-btn ai-gen-btn" onclick="generateAINote()" type="button" style="color:var(--aqua); border-color:var(--aqua);">✨ Generate with AI</button>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
       </div>
       <form id="note-form">
         <input type="text" id="note-title" class="form-input" placeholder="Note Title" required>
         <input type="text" id="note-topic" class="form-input" placeholder="Topic (e.g. Projectile Motion)">
-        <div class="ai-toggle">
-          <input type="checkbox" id="ai-generated" checked>
-          <span>Let AI help generate content</span>
+        
+        <div id="note-preview-container" class="form-input" style="display:none; min-height: 160px; overflow-y:auto;">
+          <div id="note-preview" class="markdown-body" style="font-family: var(--font-body); font-size: 0.95rem; line-height: 1.6; color: var(--fg);"></div>
         </div>
+        
         <textarea id="note-content" class="form-input" placeholder="Write your note or ask AI to generate one..."></textarea>
+        
         <div class="modal-footer">
           <button type="button" class="note-action-btn" onclick="closeModal()">Cancel</button>
           <button type="submit" class="create-note-btn" style="width:auto;">Save Note</button>
@@ -337,6 +343,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
 </body>

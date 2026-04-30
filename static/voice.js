@@ -65,98 +65,16 @@ class VoiceInput {
 
 class VoiceOutput {
   constructor() {
-    this.synth = window.speechSynthesis;
-    this.voice = null;
-    this.resumeTimer = null;
+    this.audio = null;
     this.activeSession = 0;
-    this.loadVoices();
+    this.voiceId = localStorage.getItem("preferred_elevenlabs_voice") || "pNInz6obpgDQGcFmaJgB"; // Default Adam
+    this._ampInterval = null;
   }
 
-  loadVoices() {
-    const setVoice = () => {
-      const voices = this.synth.getVoices();
-      const savedVoiceIndex = localStorage.getItem("preferred_voice");
-
-      if (savedVoiceIndex !== null && voices[parseInt(savedVoiceIndex, 10)]) {
-        this.voice = voices[parseInt(savedVoiceIndex, 10)];
-        return;
-      }
-
-      const preferred = [
-        "Google UK English Female",
-        "Microsoft Libby Online (Natural)",
-        "Microsoft Ryan Online (Natural)",
-        "Samantha",
-        "Karen",
-        "en-ZA",
-        "en-GB",
-        "en-US",
-      ];
-
-      for (const name of preferred) {
-        const match = voices.find((voice) => voice.name.includes(name) || voice.lang.includes(name));
-        if (match) {
-          this.voice = match;
-          return;
-        }
-      }
-
-      this.voice = voices.find((voice) => voice.lang.startsWith("en")) || voices[0] || null;
-    };
-
-    setVoice();
-    this.synth.addEventListener("voiceschanged", () => {
-      setVoice();
-      if (window.onVoicesLoaded) window.onVoicesLoaded();
-    });
-  }
-
-  setVoice(voice) {
-    if (voice) {
-      this.voice = voice;
-      return;
-    }
-    this.loadVoices();
-  }
-
-  splitIntoChunks(text) {
-    const content = (text || "").trim();
-    if (!content) return [];
-
-    const sentences = content.match(/[^.!?]+[.!?]?/g) || [content];
-    const chunks = [];
-    let current = "";
-
-    sentences.forEach((sentence) => {
-      const next = current ? `${current} ${sentence.trim()}` : sentence.trim();
-      if (next.length > 220 && current) {
-        chunks.push(current.trim());
-        current = sentence.trim();
-      } else {
-        current = next;
-      }
-    });
-
-    if (current) {
-      chunks.push(current.trim());
-    }
-
-    return chunks;
-  }
-
-  startResumeGuard() {
-    this.stopResumeGuard();
-    this.resumeTimer = setInterval(() => {
-      if (this.synth?.speaking) {
-        this.synth.resume();
-      }
-    }, 1500);
-  }
-
-  stopResumeGuard() {
-    if (this.resumeTimer) {
-      clearInterval(this.resumeTimer);
-      this.resumeTimer = null;
+  setVoiceId(id) {
+    if (id && id !== 'default') {
+      this.voiceId = id;
+      localStorage.setItem("preferred_elevenlabs_voice", id);
     }
   }
 
@@ -173,7 +91,10 @@ class VoiceOutput {
   }
 
   stopAmplitudeTracking() {
-    clearInterval(this._ampInterval);
+    if (this._ampInterval) {
+      clearInterval(this._ampInterval);
+      this._ampInterval = null;
+    }
     window.speakingAmplitude = 0;
   }
 
@@ -183,75 +104,78 @@ class VoiceOutput {
       .replace(/\*/g, "")
       .replace(/`/g, "")
       .replace(/#{1,6}\s/g, "")
-      .replace(/\n+/g, ". ")
       .replace(/F_net|F_s|F_k/g, "F net, F static, F kinetic")
       .replace(/vÂ²/g, "v squared")
       .replace(/m\/sÂ²/g, "metres per second squared")
-      .replace(/[=+\-Ã—Ã·]/g, " ")
-      .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 1200);
+      .slice(0, 2000);
   }
 
-  speak(text, onStart, onEnd) {
+  async speak(text, onStart, onEnd) {
     this.activeSession += 1;
     const sessionId = this.activeSession;
-    this.synth.cancel();
-    this.stopAmplitudeTracking();
-    this.stopResumeGuard();
-
+    
+    this.stop();
     const clean = this.normalizeText(text);
-    const chunks = this.splitIntoChunks(clean);
-    if (!chunks.length) {
+    if (!clean) {
       if (onEnd) onEnd();
       return;
     }
 
-    const speakChunk = (index) => {
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean, voice_id: this.voiceId })
+      });
+
+      if (!response.ok) throw new Error("TTS failed");
+
+      const blob = await response.blob();
       if (sessionId !== this.activeSession) return;
 
-      if (index >= chunks.length) {
-        window.avatarState = window.AvatarState?.IDLE || "idle";
-        this.stopAmplitudeTracking();
-        this.stopResumeGuard();
-        if (onEnd) onEnd();
-        return;
-      }
-
-      const utterance = new SpeechSynthesisUtterance(chunks[index]);
-      utterance.voice = this.voice;
-      utterance.rate = 0.95;
-      utterance.pitch = 1.02;
-      utterance.volume = 1.0;
-
-      utterance.onstart = () => {
+      const url = URL.createObjectURL(blob);
+      this.audio = new Audio(url);
+      
+      this.audio.onplay = () => {
         window.avatarState = window.AvatarState?.SPEAKING || "speaking";
         this.startAmplitudeTracking();
-        this.startResumeGuard();
-        if (index === 0 && onStart) onStart();
+        if (onStart) onStart();
       };
 
-      utterance.onend = () => {
+      this.audio.onended = () => {
         if (sessionId !== this.activeSession) return;
-        speakChunk(index + 1);
+        window.avatarState = window.AvatarState?.IDLE || "idle";
+        this.stopAmplitudeTracking();
+        if (onEnd) onEnd();
+        URL.revokeObjectURL(url);
       };
 
-      utterance.onerror = () => {
+      this.audio.onerror = () => {
         if (sessionId !== this.activeSession) return;
-        speakChunk(index + 1);
+        window.avatarState = window.AvatarState?.IDLE || "idle";
+        this.stopAmplitudeTracking();
+        if (onEnd) onEnd();
+        URL.revokeObjectURL(url);
       };
 
-      this.synth.speak(utterance);
-    };
+      await this.audio.play();
 
-    speakChunk(0);
+    } catch (e) {
+      console.error("ElevenLabs TTS Error:", e);
+      window.avatarState = window.AvatarState?.IDLE || "idle";
+      if (onEnd) onEnd();
+    }
   }
 
   stop() {
     this.activeSession += 1;
-    this.synth.cancel();
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.src = "";
+      this.audio = null;
+    }
     this.stopAmplitudeTracking();
-    this.stopResumeGuard();
     window.avatarState = window.AvatarState?.IDLE || "idle";
     window.speakingAmplitude = 0;
   }
@@ -288,33 +212,35 @@ window.voiceInput = voiceInput;
 let isSpeaking = false;
 let isListening = false;
 
-const voiceLaunchBtn = document.getElementById("voice-launch-btn");
-const voiceOverlay = document.getElementById("voice-mode");
-const voiceCloseBtn = document.getElementById("voice-close-btn");
-const voiceEndBtn = document.getElementById("voice-end-btn");
+const voiceTab = document.getElementById("tab-voice");
 const micBtn = document.getElementById("voice-mic-btn");
 
-if (voiceLaunchBtn && voiceOverlay) {
-  voiceLaunchBtn.addEventListener("click", () => {
-    voiceOverlay.classList.remove("hidden");
-    voiceOverlay.classList.add("active");
-    setVoiceStatus("Tap the mic to start");
-    setupAudioAnalyser();
+let analyserSetup = false;
+if (voiceTab) {
+  // We can use a mutation observer to detect when the tab becomes active
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === "class") {
+        if (voiceTab.classList.contains("active")) {
+          if (!analyserSetup) {
+            setupAudioAnalyser();
+            analyserSetup = true;
+          }
+        } else {
+          // Tab hidden, stop listening/speaking if active
+          closeVoiceMode();
+        }
+      }
+    });
   });
+  observer.observe(voiceTab, { attributes: true });
 }
-
-if (voiceCloseBtn) voiceCloseBtn.addEventListener("click", closeVoiceMode);
-if (voiceEndBtn) voiceEndBtn.addEventListener("click", closeVoiceMode);
 
 function closeVoiceMode() {
   voiceInput.stop();
   voiceOutput.stop();
   isSpeaking = false;
   isListening = false;
-  if (voiceOverlay) {
-    voiceOverlay.classList.remove("active");
-    voiceOverlay.classList.add("hidden");
-  }
   window.avatarState = window.AvatarState?.IDLE || "idle";
 }
 

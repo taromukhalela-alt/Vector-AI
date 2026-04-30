@@ -98,8 +98,10 @@ body {
   justify-content: space-between;
   padding: 0 var(--space-lg);
   height: 56px;
-  background: var(--bg-hard);
-  border-bottom: 1px solid var(--border);
+  background: rgba(29, 32, 33, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -138,10 +140,12 @@ body {
 .tab-nav {
   display: flex;
   gap: var(--space-xs);
-  background: var(--bg-1);
+  background: rgba(60, 56, 54, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 4px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tab-btn {
@@ -201,8 +205,10 @@ body {
 
 /* Sidebar */
 .chat-sidebar {
-  background: var(--bg);
-  border-right: 1px solid var(--border);
+  background: rgba(40, 40, 40, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
@@ -378,8 +384,10 @@ body {
 
 .message.assistant {
   align-self: flex-start;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
+  background: rgba(50, 48, 47, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-left: 3px solid var(--aqua);
   color: var(--fg);
 }
@@ -887,24 +895,20 @@ body {
   .anim-sidebar { width: 220px; }
 }
 
-/* === VOICE MODE OVERLAY === */
-.voice-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-hard);
-  z-index: 1000;
+/* === VOICE TAB LAYOUT === */
+.voice-tab-layout {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
-
-.voice-overlay.hidden { display: none; }
 
 .voice-header {
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: var(--space-md) var(--space-lg);
   border-bottom: 1px solid var(--border);
@@ -1093,30 +1097,6 @@ body {
 .mic-error.hidden { display: none; }
 .mic-error a { color: var(--yellow); }
 
-.voice-launch-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  min-width: 112px;
-  height: 52px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(184, 187, 38, 0.18), rgba(142, 192, 124, 0.18));
-  border: 2px solid var(--accent);
-  color: var(--fg);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow: var(--glow-green);
-  z-index: 500;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.voice-launch-btn:hover {
   background: var(--accent);
   color: var(--bg-hard);
   transform: translateY(-2px);

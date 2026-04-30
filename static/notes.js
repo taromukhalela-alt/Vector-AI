@@ -34,11 +34,15 @@ function renderNotes(notesToRender = notes) {
     const card = document.createElement("div");
     card.className = "note-card";
     card.onclick = () => viewNote(note.id);
+    
+    // Use marked if available, otherwise fallback
+    const rawHTML = typeof marked !== "undefined" ? marked.parse(note.content || "") : simpleMarkdown(note.content);
+    
     card.innerHTML = `
       <div class="note-card-title">${escapeHtml(note.title)}</div>
       <div class="note-card-meta">${formatDate(note.created_at)}</div>
       ${note.topic ? `<span class="note-card-topic">${escapeHtml(note.topic)}</span>` : ""}
-      <div class="note-card-content">${simpleMarkdown(note.content)}</div>
+      <div class="note-card-content">${rawHTML}</div>
       <div class="note-card-actions" onclick="event.stopPropagation()">
         <button class="note-action-btn" onclick="editNote('${note.id}')">Edit</button>
         <button class="note-action-btn" onclick="deleteNote('${note.id}')">Delete</button>
@@ -106,8 +110,11 @@ function openModal(note = null, viewOnly = false) {
   const titleEl = document.getElementById("note-title");
   const topicEl = document.getElementById("note-topic");
   const contentEl = document.getElementById("note-content");
+  const previewContainer = document.getElementById("note-preview-container");
+  const previewEl = document.getElementById("note-preview");
   const modalTitle = document.getElementById("modal-title");
-  const aiCheck = document.getElementById("ai-generated");
+  const toggleBtn = document.getElementById("toggle-view-btn");
+  const genBtn = document.querySelector(".ai-gen-btn");
   const footer = modal?.querySelector(".modal-footer");
 
   if (!modal || !titleEl || !topicEl || !contentEl || !modalTitle) return;
@@ -118,24 +125,110 @@ function openModal(note = null, viewOnly = false) {
     topicEl.value = note.topic || "";
     contentEl.value = note.content;
     modalTitle.textContent = viewOnly ? note.title : "Edit Note";
+    
     if (viewOnly) {
-      contentEl.readOnly = true;
+      contentEl.style.display = "none";
+      previewContainer.style.display = "block";
+      previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(note.content || "") : simpleMarkdown(note.content);
+      titleEl.style.display = "none";
+      topicEl.style.display = "none";
       if (footer) footer.style.display = "none";
+      if (toggleBtn) { toggleBtn.classList.remove("hidden"); toggleBtn.textContent = "Edit"; }
+      if (genBtn) genBtn.style.display = "none";
     } else {
-      contentEl.readOnly = false;
+      contentEl.style.display = "block";
+      previewContainer.style.display = "none";
+      titleEl.style.display = "block";
+      topicEl.style.display = "block";
       if (footer) footer.style.display = "flex";
+      if (toggleBtn) { toggleBtn.classList.remove("hidden"); toggleBtn.textContent = "Preview"; }
+      if (genBtn) genBtn.style.display = "inline-block";
     }
   } else {
     editingNoteId = null;
     titleEl.value = "";
     topicEl.value = "";
     contentEl.value = "";
-    contentEl.readOnly = false;
+    contentEl.style.display = "block";
+    previewContainer.style.display = "none";
+    titleEl.style.display = "block";
+    topicEl.style.display = "block";
     modalTitle.textContent = "Create New Note";
     if (footer) footer.style.display = "flex";
+    if (toggleBtn) { toggleBtn.classList.remove("hidden"); toggleBtn.textContent = "Preview"; }
+    if (genBtn) genBtn.style.display = "inline-block";
   }
 
   modal.classList.add("active");
+}
+
+function toggleViewEdit() {
+  const contentEl = document.getElementById("note-content");
+  const previewContainer = document.getElementById("note-preview-container");
+  const previewEl = document.getElementById("note-preview");
+  const toggleBtn = document.getElementById("toggle-view-btn");
+  const titleEl = document.getElementById("note-title");
+  const topicEl = document.getElementById("note-topic");
+  const footer = document.querySelector(".modal-footer");
+  const genBtn = document.querySelector(".ai-gen-btn");
+
+  if (contentEl.style.display === "none") {
+    // Switch to edit
+    contentEl.style.display = "block";
+    previewContainer.style.display = "none";
+    titleEl.style.display = "block";
+    topicEl.style.display = "block";
+    if (footer) footer.style.display = "flex";
+    if (toggleBtn) toggleBtn.textContent = "Preview";
+    if (genBtn) genBtn.style.display = "inline-block";
+  } else {
+    // Switch to preview
+    contentEl.style.display = "none";
+    previewContainer.style.display = "block";
+    previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(contentEl.value || "") : simpleMarkdown(contentEl.value);
+    if (toggleBtn) toggleBtn.textContent = "Edit";
+  }
+}
+
+async function generateAINote() {
+  const topicEl = document.getElementById("note-topic");
+  const titleEl = document.getElementById("note-title");
+  const contentEl = document.getElementById("note-content");
+  const genBtn = document.querySelector(".ai-gen-btn");
+
+  const topic = topicEl.value.trim() || titleEl.value.trim() || "CAPS Physics or Chemistry";
+  
+  if (!topic) {
+    alert("Please enter a topic or title first.");
+    return;
+  }
+
+  const originalText = genBtn.textContent;
+  genBtn.textContent = "Generating...";
+  genBtn.disabled = true;
+
+  try {
+    const prompt = `Generate a comprehensive, structured CAPS study note on the topic: ${topic}. Use markdown formatting with clear headings, bullet points, and bold text for key terms. Keep it focused and educational.`;
+    
+    const response = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: prompt, history: [] })
+    });
+    
+    const data = await response.json();
+    if (data && data.reply) {
+      contentEl.value = data.reply;
+      // Auto-switch to preview
+      toggleViewEdit();
+    }
+  } catch (e) {
+    console.error("AI Generation failed:", e);
+    alert("Failed to generate note with AI.");
+  } finally {
+    genBtn.textContent = originalText;
+    genBtn.disabled = false;
+  }
 }
 
 function closeModal() {
@@ -148,7 +241,7 @@ async function saveNote() {
   const title = document.getElementById("note-title")?.value;
   const topic = document.getElementById("note-topic")?.value;
   const content = document.getElementById("note-content")?.value;
-  const aiGenerated = document.getElementById("ai-generated")?.checked;
+  const aiGenerated = true; // Assume AI generated since we have the button now
 
   if (!title || !content) {
     alert("Please fill in title and content");
@@ -196,7 +289,7 @@ function createFromTopic(topic) {
   openModal();
   document.getElementById("note-topic").value = topic;
   document.getElementById("note-title").value = `Notes on ${topic.charAt(0).toUpperCase() + topic.slice(1)}`;
-  document.getElementById("ai-generated").checked = true;
+  generateAINote();
 }
 
 function formatDate(isoStr) {

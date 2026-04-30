@@ -15,6 +15,7 @@
     <div class="topbar-logo">Vector AI</div>
     <nav class="tab-nav" role="tablist">
       <button class="tab-btn active" data-tab="chat"       role="tab">Tutor</button>
+      <button class="tab-btn"        data-tab="voice"      role="tab">Voice Tutor</button>
       <button class="tab-btn"        data-tab="animations" role="tab">Visual Lab</button>
       <button class="tab-btn"        data-tab="topics"     role="tab">CAPS Tracks</button>
       <button class="tab-btn"        data-tab="history"    role="tab">History</button>
@@ -103,47 +104,44 @@
     <div id="topics-grid" class="topics-grid"></div>
   </section>
 
-  </div>
-</div>
+    <!-- VOICE TAB -->
+  <section id="tab-voice" class="tab-panel" role="tabpanel">
+    <div class="voice-tab-layout">
+      <div class="voice-header">
+        <div class="voice-header-meta">
+          <span class="voice-status-label" id="voice-status-label">Tap the mic to start</span>
+          <select id="voice-select-overlay" class="voice-select voice-select-overlay"></select>
+        </div>
+      </div>
 
-<!-- VOICE MODE OVERLAY — fullscreen, toggled on/off -->
-<div id="voice-mode" class="voice-overlay hidden">
-  <div class="voice-header">
-    <div class="voice-header-meta">
-      <span class="voice-status-label" id="voice-status-label">Tap to speak</span>
-      <select id="voice-select-overlay" class="voice-select voice-select-overlay"></select>
+      <div class="voice-avatar-wrap">
+        <canvas id="avatar-canvas"></canvas>
+        <div class="avatar-ripple r1"></div>
+        <div class="avatar-ripple r2"></div>
+        <div class="avatar-ripple r3"></div>
+      </div>
+
+      <div class="voice-transcript-area">
+        <div class="transcript-you" id="transcript-you"></div>
+        <div class="transcript-ai" id="transcript-ai"></div>
+      </div>
+
+      <div class="voice-controls">
+        <button class="voice-mic-btn" id="voice-mic-btn">
+          <span class="mic-icon">Mic</span>
+          <span class="mic-label">Hold to Talk</span>
+        </button>
+      </div>
+
+      <div class="mic-error hidden" id="mic-error">
+        Microphone access denied.
+        <a href="#" onclick="openMicSettings()">Enable in browser settings</a>
+      </div>
     </div>
-    <button class="voice-close-btn" id="voice-close-btn">Close Voice Mode</button>
-  </div>
+  </section>
 
-  <div class="voice-avatar-wrap">
-    <canvas id="avatar-canvas"></canvas>
-    <div class="avatar-ripple r1"></div>
-    <div class="avatar-ripple r2"></div>
-    <div class="avatar-ripple r3"></div>
-  </div>
-
-  <div class="voice-transcript-area">
-    <div class="transcript-you" id="transcript-you"></div>
-    <div class="transcript-ai" id="transcript-ai"></div>
-  </div>
-
-  <div class="voice-controls">
-    <button class="voice-mic-btn" id="voice-mic-btn">
-      <span class="mic-icon">Mic</span>
-      <span class="mic-label">Hold to Talk</span>
-    </button>
-    <button class="voice-end-btn" id="voice-end-btn">End</button>
-  </div>
-
-  <div class="mic-error hidden" id="mic-error">
-    Microphone access denied.
-    <a href="#" onclick="openMicSettings()">Enable in browser settings</a>
   </div>
 </div>
-
-<!-- Voice Mode trigger button (floating, always visible) -->
-<button class="voice-launch-btn" id="voice-launch-btn" title="Voice Mode">Voice</button>
 
 <!-- Mobile FAB -->
 <button class="mobile-fab" id="mobile-fab" title="New session">+</button>

@@ -340,74 +340,48 @@ function initVectorAI() {
   }
 
   if (voiceSelects.length) {
-    loadVoices();
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
+    loadElevenLabsVoices();
 
-    fetch('/api/user/preferences')
-      .then(res => res.json())
-      .then(data => {
-        const savedVoice = data.success && data.preferences.voice ? data.preferences.voice : 'default';
-        syncVoiceSelectors(savedVoice);
-        updateVoiceOutput(savedVoice);
-      })
-      .catch(() => {
-        syncVoiceSelectors(localStorage.getItem('preferred_voice') || 'default');
-        updateVoiceOutput(localStorage.getItem('preferred_voice') || 'default');
-      });
+    const savedVoice = localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB';
+    syncVoiceSelectors(savedVoice);
+    if (window.voiceOutput) {
+      window.voiceOutput.setVoiceId(savedVoice);
+    }
 
     voiceSelects.forEach((select) => {
       select.addEventListener('change', () => {
         syncVoiceSelectors(select.value);
-        fetch('/api/user/preferences', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ voice: select.value })
-        }).catch(() => {});
-        updateVoiceOutput(select.value);
+        if (window.voiceOutput) {
+          window.voiceOutput.setVoiceId(select.value);
+        }
       });
     });
   }
 
-  function loadVoices() {
-    const voices = window.speechSynthesis.getVoices();
+  function loadElevenLabsVoices() {
+    const elevenLabsVoices = [
+      { id: "pNInz6obpgDQGcFmaJgB", name: "Adam (Deep, American)" },
+      { id: "N2lVS1w4EtoT3dr4eOWO", name: "Callum (Deep, Transatlantic)" },
+      { id: "JBFqnCBrubYjTQNpc2kc", name: "George (Deep, British)" },
+      { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie (Natural, Australian)" },
+      { id: "D38z5RcWu1voky8WS1ja", name: "Fin (Soft, Irish)" }
+    ];
+
     voiceSelects.forEach((select) => {
-      select.innerHTML = '<option value="default">Default Voice</option>';
-      const added = new Set();
-      voices.forEach((voice, i) => {
-        const key = `${voice.name}-${voice.lang}`;
-        if (!added.has(key)) {
-          added.add(key);
-          const option = document.createElement('option');
-          option.value = i;
-          option.textContent = `${voice.name} (${voice.lang})`;
-          select.appendChild(option);
-        }
+      select.innerHTML = '';
+      elevenLabsVoices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.value = voice.id;
+        option.textContent = voice.name;
+        select.appendChild(option);
       });
     });
-    syncVoiceSelectors(localStorage.getItem('preferred_voice') || 'default');
   }
 
   function syncVoiceSelectors(value) {
     voiceSelects.forEach((select) => {
       select.value = value;
     });
-  }
-
-  function updateVoiceOutput(selectedIndex) {
-    const voices = window.speechSynthesis.getVoices();
-    if (selectedIndex !== 'default' && voices[parseInt(selectedIndex)]) {
-      localStorage.setItem('preferred_voice', String(selectedIndex));
-      if (window.voiceOutput) {
-        window.voiceOutput.setVoice(voices[parseInt(selectedIndex)]);
-      }
-    } else {
-      localStorage.removeItem('preferred_voice');
-      if (window.voiceOutput) {
-        window.voiceOutput.setVoice(null);
-      }
-    }
   }
 }
 
