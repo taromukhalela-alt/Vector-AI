@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vector AI | Chat Studio</title>
+    <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml" />
+    <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}" />
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}" />
   </head>
   <body class="chat-shell">
@@ -42,6 +46,10 @@
         <div class="hint-card">
           <p class="hint-title">Try a prompt</p>
           <p class="hint">"Projectile range for v0=40 m/s at 30 degrees."</p>
+        </div>
+
+        <div class="credit-footer" style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--bg3); opacity: 0.7; font-size: 0.75rem;">
+          <p>Created by <strong style="color: var(--green);">Taro Mukhalela</strong></p>
         </div>
       </aside>
 

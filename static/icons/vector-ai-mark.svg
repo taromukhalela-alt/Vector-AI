@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Vector AI mark</title>
+  <desc id="desc">A lime vector V with an orbit node on a dark rounded square.</desc>
+  <defs>
+    <linearGradient id="tile" x1="90" y1="52" x2="424" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#232827"/>
+      <stop offset="0.55" stop-color="#141817"/>
+      <stop offset="1" stop-color="#0b0e0d"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="132" y1="120" x2="380" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f3ff4f"/>
+      <stop offset="0.45" stop-color="#b8bb26"/>
+      <stop offset="1" stop-color="#7fa66f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#tile)"/>
+  <path d="M112 114h288c24 0 44 20 44 44v196c0 24-20 44-44 44H112c-24 0-44-20-44-44V158c0-24 20-44 44-44Z" fill="none" stroke="#3a403e" stroke-width="8"/>
+  <path d="M101 337c78-135 178-204 300-207" fill="none" stroke="#8ec07c" stroke-width="22" stroke-linecap="round" opacity=".45"/>
+  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="#050706" stroke-width="82" stroke-linecap="round" stroke-linejoin="round" opacity=".78"/>
+  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="#f3ff4f" stroke-width="58" stroke-linecap="round" stroke-linejoin="round" opacity=".2"/>
+  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="url(#lime)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M360 154h48v48" fill="none" stroke="#f3ff4f" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="380" r="30" fill="#141817" stroke="#f3ff4f" stroke-width="20"/>
+  <circle cx="132" cy="154" r="21" fill="#141817" stroke="#8ec07c" stroke-width="15"/>
+  <circle cx="380" cy="154" r="21" fill="#141817" stroke="#f3ff4f" stroke-width="15"/>
+  <path d="M158 398h196" stroke="#ebdbb2" stroke-width="12" stroke-linecap="round" opacity=".26"/>
+</svg>

@@ -1,0 +1,3634 @@
+[
+  {
+    "text": "Calculate the acceleration of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Help with Fnet = ma questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "convert fahrenheit to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "A ball is projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Difference between speed and vector",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Is momentum conserved in inelastic collision?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Chemistry ionic bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Help with velocity graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "State net force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "convert liters to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain frames of reference simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate the non-conservative forces",
+    "intent": "energy"
+  },
+  {
+    "text": "change meters into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for kinematics",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Help with newton's third law questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "How does red shift work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain impulse to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "change liters into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain reaction rates",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain net force with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Formula for electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Find the maximum height for a terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "change miles into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is conservation of energy?",
+    "intent": "energy"
+  },
+  {
+    "text": "Explain boyle's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Calculate impulse after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How much kinetic energy is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "Factors affecting neutralization",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Chemistry covalent bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Conservation of conservation of energy help",
+    "intent": "energy"
+  },
+  {
+    "text": "What is ionic bonding?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many seconds in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change liters into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for scalar",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is ohm's law?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain parallel circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is the doppler effect?",
+    "intent": "waves"
+  },
+  {
+    "text": "how many meters in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and ph scale",
+    "intent": "chemistry"
+  },
+  {
+    "text": "The car is moving with frames of reference",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate the electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Define newton's third law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain ph scale",
+    "intent": "chemistry"
+  },
+  {
+    "text": "how many fahrenheit in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many kilometers in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain the frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "Grade 11 ionic bonding help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Circuits and electrical power",
+    "intent": "electricity"
+  },
+  {
+    "text": "how many liters in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How does ultrasound work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Define resistance in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Calculate the conservation of energy",
+    "intent": "energy"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why is newton's laws important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is voltage?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Application of resultant force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "how many seconds in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for covalent bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Define acids and bases",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Calculate the observed frequency in wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain the doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "convert seconds to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "A ball is free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "change kilometers into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Explain thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "say something funny",
+    "intent": "jokes"
+  },
+  {
+    "text": "Circuits and potential difference",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is change in momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Formula for change in momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "Help with displacement graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define chemical equilibrium",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Equations for thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Factors affecting chemical equilibrium",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for potential difference",
+    "intent": "electricity"
+  },
+  {
+    "text": "Graph of time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Calculate the kinetic energy",
+    "intent": "energy"
+  },
+  {
+    "text": "change seconds into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Graph of thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Calculate thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Application of newton's third law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Applications of sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "How does inertia work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Circuits and resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "Circuits and emf",
+    "intent": "electricity"
+  },
+  {
+    "text": "A ball is vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "change fahrenheit into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "how many liters in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change meters into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State the mechanical energy",
+    "intent": "energy"
+  },
+  {
+    "text": "Explain charles's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "convert celsius to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How much power is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "Why does ohm's law change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Formula for acceleration",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Help with kinematics graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How do I calculate acceleration?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define impulse",
+    "intent": "momentum"
+  },
+  {
+    "text": "Grade 10 constant speed help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Explain newton's first law with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "How to calculate series circuit?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define inelastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change fahrenheit into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain velocity simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Applications of light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "What is charles's law?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Electric field due to coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "State electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "convert liters to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define Fnet = ma",
+    "intent": "dynamics"
+  },
+  {
+    "text": "how many fahrenheit in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for work",
+    "intent": "energy"
+  },
+  {
+    "text": "Calculate the scalar of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "State ionic bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Calculate the observed frequency in sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "hello",
+    "intent": "greeting"
+  },
+  {
+    "text": "Grade 10 scalar help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How does frequency work?",
+    "intent": "waves"
+  },
+  {
+    "text": "change miles into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert miles to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and chemical equilibrium",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Application of inertia",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is electric field?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Electric field due to charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How do ionic bonding work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Electric force between electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Explain neutralization",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for collisions",
+    "intent": "momentum"
+  },
+  {
+    "text": "Definition of constant speed",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Sound and wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "change meters into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Find the maximum height for a free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Definition of acceleration",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Application of newton's first law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Formula for mechanical energy",
+    "intent": "energy"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the constant speed of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many liters in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is the waves?",
+    "intent": "waves"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is power?",
+    "intent": "energy"
+  },
+  {
+    "text": "What is newton's second law?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "convert kilograms to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How does sound waves work?",
+    "intent": "waves"
+  },
+  {
+    "text": "how many miles in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for electrical power",
+    "intent": "electricity"
+  },
+  {
+    "text": "A ball is terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Acids and titration",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Explain electrical power",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is electric field lines?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Grade 11 intermolecular forces help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for boyle's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Grade 11 charles's law help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Explain acceleration simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Light and waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain newton's laws with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change seconds into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain kinematics simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How do I calculate vector?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is elastic collision?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Calculate the frames of reference of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many miles in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between chemical bonding and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "The car is moving with vector",
+    "intent": "kinematics"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change seconds into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Difference between conservation of energy and work",
+    "intent": "energy"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many fahrenheit in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why does electrical power change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Formula for gas laws",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "State gas laws",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Light and red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many liters in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State the kinetic energy",
+    "intent": "energy"
+  },
+  {
+    "text": "convert miles to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert kilometers to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain ionic bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Explain conservation of momentum to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "Circuits and current",
+    "intent": "electricity"
+  },
+  {
+    "text": "Calculate the observed frequency in doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "Help with series circuit problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Formula for frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for emf",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "What is newton's first law?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "How do I calculate displacement?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Factors affecting acids and bases",
+    "intent": "chemistry"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain le chatelier's principle",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with inertia questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change seconds into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert miles to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Help with newton's first law questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change celsius into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define work-energy theorem",
+    "intent": "energy"
+  },
+  {
+    "text": "Explain emf",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is internal resistance?",
+    "intent": "electricity"
+  },
+  {
+    "text": "change liters into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change fahrenheit into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert celsius to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define kinetic energy",
+    "intent": "energy"
+  },
+  {
+    "text": "change miles into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert kilograms to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State newton's third law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "what subjects",
+    "intent": "capabilities"
+  },
+  {
+    "text": "Calculate dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Define inertia",
+    "intent": "dynamics"
+  },
+  {
+    "text": "convert meters to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Help with potential difference problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "How do I calculate velocity?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate the observed frequency in ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "How to solve acids and bases problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert kilometers to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equilibrium and ph scale",
+    "intent": "chemistry"
+  },
+  {
+    "text": "how many seconds in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert celsius to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many fahrenheit in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is kinetic energy?",
+    "intent": "energy"
+  },
+  {
+    "text": "Sound and ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "What is constant speed?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Is momentum conserved in collisions?",
+    "intent": "momentum"
+  },
+  {
+    "text": "change seconds into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Sound and light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain the light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Equilibrium and chemical equilibrium",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain covalent bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Why does series circuit change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "change seconds into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Grade 10 displacement help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Chemistry redox grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Difference between charles's law and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Definition of scalar",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define parallel circuit in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "State ideal gas",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Explain redox",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Definition of frames of reference",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Conservation of non-conservative forces help",
+    "intent": "energy"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Factors affecting titration",
+    "intent": "chemistry"
+  },
+  {
+    "text": "State newton's first law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "State the work-energy theorem",
+    "intent": "energy"
+  },
+  {
+    "text": "Explain electrolytic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with emf problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain resultant force with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain constant speed simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "convert seconds to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain chemical equilibrium",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert kilograms to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is free fall in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert celsius to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is the light waves?",
+    "intent": "waves"
+  },
+  {
+    "text": "Difference between potential energy and work",
+    "intent": "energy"
+  },
+  {
+    "text": "Circuits and ohm's law",
+    "intent": "electricity"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between work and work",
+    "intent": "energy"
+  },
+  {
+    "text": "change kilometers into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Circuits and internal resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "Electric force between coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Define ohm's law in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "change miles into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Definition of vector",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Formula for vector",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How to calculate resistance?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Difference between non-conservative forces and work",
+    "intent": "energy"
+  },
+  {
+    "text": "how many liters in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How does Fnet = ma work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Find the maximum height for a projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to calculate voltage?",
+    "intent": "electricity"
+  },
+  {
+    "text": "greetings",
+    "intent": "greeting"
+  },
+  {
+    "text": "Explain newton's third law with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Difference between gas laws and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Calculate the displacement of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many fahrenheit in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Light and light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Calculate the electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How does wavelength work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "How do boyle's law work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Difference between speed and velocity",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Application of Fnet = ma",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Why is newton's third law important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "State electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "good morning",
+    "intent": "greeting"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to solve thrown upwards problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "What is frames of reference?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change meters into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "caps tutor",
+    "intent": "capabilities"
+  },
+  {
+    "text": "how many kilometers in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define resultant force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Define galvanic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert fahrenheit to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many seconds in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to solve neutralization problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Light and wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "Difference between speed and displacement",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is newton's third law?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Define reaction rates",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert kilograms to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "howsit",
+    "intent": "greeting"
+  },
+  {
+    "text": "What is vertical projectile motion in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "How to solve terminal velocity problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert kilograms to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Help with newton's laws questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Grade 11 gas laws help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Definition of displacement",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Help with constant speed graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate the charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "What is gas laws?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Define conservation of energy",
+    "intent": "energy"
+  },
+  {
+    "text": "How much potential energy is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "Formula for work-energy theorem",
+    "intent": "energy"
+  },
+  {
+    "text": "How to calculate parallel circuit?",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is time of flight in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Define elastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "How to calculate internal resistance?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Applications of ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "how many fahrenheit in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equations for terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Difference between covalent bonding and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "How does doppler effect work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Sound and red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Calculate the vector of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many kilometers in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the potential energy",
+    "intent": "energy"
+  },
+  {
+    "text": "convert meters to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Chemistry chemical bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Find the maximum height for a time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "How to solve titration problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "how many kilograms in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for non-conservative forces",
+    "intent": "energy"
+  },
+  {
+    "text": "Equations for vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Electric field due to electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "convert kilometers to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Chemistry electrolytic cell grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Grade 11 ideal gas help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is ideal gas?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is ph scale?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with acceleration graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Formula for ideal gas",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Circuits and parallel circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert kilograms to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define power",
+    "intent": "energy"
+  },
+  {
+    "text": "Calculate the observed frequency in blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "What is thrown upwards in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "State chemical bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Factors affecting electrolytic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert meters to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to solve ph scale problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "change fahrenheit into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is electrolytic cell?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Why does parallel circuit change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "change kilograms into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equations for free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Applications of wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "change celsius into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Chemistry charles's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "State resultant force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Calculate change in momentum after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Formula for microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "State the potential energy",
+    "intent": "energy"
+  },
+  {
+    "text": "Help with resistance problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Grade 10 velocity help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is coulomb's law?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Conservation of work help",
+    "intent": "energy"
+  },
+  {
+    "text": "change kilometers into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "show me features",
+    "intent": "capabilities"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State newton's laws",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is conservation of momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Formula for conservation of momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "How to solve maximum height problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "State intermolecular forces",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Define potential energy",
+    "intent": "energy"
+  },
+  {
+    "text": "Application of newton's second law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Electric field due to point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "What is vector?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is reaction rates?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Calculate the work",
+    "intent": "energy"
+  },
+  {
+    "text": "Acids and acids and bases",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Electric field due to electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "The car is moving with scalar",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Formula for ohm's law",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Define work",
+    "intent": "energy"
+  },
+  {
+    "text": "Calculate elastic collision after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Formula for current",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert seconds to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Help with newton's second law questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "convert kilograms to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain current",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is acceleration?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Graph of free fall",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert miles to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State inertia",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Calculate the point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "convert meters to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is acids and bases?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Relationship between force and conservation of momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "What is impulse?",
+    "intent": "momentum"
+  },
+  {
+    "text": "State covalent bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many miles in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Electric force between electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Formula for point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "What is work-energy theorem?",
+    "intent": "energy"
+  },
+  {
+    "text": "how many liters in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change celsius into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is intermolecular forces?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "How to solve free fall problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert miles to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for elastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Define electrical power in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Difference between speed and scalar",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Is momentum conserved in elastic collision?",
+    "intent": "momentum"
+  },
+  {
+    "text": "how many kilometers in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change meters into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and electrolytic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How much mechanical energy is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "How do intermolecular forces work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Difference between boyle's law and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many celsius in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Graph of terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Calculate inelastic collision after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "change fahrenheit into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Relationship between force and impulse",
+    "intent": "momentum"
+  },
+  {
+    "text": "change kilograms into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for potential energy",
+    "intent": "energy"
+  },
+  {
+    "text": "How do chemical bonding work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Chemistry le chatelier's principle grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Define current in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain scalar simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many miles in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change kilometers into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many seconds in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Chemistry acids and bases grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Define newton's first law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Sound and frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "Difference between kinetic energy and work",
+    "intent": "energy"
+  },
+  {
+    "text": "Electric force between charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Grade 11 chemical bonding help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "How to solve time of flight problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "how many meters in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "The car is moving with constant speed",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many celsius in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is point charges?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Define redox",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain galvanic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Why does internal resistance change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "how many seconds in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change miles into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many miles in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between work-energy theorem and work",
+    "intent": "energy"
+  },
+  {
+    "text": "What is electrostatic force?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Chemistry intermolecular forces",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Define potential difference in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define titration",
+    "intent": "chemistry"
+  },
+  {
+    "text": "change kilometers into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert meters to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and redox",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Calculate the kinematics of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Grade 10 acceleration help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How do I calculate constant speed?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Help with ohm's law problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Light and blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How do charles's law work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is Fnet = ma?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Formula for sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Difference between speed and constant speed",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How does resultant force work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain ohm's law",
+    "intent": "electricity"
+  },
+  {
+    "text": "how many meters in a liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert fahrenheit to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How do I calculate kinematics?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Formula for series circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "How much work is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equilibrium and neutralization",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert meters to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many meters in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and le chatelier's principle",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Define newton's second law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain internal resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is resultant force?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Find the maximum height for a thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "What is charge?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How does blue shift work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Why does voltage change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert liters to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain Fnet = ma with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is the red shift?",
+    "intent": "waves"
+  },
+  {
+    "text": "tell me a joke",
+    "intent": "jokes"
+  },
+  {
+    "text": "Calculate the coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Why is inertia important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change celsius into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Formula for ionic bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Formula for kinetic energy",
+    "intent": "energy"
+  },
+  {
+    "text": "how many miles in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "how many kilometers in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the observed frequency in waves",
+    "intent": "waves"
+  },
+  {
+    "text": "convert miles to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How does newton's first law work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Calculate collisions after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "change meters into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How much work-energy theorem is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Relationship between force and inelastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Calculate the observed frequency in light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "What is projectile in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Why is Fnet = ma important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "State the conservation of energy",
+    "intent": "energy"
+  },
+  {
+    "text": "Define ph scale",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How do I calculate frames of reference?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define newton's laws",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is boyle's law?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "chemistry jokes",
+    "intent": "jokes"
+  },
+  {
+    "text": "Find the maximum height for a maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "What is parallel circuit?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Chemistry titration grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Sound and waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for parallel circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "What is chemical bonding?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Calculate the electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "What is inertia?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Sound and blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "The car is moving with displacement",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Applications of doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "how many liters in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change kilograms into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to solve le chatelier's principle problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "A ball is dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Graph of dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "change meters into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change kilograms into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is displacement?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define non-conservative forces",
+    "intent": "energy"
+  },
+  {
+    "text": "State the power",
+    "intent": "energy"
+  },
+  {
+    "text": "How to solve chemical equilibrium problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Difference between ideal gas and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is scalar?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Definition of kinematics",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many kilograms in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why is newton's second law important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "How does net force work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Chemistry boyle's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change celsius into kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is microcoulombs?",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Difference between ionic bonding and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many meters in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why is net force important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain momentum to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "What is non-conservative forces?",
+    "intent": "energy"
+  },
+  {
+    "text": "What is resistance?",
+    "intent": "electricity"
+  },
+  {
+    "text": "how many kilograms in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain chemical bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Relationship between force and momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "change miles into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Grade 11 covalent bonding help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Light and frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "What is series circuit?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Formula for ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "Equations for maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "how many kilograms in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the observed frequency in red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Chemistry galvanic cell grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "how many celsius in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Application of newton's laws",
+    "intent": "dynamics"
+  },
+  {
+    "text": "how many kilometers in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is the wavelength?",
+    "intent": "waves"
+  },
+  {
+    "text": "convert celsius to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change liters into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equilibrium and titration",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How much conservation of energy is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "Is momentum conserved in momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "what can you do",
+    "intent": "capabilities"
+  },
+  {
+    "text": "Applications of blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "What is kinematics?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is the blue shift?",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for power",
+    "intent": "energy"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Chemistry neutralization grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Is momentum conserved in conservation of momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "convert liters to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain voltage",
+    "intent": "electricity"
+  },
+  {
+    "text": "Help with resultant force questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Define series circuit in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Why is resultant force important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Equilibrium and electrolytic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Difference between speed and acceleration",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate the work-energy theorem",
+    "intent": "energy"
+  },
+  {
+    "text": "how many celsius in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Conservation of kinetic energy help",
+    "intent": "energy"
+  },
+  {
+    "text": "Formula for internal resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "change celsius into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define change in momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "convert seconds to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Find the maximum height for a vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Factors affecting ph scale",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain displacement simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Explain inelastic collision to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain inertia with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Formula for velocity",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How does light waves work?",
+    "intent": "waves"
+  },
+  {
+    "text": "Chemistry gas laws",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Chemistry chemical equilibrium grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Grade 10 frames of reference help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Calculate momentum after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Explain vector simply",
+    "intent": "kinematics"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to solve electrolytic cell problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "What is newton's laws?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change liters into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between speed and frames of reference",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How do I calculate scalar?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define electrolytic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Difference between speed and kinematics",
+    "intent": "kinematics"
+  },
+  {
+    "text": "The car is moving with kinematics",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Equations for projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Chemistry ideal gas",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Applications of red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain the waves",
+    "intent": "waves"
+  },
+  {
+    "text": "State microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Formula for light waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain the blue shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for inelastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "State the work",
+    "intent": "energy"
+  },
+  {
+    "text": "change kilograms into liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many kilograms in a celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is chemical equilibrium?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with scalar graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is collisions?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Electric force between point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Define net force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Equations for time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Difference between intermolecular forces and other bonds",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Applications of frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "Factors affecting reaction rates",
+    "intent": "chemistry"
+  },
+  {
+    "text": "The car is moving with velocity",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is electrical power?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Formula for voltage",
+    "intent": "electricity"
+  },
+  {
+    "text": "State the non-conservative forces",
+    "intent": "energy"
+  },
+  {
+    "text": "Formula for electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Sound and sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "convert seconds to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Sound and doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "Why does current change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Explain collisions to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "What is work?",
+    "intent": "energy"
+  },
+  {
+    "text": "Equations for dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert kilometers to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate the power",
+    "intent": "energy"
+  },
+  {
+    "text": "State charles's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is maximum height in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "how many celsius in a meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Is momentum conserved in impulse?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Calculate the observed frequency in frequency",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Calculate time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "units of celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "The car is moving with acceleration",
+    "intent": "kinematics"
+  },
+  {
+    "text": "change celsius into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Equilibrium and galvanic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How does newton's third law work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "What is dropped from a height in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change kilometers into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is redox?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "change kilograms into kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why does potential difference change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define le chatelier's principle",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Factors affecting galvanic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "convert fahrenheit to celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain change in momentum to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "convert liters to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many meters in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Application of net force",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain gas laws",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "convert fahrenheit to miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Grade 11 boyle's law help",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Formula for frames of reference",
+    "intent": "kinematics"
+  },
+  {
+    "text": "is anyone there",
+    "intent": "greeting"
+  },
+  {
+    "text": "Formula for wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "How does newton's second law work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "How to solve reaction rates problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "convert kilometers to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert fahrenheit to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate conservation of momentum after collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "Help with frames of reference graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Factors affecting le chatelier's principle",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How to solve galvanic cell problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Equilibrium and reaction rates",
+    "intent": "chemistry"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Define momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "convert seconds to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many meters in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How to calculate electrical power?",
+    "intent": "electricity"
+  },
+  {
+    "text": "units of fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Why is newton's first law important?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "State boyle's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many seconds in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is mechanical energy?",
+    "intent": "energy"
+  },
+  {
+    "text": "change liters into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is galvanic cell?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "How to calculate current?",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert seconds to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is the ultrasound?",
+    "intent": "waves"
+  },
+  {
+    "text": "What is net force?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Acids and neutralization",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Grade 10 vector help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "What is emf?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define collisions",
+    "intent": "momentum"
+  },
+  {
+    "text": "Help with electrical power problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Equilibrium and le chatelier's principle",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for displacement",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Explain series circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "State Fnet = ma",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Explain potential difference",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define internal resistance in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "Relationship between force and change in momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "Light and ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "How to calculate ohm's law?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Definition of velocity",
+    "intent": "kinematics"
+  },
+  {
+    "text": "how many kilograms in a fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State newton's second law",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change fahrenheit into celsius",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Help with vector graphs",
+    "intent": "kinematics"
+  },
+  {
+    "text": "How does newton's laws work?",
+    "intent": "dynamics"
+  },
+  {
+    "text": "change miles into seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert kilometers to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "convert meters to seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is current?",
+    "intent": "electricity"
+  },
+  {
+    "text": "change liters into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "State electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How to solve dropped from a height problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Help with net force questions",
+    "intent": "dynamics"
+  },
+  {
+    "text": "units of meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between mechanical energy and work",
+    "intent": "energy"
+  },
+  {
+    "text": "How to calculate potential difference?",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert liters to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain acids and bases",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with current problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Relationship between force and collisions",
+    "intent": "momentum"
+  },
+  {
+    "text": "change kilograms into fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How much non-conservative forces is used?",
+    "intent": "energy"
+  },
+  {
+    "text": "Formula for momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "State point charges",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Explain the sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for conservation of energy",
+    "intent": "energy"
+  },
+  {
+    "text": "What is terminal velocity in physics?",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Explain ideal gas",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Formula for resistance",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert celsius to meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "convert fahrenheit to kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "physics jokes",
+    "intent": "jokes"
+  },
+  {
+    "text": "What is titration?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Graph of vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "A ball is maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Electric force between microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Why does emf change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Applications of waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Formula for constant speed",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Define voltage in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "hi",
+    "intent": "greeting"
+  },
+  {
+    "text": "How do ideal gas work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is velocity?",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Conservation of mechanical energy help",
+    "intent": "energy"
+  },
+  {
+    "text": "How to solve vertical projectile motion problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert kilometers to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "units of kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is potential difference?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Conservation of power help",
+    "intent": "energy"
+  },
+  {
+    "text": "convert miles to liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "how many miles in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Acids and galvanic cell",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Chemistry ph scale grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain electrostatic force",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Equilibrium and redox",
+    "intent": "chemistry"
+  },
+  {
+    "text": "make me laugh",
+    "intent": "jokes"
+  },
+  {
+    "text": "Help with voltage problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "how do you work",
+    "intent": "capabilities"
+  },
+  {
+    "text": "Light and doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "Explain titration",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Circuits and series circuit",
+    "intent": "electricity"
+  },
+  {
+    "text": "how many kilometers in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Calculate terminal velocity",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Help with internal resistance problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "Find the maximum height for a dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Explain elastic collision to me",
+    "intent": "momentum"
+  },
+  {
+    "text": "how many kilograms in a seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "A ball is thrown upwards",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "How to calculate emf?",
+    "intent": "electricity"
+  },
+  {
+    "text": "Define emf in physics",
+    "intent": "electricity"
+  },
+  {
+    "text": "How to solve projectile problems",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Grade 10 kinematics help",
+    "intent": "kinematics"
+  },
+  {
+    "text": "help me",
+    "intent": "capabilities"
+  },
+  {
+    "text": "Explain the red shift",
+    "intent": "waves"
+  },
+  {
+    "text": "Graph of projectile",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Define neutralization",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for impulse",
+    "intent": "momentum"
+  },
+  {
+    "text": "Graph of maximum height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Explain newton's second law with an example",
+    "intent": "dynamics"
+  },
+  {
+    "text": "Light and sound waves",
+    "intent": "waves"
+  },
+  {
+    "text": "Calculate the velocity of the object",
+    "intent": "kinematics"
+  },
+  {
+    "text": "Electric force between electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Chemistry reaction rates grade 12",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Conservation of potential energy help",
+    "intent": "energy"
+  },
+  {
+    "text": "Is momentum conserved in change in momentum?",
+    "intent": "momentum"
+  },
+  {
+    "text": "units of liters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "change fahrenheit into meters",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is neutralization?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Equilibrium and acids and bases",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Help with parallel circuit problems",
+    "intent": "electricity"
+  },
+  {
+    "text": "convert celsius to fahrenheit",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain electric field lines",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Formula for chemical bonding",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "how many celsius in a miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain dropped from a height",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "convert liters to kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "How do covalent bonding work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "What is the sound waves?",
+    "intent": "waves"
+  },
+  {
+    "text": "Conservation of work-energy theorem help",
+    "intent": "energy"
+  },
+  {
+    "text": "Relationship between force and elastic collision",
+    "intent": "momentum"
+  },
+  {
+    "text": "What is inelastic collision?",
+    "intent": "momentum"
+  },
+  {
+    "text": "Electric field due to electric field",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "change kilometers into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Difference between power and work",
+    "intent": "energy"
+  },
+  {
+    "text": "Explain coulomb's law",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "How to solve redox problems",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain charge",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "Formula for intermolecular forces",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "How do gas laws work?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Acids and reaction rates",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Explain the wavelength",
+    "intent": "waves"
+  },
+  {
+    "text": "Why does resistance change?",
+    "intent": "electricity"
+  },
+  {
+    "text": "units of miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Factors affecting redox",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Formula for doppler effect",
+    "intent": "waves"
+  },
+  {
+    "text": "What is le chatelier's principle?",
+    "intent": "chemistry"
+  },
+  {
+    "text": "Define conservation of momentum",
+    "intent": "momentum"
+  },
+  {
+    "text": "how many fahrenheit in a kilometers",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain the ultrasound",
+    "intent": "waves"
+  },
+  {
+    "text": "Define mechanical energy",
+    "intent": "energy"
+  },
+  {
+    "text": "What is covalent bonding?",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "hey",
+    "intent": "greeting"
+  },
+  {
+    "text": "What is the frequency?",
+    "intent": "waves"
+  },
+  {
+    "text": "units of seconds",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain vertical projectile motion",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Formula for charles's law",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "Calculate the mechanical energy",
+    "intent": "energy"
+  },
+  {
+    "text": "change seconds into miles",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "What is potential energy?",
+    "intent": "energy"
+  },
+  {
+    "text": "Electric field due to microcoulombs",
+    "intent": "electrostatics"
+  },
+  {
+    "text": "how many celsius in a kilograms",
+    "intent": "unit_conversion"
+  },
+  {
+    "text": "Explain intermolecular forces",
+    "intent": "thermodynamics"
+  },
+  {
+    "text": "How does waves work?",
+    "intent": "waves"
+  },
+  {
+    "text": "A ball is time of flight",
+    "intent": "projectile_motion"
+  },
+  {
+    "text": "Circuits and voltage",
+    "intent": "electricity"
+  }
+]

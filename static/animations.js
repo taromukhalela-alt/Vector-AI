@@ -40,15 +40,19 @@ const GRV = {
 function getCanvasSize() {
   const containerRect = canvasContainer?.getBoundingClientRect();
   const canvasRect = canvas?.getBoundingClientRect();
+  const fallbackWidth = Math.min(Math.max(window.innerWidth - 32, 320), 960);
+  const fallbackHeight = Math.min(Math.max(window.innerHeight - 180, 320), 640);
   const width = Math.max(
     Math.floor(containerRect?.width || 0),
     Math.floor(canvasRect?.width || 0),
-    960
+    fallbackWidth,
+    320
   );
   const height = Math.max(
     Math.floor(containerRect?.height || 0),
     Math.floor(canvasRect?.height || 0),
-    560
+    fallbackHeight,
+    320
   );
   return { width, height };
 }
@@ -1504,18 +1508,15 @@ function bootAnimations() {
     window.addEventListener("resize", handleAnimResize);
   }
 
-  const sidebar = document.getElementById("anim-sidebar");
-  if (sidebar && !sidebar.dataset.ready) {
-    ANIMATIONS.forEach((anim) => {
-      const btn = document.createElement("button");
-      btn.className = "anim-field-btn";
-      btn.dataset.anim = anim.id;
-      btn.innerHTML = `<span class="anim-field-icon">${anim.icon}</span>${anim.label}`;
-      btn.addEventListener("click", () => loadAnimation(anim.id));
-      sidebar.appendChild(btn);
+  const buttons = document.querySelectorAll(".anim-field-btn");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const animType = btn.getAttribute("data-anim");
+      loadAnimation(animType);
     });
-    sidebar.dataset.ready = "true";
-  }
+  });
 
   loadAnimation("idle");
   window.addEventListener("resize", handleAnimResize);

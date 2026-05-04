@@ -225,29 +225,3 @@ def _sanitize_generated_reply(reply):
             cleaned = cleaned.split(marker)[0].strip()
     return cleaned
 
-
-    return reply
-    if is_off_topic(intent, confidence):
-        if intent != "unknown":
-            brief = _rule_based_non_physics_reply(intent, deterministic_hint=deterministic_hint)
-            return (
-                f"{brief} If you want, ask me a CAPS physics question next."
-            )
-        return OFF_TOPIC_RESPONSE
-
-    reply = _gemini_generate(prompt)
-    if not reply:
-        if intent in PHYSICS_INTENTS:
-            reply = _rule_based_physics_reply(user_message, deterministic_hint=deterministic_hint)
-        else:
-            reply = _rule_based_non_physics_reply(intent, deterministic_hint=deterministic_hint)
-    if not reply:
-        reply = _local_generate(prompt)
-    reply = _sanitize_generated_reply(reply)
-    if not reply:
-        reply = "I can help with CAPS physics topics. Ask me about mechanics, waves, electricity, or energy."
-
-    follow_up = choose_follow_up(intent)
-    if follow_up not in reply:
-        reply = f"{reply.rstrip()}\n\n{follow_up}"
-    return reply

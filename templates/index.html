@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1d2021">
   <title>Vector AI | CAPS Physics and Chemistry Studio</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
+  <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,15 +16,36 @@
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="topbar-logo">Vector AI</div>
-    <nav class="tab-nav" role="tablist">
+    <div class="topbar-branding">
+      <img class="topbar-mark" src="{{ url_for('static', filename='icons/vector-ai-mark.svg') }}" alt="" aria-hidden="true">
+      <div class="topbar-brand-text">
+        <div class="topbar-logo">Vector AI</div>
+        <div class="topbar-credit">by Taro Mukhalela</div>
+      </div>
+    </div>
+    
+    <nav class="tab-nav" id="tab-nav" role="tablist">
       <button class="tab-btn active" data-tab="chat"       role="tab">Tutor</button>
-      <button class="tab-btn"        data-tab="voice"      role="tab">Voice Tutor</button>
-      <button class="tab-btn"        data-tab="animations" role="tab">Visual Lab</button>
-      <button class="tab-btn"        data-tab="topics"     role="tab">CAPS Tracks</button>
+      <button class="tab-btn"        data-tab="voice"      role="tab">Voice</button>
+      <button class="tab-btn"        data-tab="animations" role="tab">Lab</button>
+      <button class="tab-btn"        data-tab="topics"     role="tab">Topics</button>
       <button class="tab-btn"        data-tab="history"    role="tab">History</button>
       <a class="tab-btn tab-link" href="/notes">Notes</a>
     </nav>
+
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+        <span class="theme-icon">🌓</span>
+      </button>
+      <button class="history-toggle" id="history-toggle" aria-label="Toggle History">
+        <span class="history-icon">📜</span>
+      </button>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </button>
+    </div>
   </header>
 
   <!-- MAIN -->
@@ -31,14 +56,20 @@
       <div class="chat-layout">
         <aside class="chat-sidebar">
           <div class="sidebar-label">Session</div>
-          <p class="sidebar-info">Ask any CAPS physics or chemistry question. Voice, worked explanations, and matching visuals update live.</p>
-          <button class="btn-primary" id="new-session-btn">New Session</button>
-          <button class="btn-secondary" id="logout-btn">Logout</button>
-          <a href="/notes" class="btn-secondary side-link-btn">Open Notes</a>
+          <button class="btn-primary" id="new-session-btn" style="width:100%; margin-bottom:8px;">+ New Chat</button>
+          
+          <div class="sidebar-label" style="margin-top:16px">Recent Chats</div>
+          <div id="chat-history-list" class="chat-history-list">
+            <!-- Sessions will be loaded here -->
+            <p class="sidebar-info" style="font-size: 0.7rem;">Loading history...</p>
+          </div>
+
+          <div class="sidebar-label" style="margin-top:16px">Settings</div>
           <div class="control-group">
             <label for="voice-select" class="control-label">Voice Output</label>
             <select id="voice-select" class="voice-select"></select>
           </div>
+          <button class="btn-secondary" id="logout-btn" style="width:100%; margin-top:8px;">Logout</button>
           <div class="sidebar-label" style="margin-top:16px">Quick Start</div>
           <div class="quick-prompts">
             <div class="quick-prompt-chip" data-prompt="Explain Newton's second law">Newton's 2nd Law</div>
@@ -48,6 +79,12 @@
             <div class="quick-prompt-chip" data-prompt="Explain ionic and covalent bonding">Bonding</div>
             <div class="quick-prompt-chip" data-prompt="Explain acids, bases, and pH">Acids and Bases</div>
           </div>
+
+          <div class="sidebar-label" style="margin-top:auto; padding-top:24px;">Developer</div>
+          <p class="sidebar-info" style="font-size: 0.72rem; opacity: 0.8;">
+            Designed & Built by <br>
+            <span style="color: var(--accent); font-weight: 600; font-family: var(--font-mono); letter-spacing: 1px;">Taro Mukhalela</span>
+          </p>
         </aside>
         <div class="chat-main">
           <div class="chat-messages" id="chat-messages"></div>
@@ -67,15 +104,22 @@
 
     <!-- ANIMATIONS TAB -->
     <section id="tab-animations" class="tab-panel" role="tabpanel">
-      <aside class="anim-sidebar" id="anim-sidebar">
-        <div class="anim-sidebar-heading">Physics and Chemistry Visuals</div>
-        <!-- JS generates buttons here -->
-      </aside>
+      <nav class="anim-sidebar" id="anim-sidebar">
+        <div class="anim-sidebar-heading">Visuals</div>
+        <button class="anim-field-btn active" data-anim="idle"><span class="anim-field-icon">🌀</span>Idle</button>
+        <button class="anim-field-btn" data-anim="projectile"><span class="anim-field-icon">🚀</span>Projectile</button>
+        <button class="anim-field-btn" data-anim="wave"><span class="anim-field-icon">🌊</span>Waves</button>
+        <button class="anim-field-btn" data-anim="pendulum"><span class="anim-field-icon">🕰️</span>Pendulum</button>
+        <button class="anim-field-btn" data-anim="forces"><span class="anim-field-icon">📦</span>Forces</button>
+        <button class="anim-field-btn" data-anim="collision"><span class="anim-field-icon">💥</span>Collisions</button>
+        <button class="anim-field-btn" data-anim="orbit"><span class="anim-field-icon">🪐</span>Orbits</button>
+        <button class="anim-field-btn" data-anim="electricity"><span class="anim-field-icon">⚡</span>E-Field</button>
+      </nav>
       <div class="anim-viewport" id="canvas-container">
         <canvas id="physics-canvas"></canvas>
         <div class="anim-hud">
-          <div class="hud-title" id="hud-title">Select a Physics or Chemistry Animation</div>
-          <div class="hud-formula" id="hud-formula"></div>
+          <div class="hud-title" id="hud-title">Select a Visual Lab</div>
+          <div class="hud-formula" id="hud-formula">Explore physics in real-time</div>
         </div>
         <div class="anim-readout" id="anim-readout"></div>
         <div class="anim-controls-bar" id="anim-controls-bar"></div>
@@ -141,15 +185,16 @@
   </section>
 
   </div>
+  <div class="menu-overlay" id="menu-overlay"></div>
 </div>
 
 <!-- Mobile FAB -->
 <button class="mobile-fab" id="mobile-fab" title="New session">+</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="/static/avatar.js"></script>
-<script src="/static/animations.js"></script>
-<script src="/static/voice.js"></script>
-<script src="/static/main.js"></script>
+<script src="{{ url_for('static', filename='avatar.js') }}"></script>
+<script src="{{ url_for('static', filename='animations.js') }}"></script>
+<script src="{{ url_for('static', filename='voice.js') }}"></script>
+<script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>

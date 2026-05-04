@@ -7,6 +7,20 @@ function initVectorAI() {
   const mobileFab = document.getElementById("mobile-fab");
   const topicsGrid = document.getElementById("topics-grid");
   const voiceSelects = Array.from(document.querySelectorAll(".voice-select"));
+  const themeToggle = document.getElementById("theme-toggle");
+
+  // --- Theme Logic ---
+  const currentTheme = localStorage.getItem("theme") || "dark";
+  if (currentTheme === "light") {
+    document.body.classList.add("light-theme");
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const isLight = document.body.classList.toggle("light-theme");
+      localStorage.setItem("theme", isLight ? "light" : "dark");
+    });
+  }
 
   let conversationHistory = [];
   window.conversationHistory = conversationHistory;
@@ -19,11 +33,25 @@ function initVectorAI() {
     return d.innerHTML;
   }
 
+  function escapeHtml(str) {
+    if (!str) return "";
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function cleanChatText(text, role) {
+    const value = text || "";
+    if (role !== "assistant") return value;
+    return value.replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
     function appendMessage(text, role) {
       if (!chatMessages) return;
       const msg = document.createElement("div");
       msg.className = `message ${role}`;
-      msg.innerHTML = sanitize(text || "")
+      const displayText = cleanChatText(text, role);
+      msg.innerHTML = sanitize(displayText)
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/`([^`]+)`/g, "<code>$1</code>")
         .replace(/\n/g, "<br>");
@@ -35,7 +63,7 @@ function initVectorAI() {
         const noteBtn = document.createElement('button');
         noteBtn.className = 'note-action-btn';
         noteBtn.textContent = 'Save as Note';
-        noteBtn.onclick = () => saveResponseAsNote(text);
+        noteBtn.onclick = () => saveResponseAsNote(displayText);
         msg.appendChild(noteBtn);
       }
     }
@@ -148,10 +176,10 @@ function initVectorAI() {
     });
   }
 
-  const quickChips = document.querySelectorAll(".quick-prompt-chip");
+  const quickChips = document.querySelectorAll(".quick-prompt-chip[data-prompt]");
   quickChips.forEach((chip) => {
     chip.addEventListener("click", () => {
-      const prompt = chip.getAttribute("data-prompt") || chip.textContent || "";
+      const prompt = chip.getAttribute("data-prompt") || "";
       sendMessage(prompt);
     });
   });
@@ -204,6 +232,42 @@ function initVectorAI() {
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
+
+  // --- Mobile Menu Toggle ---
+  const menuToggle = document.getElementById("menu-toggle");
+  const tabNav = document.getElementById("tab-nav");
+  const menuOverlay = document.getElementById("menu-overlay");
+
+  function closeOverlays() {
+    if (tabNav) tabNav.classList.remove("is-open");
+    if (menuToggle) menuToggle.classList.remove("is-active");
+    const sidebar = document.querySelector(".chat-sidebar");
+    if (sidebar) sidebar.classList.remove("is-active");
+    if (menuOverlay) menuOverlay.classList.remove("is-active");
+    document.body.style.overflow = "";
+  }
+
+  if (menuToggle && tabNav && menuOverlay) {
+    const toggleMenu = () => {
+      const isOpen = !tabNav.classList.contains("is-open");
+      closeOverlays();
+      tabNav.classList.toggle("is-open", isOpen);
+      menuToggle.classList.toggle("is-active", isOpen);
+      menuOverlay.classList.toggle("is-active", isOpen);
+      document.body.style.overflow = isOpen ? "hidden" : "";
+    };
+
+    menuToggle.addEventListener("click", toggleMenu);
+    menuOverlay.addEventListener("click", closeOverlays);
+
+    // Close menu when a tab is clicked
+    const menuLinks = tabNav.querySelectorAll(".tab-btn");
+    menuLinks.forEach((link) => {
+      link.addEventListener("click", () => {
+        closeOverlays();
+      });
+    });
+  }
 
   const params = new URLSearchParams(window.location.search);
   const initialTab = params.get("tab") || "chat";
@@ -275,33 +339,81 @@ function initVectorAI() {
 
   function loadHistorySessions() {
     const listEl = document.getElementById("session-list");
-    if (!listEl) return;
+    const sidebarListEl = document.getElementById("chat-history-list");
+    if (!listEl && !sidebarListEl) return;
+
     fetch("/api/history")
       .then(r => r.json())
       .then(data => {
-        if (!Array.isArray(data)) return;
-        // Group into sessions by chat_id
-        const sessions = {};
-        data.forEach(entry => {
-          const cid = entry.chat_id || "legacy";
-          if (!sessions[cid]) sessions[cid] = [];
-          sessions[cid].push(entry);
-        });
-        listEl.innerHTML = "";
-        Object.entries(sessions).forEach(([chatId, msgs]) => {
-          const firstMsg = msgs[0]?.message || "Session";
-          const lastTime = msgs[msgs.length - 1]?.time || "";
-          const btn = document.createElement("div");
-          btn.className = "session-item";
-          btn.innerHTML = `
-            <div class="session-item-title">${escapeHtml(firstMsg.slice(0, 40))}</div>
-            <div class="session-item-meta">${msgs.length} messages · ${formatHistoryTime(lastTime)}</div>
-          `;
-          btn.onclick = () => showHistorySession(chatId, msgs, btn);
-          listEl.appendChild(btn);
+        if (!data.success || !Array.isArray(data.sessions)) return;
+        
+        if (listEl) listEl.innerHTML = "";
+        if (sidebarListEl) sidebarListEl.innerHTML = "";
+
+        data.sessions.forEach(session => {
+          // Main history tab item
+          if (listEl) {
+            const btn = document.createElement("div");
+            btn.className = "session-item";
+            btn.innerHTML = `
+              <div class="session-item-title">${escapeHtml(session.title.slice(0, 40))}</div>
+              <div class="session-item-meta">${session.count} messages · ${session.last_time}</div>
+              <button class="session-load-btn">Resume</button>
+            `;
+            btn.onclick = () => showHistorySession(session.chat_id, session.messages, btn);
+            btn.querySelector(".session-load-btn").onclick = (e) => {
+              e.stopPropagation();
+              loadSessionIntoChat(session.chat_id);
+            };
+            listEl.appendChild(btn);
+          }
+
+          // Sidebar history item
+          if (sidebarListEl) {
+            const item = document.createElement("div");
+            item.className = "chat-history-item";
+            item.textContent = session.title.slice(0, 30) || "Session";
+            item.onclick = () => loadSessionIntoChat(session.chat_id);
+            sidebarListEl.appendChild(item);
+          }
         });
       })
       .catch(e => console.error("History load error:", e));
+  }
+
+  async function loadSessionIntoChat(chatId) {
+    try {
+      const res = await fetch(`/api/session/${chatId}`);
+      const data = await res.json();
+      if (data.success) {
+        activateTab("chat");
+        if (chatMessages) chatMessages.innerHTML = "";
+        conversationHistory = data.history || [];
+        window.conversationHistory = conversationHistory;
+        conversationHistory.forEach(m => appendMessage(m.content, m.role));
+        if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Close sidebar on mobile
+        const sidebar = document.querySelector(".chat-sidebar");
+        if (sidebar) sidebar.classList.remove("is-active");
+        if (menuOverlay) menuOverlay.classList.remove("is-active");
+      }
+    } catch (err) {
+      console.error("Failed to load session:", err);
+    }
+  }
+
+  // --- Sidebar Toggle for Mobile ---
+  const historyToggle = document.getElementById("history-toggle");
+  const chatSidebar = document.querySelector(".chat-sidebar");
+  if (historyToggle && chatSidebar && menuOverlay) {
+    historyToggle.addEventListener("click", () => {
+      const isOpen = !chatSidebar.classList.contains("is-active");
+      closeOverlays();
+      chatSidebar.classList.toggle("is-active", isOpen);
+      menuOverlay.classList.toggle("is-active", isOpen);
+      document.body.style.overflow = isOpen ? "hidden" : "";
+    });
   }
 
   function showHistorySession(chatId, messages, btnEl) {

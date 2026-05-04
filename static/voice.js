@@ -377,6 +377,7 @@ window.openMicSettings = () => {
 };
 
 if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+  const voiceLaunchBtn = document.getElementById("voice-launch-btn");
   if (voiceLaunchBtn) {
     voiceLaunchBtn.title = "Voice input requires Chrome or Edge. Text mode still works.";
   }

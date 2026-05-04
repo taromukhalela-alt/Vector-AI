@@ -5,16 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1d2021">
   <title>Study Notes - Vector AI</title>
+  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
+  <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     .notes-layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: 280px 1fr;
       gap: var(--space-lg);
       padding: var(--space-lg);
       max-width: 1400px;
       margin: 0 auto;
-      min-height: calc(100vh - 56px);
+      flex: 1;
+      overflow: auto;
+      min-height: 0;
     }
 
     .notes-sidebar {
@@ -26,146 +32,156 @@
     .notes-search {
       width: 100%;
       padding: var(--space-sm) var(--space-md);
-      background: var(--bg-1);
-      border: 1px solid var(--border);
+      background: var(--bg-element);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
-      color: var(--text);
+      color: var(--fg);
       font-family: var(--font-body);
-      font-size: var(--font-size-sm);
+      font-size: 0.9rem;
+      outline: none;
+      transition: all var(--transition);
     }
 
     .notes-search:focus {
-      outline: none;
       border-color: var(--accent);
+      background: var(--bg-dark);
+      box-shadow: 0 0 0 4px var(--accent-glow);
     }
 
     .create-note-btn {
       width: 100%;
-      padding: var(--space-sm) var(--space-md);
+      padding: 12px 20px;
       background: var(--accent);
       color: var(--bg-hard);
       border: none;
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius);
       font-family: var(--font-body);
-      font-weight: 600;
-      font-size: var(--font-size-sm);
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       cursor: pointer;
-      transition: filter 0.15s;
+      transition: all var(--transition);
     }
 
-    .create-note-btn:hover { filter: brightness(1.15); }
+    .create-note-btn:hover { 
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
 
     .sidebar-section-label {
-      font-size: var(--font-size-xs);
-      color: var(--text-faint);
+      font-size: 0.7rem;
+      color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: var(--space-sm);
+      letter-spacing: 2px;
+      font-weight: 700;
+      margin: var(--space-md) 0 var(--space-sm);
     }
 
     .quick-prompt-chip {
-      display: block;
+      display: flex;
+      align-items: center;
       width: 100%;
       text-align: left;
-      padding: var(--space-xs) var(--space-sm);
-      background: var(--bg-1);
-      border: 1px solid var(--border);
+      padding: 12px 16px;
+      background: var(--bg-element);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
-      color: var(--text);
+      color: var(--fg-muted);
       font-family: var(--font-body);
-      font-size: var(--font-size-xs);
+      font-size: 0.85rem;
       cursor: pointer;
-      transition: background 0.15s;
-      margin-bottom: var(--space-xs);
+      transition: all var(--transition);
+      margin-bottom: 8px;
     }
 
-    .quick-prompt-chip:hover { background: var(--bg-2); }
+    .quick-prompt-chip:hover {
+      background: var(--glass-bright);
+      border-color: var(--accent);
+      color: var(--fg);
+      transform: translateX(4px);
+    }
 
     .notes-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: var(--space-md);
     }
 
     .note-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
       padding: var(--space-md);
-      transition: border-color 0.15s, transform 0.15s;
+      transition: all var(--transition);
       cursor: pointer;
       display: flex;
       flex-direction: column;
+      box-shadow: var(--shadow);
     }
 
     .note-card:hover {
       border-color: var(--accent);
-      transform: translateY(-2px);
+      transform: translateY(-4px);
     }
 
     .note-card-title {
-      font-size: var(--font-size-md);
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: var(--space-xs);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 4px;
     }
 
     .note-card-meta {
-      font-size: var(--font-size-xs);
-      color: var(--text-faint);
+      font-size: 0.75rem;
+      color: var(--fg-faint);
       margin-bottom: var(--space-sm);
     }
 
     .note-card-topic {
       display: inline-block;
-      background: var(--accent-dim);
-      color: var(--bg-hard);
-      padding: 2px 8px;
-      border-radius: 999px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 100px;
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 1px;
       margin-bottom: var(--space-sm);
+      width: fit-content;
     }
 
     .note-card-content {
-      font-size: var(--font-size-sm);
-      color: var(--text-muted);
-      line-height: 1.5;
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
       flex: 1;
       overflow: hidden;
       display: -webkit-box;
-      -webkit-line-clamp: 6;
+      -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
-    }
-
-    .note-card-content strong { color: var(--fg); }
-    .note-card-content code {
-      background: var(--bg-2);
-      padding: 1px 4px;
-      border-radius: 3px;
-      font-family: var(--font-mono);
-      font-size: 0.8em;
     }
 
     .note-card-actions {
       display: flex;
-      gap: var(--space-xs);
-      margin-top: var(--space-sm);
+      gap: 8px;
+      margin-top: var(--space-md);
       padding-top: var(--space-sm);
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--glass-border);
     }
 
     .note-action-btn {
-      padding: 4px 10px;
-      background: var(--bg-2);
-      border: 1px solid var(--border);
+      padding: 6px 12px;
+      background: var(--bg-element);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
-      color: var(--text-muted);
-      font-size: var(--font-size-xs);
+      color: var(--fg-muted);
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
       cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      transition: all var(--transition);
     }
 
     .note-action-btn:hover {
@@ -174,102 +190,25 @@
       border-color: var(--accent);
     }
 
-    .empty-state {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: var(--space-xl);
-      color: var(--text-faint);
-    }
-
-    .empty-state h3 { color: var(--text); margin-bottom: var(--space-sm); }
-
-    /* Modal */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(6px);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-overlay.active { display: flex; }
-
+    /* Modal Styling Fixes */
     .modal-box {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      width: 90%;
-      max-width: 620px;
-      max-height: 90vh;
-      overflow-y: auto;
+      background: var(--bg-hard);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
       padding: var(--space-lg);
+      box-shadow: var(--shadow);
+      color: var(--fg);
     }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--space-md);
-    }
-
-    .modal-header h2 {
-      margin: 0;
-      font-size: var(--font-size-lg);
-      color: var(--text);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-faint);
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-    }
-
-    .modal-close:hover { color: var(--accent); }
 
     .form-input {
-      width: 100%;
-      padding: var(--space-sm) var(--space-md);
-      background: var(--bg-1);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: var(--font-size-sm);
-      margin-bottom: var(--space-sm);
+      background: var(--bg-element) !important;
+      border: 1px solid var(--glass-border) !important;
+      color: var(--fg) !important;
+      border-radius: var(--radius) !important;
     }
 
     .form-input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    textarea.form-input { min-height: 160px; resize: vertical; font-family: var(--font-mono); font-size: 0.85rem; }
-
-    .ai-toggle {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-      margin-bottom: var(--space-md);
-      font-size: var(--font-size-sm);
-      color: var(--text-muted);
-    }
-
-    .ai-toggle input[type="checkbox"] {
-      accent-color: var(--accent);
-    }
-
-    .modal-footer {
-      display: flex;
-      gap: var(--space-sm);
-      justify-content: flex-end;
-      margin-top: var(--space-md);
+      border-color: var(--accent) !important;
     }
 
     @media (max-width: 768px) {
@@ -278,72 +217,100 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-logo">Vector AI</div>
-    <nav class="tab-nav" role="tablist">
-      <a class="tab-btn tab-link" href="/chat">Tutor</a>
-      <a class="tab-btn tab-link" href="/chat?tab=animations">Visual Lab</a>
-      <a class="tab-btn tab-link" href="/chat?tab=topics">CAPS Tracks</a>
-      <a class="tab-btn tab-link active" href="/notes">Notes</a>
-    </nav>
-  </header>
-
-  <main class="notes-layout">
-    <aside class="notes-sidebar">
-      <input type="text" id="note-search" class="notes-search" placeholder="Search notes...">
-
-      <button id="create-note-btn" class="create-note-btn">+ New Note</button>
-
-      <div>
-        <div class="sidebar-section-label">Quick AI Notes</div>
-        <button class="quick-prompt-chip" onclick="createFromTopic('kinematics')">Kinematics</button>
-        <button class="quick-prompt-chip" onclick="createFromTopic('electricity')">Electricity</button>
-        <button class="quick-prompt-chip" onclick="createFromTopic('waves')">Waves & Sound</button>
-        <button class="quick-prompt-chip" onclick="createFromTopic('chemistry')">Chemistry</button>
-        <button class="quick-prompt-chip" onclick="createFromTopic('energy')">Energy</button>
-        <button class="quick-prompt-chip" onclick="createFromTopic('forces')">Newton's Laws</button>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-branding">
+        <img class="topbar-mark" src="{{ url_for('static', filename='icons/vector-ai-mark.svg') }}" alt="" aria-hidden="true">
+        <div class="topbar-brand-text">
+          <div class="topbar-logo">Vector AI</div>
+          <div class="topbar-credit">by Taro Mukhalela</div>
+        </div>
       </div>
-    </aside>
 
-    <section>
-      <div id="notes-grid" class="notes-grid"></div>
-      <div id="empty-state" class="empty-state hidden">
-        <h3>No notes yet</h3>
-        <p>Create your first AI-assisted study note to get started.</p>
+      <nav class="tab-nav" id="tab-nav" role="tablist">
+        <a class="tab-btn tab-link" href="/chat">Tutor</a>
+        <a class="tab-btn tab-link" href="/chat?tab=animations">Lab</a>
+        <a class="tab-btn tab-link" href="/chat?tab=topics">Topics</a>
+        <a class="tab-btn tab-link active" href="/notes">Notes</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+          <span class="theme-icon">🌓</span>
+        </button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </button>
       </div>
-    </section>
-  </main>
+    </header>
 
-    <!-- Modal -->
-  <div id="note-modal" class="modal-overlay">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2 id="modal-title">Create New Note</h2>
+    <div class="menu-overlay" id="menu-overlay"></div>
+
+    <main class="notes-layout">
+      <aside class="notes-sidebar">
+        <input type="text" id="note-search" class="notes-search" placeholder="Search notes...">
+
+        <button id="create-note-btn" class="create-note-btn">+ New Note</button>
+
         <div>
-          <button id="toggle-view-btn" class="note-action-btn hidden" onclick="toggleViewEdit()" type="button">Edit</button>
-          <button class="note-action-btn ai-gen-btn" onclick="generateAINote()" type="button" style="color:var(--aqua); border-color:var(--aqua);">✨ Generate with AI</button>
-          <button class="modal-close" onclick="closeModal()">&times;</button>
+          <div class="sidebar-section-label">Quick AI Notes</div>
+          <button class="quick-prompt-chip" onclick="createFromTopic('kinematics')">Kinematics</button>
+          <button class="quick-prompt-chip" onclick="createFromTopic('electricity')">Electricity</button>
+          <button class="quick-prompt-chip" onclick="createFromTopic('waves')">Waves & Sound</button>
+          <button class="quick-prompt-chip" onclick="createFromTopic('chemistry')">Chemistry</button>
+          <button class="quick-prompt-chip" onclick="createFromTopic('energy')">Energy</button>
+          <button class="quick-prompt-chip" onclick="createFromTopic('forces')">Newton's Laws</button>
         </div>
+
+        <div style="margin-top: var(--space-lg);">
+          <div class="sidebar-section-label">Practice Tools</div>
+          <button class="create-note-btn" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">✨ Generate Exam Paper</button>
+        </div>
+      </aside>
+
+      <section>
+        <div id="notes-grid" class="notes-grid"></div>
+        <div id="empty-state" class="empty-state hidden">
+          <h3>No notes yet</h3>
+          <p>Create your first AI-assisted study note to get started.</p>
+        </div>
+      </section>
+    </main>
+
+      <!-- Modal -->
+    <div id="note-modal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 id="modal-title">Create New Note</h2>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="download-pdf-btn" class="note-action-btn hidden" onclick="downloadAsPDF()" type="button" title="Download as PDF">PDF</button>
+            <button id="toggle-view-btn" class="note-action-btn hidden" onclick="toggleViewEdit()" type="button">Edit</button>
+            <button class="note-action-btn ai-gen-btn" onclick="generateAINote()" type="button" style="color:var(--aqua); border-color:var(--aqua);">✨ Generate with AI</button>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+        </div>
+        <form id="note-form">
+          <input type="text" id="note-title" class="form-input" placeholder="Note Title" required>
+          <input type="text" id="note-topic" class="form-input" placeholder="Topic (e.g. Projectile Motion)">
+          
+          <div id="note-preview-container" class="form-input" style="display:none; min-height: 160px; overflow-y:auto;">
+            <div id="note-preview" class="markdown-body" style="font-family: var(--font-body); font-size: 0.95rem; line-height: 1.6; color: var(--fg);"></div>
+          </div>
+          
+          <textarea id="note-content" class="form-input" placeholder="Write your note or ask AI to generate one..."></textarea>
+          
+          <div class="modal-footer">
+            <button type="button" class="note-action-btn" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="create-note-btn" style="width:auto;">Save Note</button>
+          </div>
+        </form>
       </div>
-      <form id="note-form">
-        <input type="text" id="note-title" class="form-input" placeholder="Note Title" required>
-        <input type="text" id="note-topic" class="form-input" placeholder="Topic (e.g. Projectile Motion)">
-        
-        <div id="note-preview-container" class="form-input" style="display:none; min-height: 160px; overflow-y:auto;">
-          <div id="note-preview" class="markdown-body" style="font-family: var(--font-body); font-size: 0.95rem; line-height: 1.6; color: var(--fg);"></div>
-        </div>
-        
-        <textarea id="note-content" class="form-input" placeholder="Write your note or ask AI to generate one..."></textarea>
-        
-        <div class="modal-footer">
-          <button type="button" class="note-action-btn" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="create-note-btn" style="width:auto;">Save Note</button>
-        </div>
-      </form>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
 </body>

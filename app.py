@@ -6,6 +6,7 @@ from flask import (
     session,
     redirect,
     url_for,
+    send_from_directory,
 )
 from flask_cors import CORS
 from flask_caching import Cache
@@ -34,6 +35,12 @@ try:
 except ImportError:
     Groq = None
 
+# Import Google Generative AI (optional, used by summarize_content)
+try:
+    from google import genai
+except ImportError:
+    genai = None
+
 import physics_engine  # Import the new module
 from caps_knowledge import (
     PHYSICS_INTENTS,
@@ -44,18 +51,41 @@ from caps_knowledge import (
 
 load_dotenv()
 
-# Configure Logging first (before any logger usage)
+# Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _get_or_create_secret_key():
+    env_key = os.getenv("SECRET_KEY")
+    if env_key:
+        return env_key
+    key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".secret_key")
+    if os.path.exists(key_path):
+        with open(key_path, "rb") as f:
+            return f.read()
+    key = os.urandom(32)
+    with open(key_path, "wb") as f:
+        f.write(key)
+    return key
+
+
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", os.urandom(24))
+app.secret_key = _get_or_create_secret_key()
 
 # Configure CORS
 cors_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")
 if isinstance(cors_origins, str):
     cors_origins = [cors_origins]
 CORS(app, origins=cors_origins)
+
+# Initialize Database
+from database import db, User, Note, Conversation
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///vector_ai.db")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
 
 # Initialize Auth
 from auth import init_auth, login_manager
@@ -72,8 +102,6 @@ else:
 # Configure Caching
 cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
-USERS_FILE = "users.json"
-
 # ============================================================
 # SYSTEM PROMPTS
 # ============================================================
@@ -83,6 +111,7 @@ Do not repeat the same response twice in a row.
 For a single word topic such as electricity, projectile motion, gas laws, or acids, start explaining immediately.
 Provide thorough, educational answers with clear step-by-step explanations and worked examples where relevant.
 Use clear CAPS aligned explanations and correct technical terms.
+For normal chat replies, write in clean paragraphs with occasional short lists. Do not use markdown heading markers such as #, ##, or ### unless the student explicitly asks for notes, a study guide, an exam paper, or another document-style output.
 Your specialty is CAPS Physical Sciences (physics and chemistry for Grades 10-12). You can help with related topics like maths, general science, and study tips. For unrelated questions, you can give brief helpful answers before gently steering back to Physical Sciences.
 For maths questions, provide full working because maths supports physical sciences learning.
 """
@@ -135,6 +164,7 @@ EXPECTED_LABELS = {
     "nuclear",
     "shm",
     "unit_conversion",
+    "chemistry",
 }
 
 # Train only when needed (faster startup)
@@ -175,11 +205,9 @@ except Exception as e:
     label_encoder = None
     config = {}
 
-# Global list to store conversation history
-user_conversations = {}
+# Global cache and settings
 response_cache = {}
-MAX_HISTORY_PER_USER = 50
-RESPONSE_CACHE_TTL = 180
+RESPONSE_CACHE_TTL = 300
 AFFIRMATIVES = {
     "yes",
     "yeah",
@@ -274,20 +302,13 @@ def classify_intent(message):
 
 def build_prompt(history, user_message, system_prompt, user_key=None):
     lines = [system_prompt, ""]
-    if user_key:
-        try:
-            import json
-            from pathlib import Path
-            users_file = Path(USERS_FILE)
-            if users_file.exists():
-                users = json.loads(users_file.read_text(encoding="utf-8"))
-                summary = (users.get(user_key, {}).get("memory_summary") or "").strip()
-                if summary:
-                    lines.append("## What you remember from past sessions with this student:")
-                    lines.append(summary)
-                    lines.append("")
-        except Exception:
-            pass
+    if user_key and current_user.is_authenticated:
+        summary = (current_user.memory_summary or "").strip()
+        if summary:
+            lines.append("## What you remember from past sessions with this student:")
+            lines.append(summary)
+            lines.append("")
+    
     for item in normalize_history(history):
         role = "User" if item["role"] == "user" else "Assistant"
         lines.append(f"{role}: {item['content']}")
@@ -321,6 +342,13 @@ def make_voice_friendly(text):
     for source, target in replacements.items():
         cleaned = cleaned.replace(source, target)
     cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
+def make_chat_friendly(text):
+    cleaned = (text or "").strip()
+    cleaned = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
 
 
@@ -369,6 +397,15 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
     if system_prompt is None:
         system_prompt = PHYSICS_SYSTEM_PROMPT
 
+    # Inject follow-up question prompt every 3rd exchange to encourage active learning
+    if len(history) > 0 and len(history) % 3 == 0:
+        user_message += (
+            "\n\n[SYSTEM INSTRUCTION: End your response with 3 specific questions "
+            "that you think would help the student understand the concepts you are doing. "
+            "If the student doesn't return answers, then keep politely telling them to "
+            "solve your questions before you move on further.]"
+        )
+
     api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
     if not api_key or Groq is None:
         logger.error(
@@ -408,23 +445,6 @@ def generate_response(user_message, history=None, system_prompt=None, local_hint
             return local_hint
         fallback = get_local_science_response(user_message)
         return fallback or "I hit a temporary issue. Please try again."
-    if len(history) > 0 and len(history) % 3 == 0:
-        user_message += "\n\n[SYSTEM INSTRUCTION:End your response with 3 specific questions that you think would help the student understand the concepts you are doing,If student doesn't return answers, then keep politely telling them to solve your questions before you move on further.]"
-
-# -------------------------------
-# Responses
-# -------------------------------
-responses = {
-    "ai": "Artificial Intelligence is the simulation of human intelligence in machines.",
-    "physics": "Physics studies matter, energy, motion, and the forces of nature.",
-    "python": "Python is a popular programming language known for simplicity and power.",
-    "trends": "I analyze trends based on user interest and public data.",
-    "jokes": "Why did the developer go broke? Because he used up all his cache! 😂",
-    "greeting": "Hello! I'm Vector AI. How can I assist you today?",
-    "capabilities": "I can explain CAPS physics and chemistry with text, voice, worked steps, and interactive animations.",
-    "unit_conversion": "I can convert units for you. Try 'Convert 10 meters to feet'.",
-    "unknown": "I'm still learning 🤖. Could you try rephrasing?",
-}
 
 # -------------------------------
 # Physics knowledge base
@@ -773,73 +793,7 @@ def ml_detect_intent(message):
 
 
 def get_physics_info(message):
-    local = get_local_science_response(message, intent="physics")
-    if local:
-        return local
-    for key in physics_facts:
-        if key in message.lower():
-            return physics_facts[key]
-    return random.choice(list(physics_facts.values()))
-
-
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    try:
-        with open(USERS_FILE, "r") as file:
-            return json.load(file)
-    except (json.JSONDecodeError, ValueError):
-        return {}
-
-
-def save_users(users):
-    with open(USERS_FILE, "w") as file:
-        json.dump(users, file, indent=4)
-
-
-def save_user_data(
-    message, topic, username=None, confidence=None, chat_id=None, reply=None
-):
-    """Save user conversation data to data.json and also update per-user JSON"""
-    try:
-        with open("data.json", "r") as file:
-            data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = []
-
-    data.append(
-        {
-            "message": message,
-            "topic": topic,
-            "time": datetime.now().isoformat(),
-            "username": username,
-            "confidence": confidence,
-            "chat_id": chat_id,
-            "reply": reply,
-        }
-    )
-
-    with open("data.json", "w") as file:
-        json.dump(data, file, indent=4)
-
-    # Also update user-specific conversation history
-    if current_user.is_authenticated:
-        users = load_users()
-        user_data = users.get(current_user.id, {})
-        user_conversations = user_data.get("conversations", [])
-        user_conversations.append(
-            {
-                "message": message,
-                "reply": reply,
-                "topic": topic,
-                "time": datetime.now().isoformat(),
-            }
-        )
-        # Keep only last 100 messages
-        user_conversations = user_conversations[-100:]
-        user_data["conversations"] = user_conversations
-        users[current_user.id] = user_data
-        save_users(users)
+    return get_local_science_response(message, intent="physics")
 
 
 def get_user_key():
@@ -885,13 +839,42 @@ def _format_time(iso_value):
         return iso_value
 
 
-def load_user_history(username):
-    try:
-        with open("data.json", "r") as file:
-            data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        data = []
-    return [d for d in data if d.get("username") == username]
+def load_user_history(user_id):
+    if not user_id: return []
+    convs = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc()).all()
+    return [c.to_dict() for c in convs]
+
+
+def load_session_history(user_id, chat_id):
+    if not user_id or not chat_id:
+        return []
+    convs = (
+        Conversation.query.filter_by(user_id=user_id, chat_id=chat_id)
+        .order_by(Conversation.timestamp.asc())
+        .all()
+    )
+    history = []
+    for conv in convs:
+        history.append({"role": "user", "content": conv.message})
+        history.append({"role": "assistant", "content": conv.reply})
+    return history[-MAX_HISTORY:]
+
+
+def save_user_data(message, intent, chat_id=None, reply="", confidence=None):
+    if not current_user.is_authenticated:
+        return
+    chat_id = chat_id or ensure_chat_id()
+    db.session.add(
+        Conversation(
+            user_id=current_user.id,
+            chat_id=chat_id,
+            message=message,
+            reply=reply,
+            intent=intent,
+            confidence=confidence,
+        )
+    )
+    db.session.commit()
 
 
 def build_sessions(history):
@@ -932,18 +915,14 @@ def metrics():
 
 def _generate_dashboard_payload():
     now = datetime.now()
-    username = current_user.id if current_user.is_authenticated else session.get("user")
-    history = load_user_history(username) if username else []
-    sessions = build_sessions(history)
+    if not current_user.is_authenticated:
+        return {}
+        
+    history = Conversation.query.filter_by(user_id=current_user.id).order_by(Conversation.timestamp.desc()).all()
+    sessions = build_sessions([c.to_dict() for c in history])
     questions_asked = len(history)
-    confidences = [
-        h.get("confidence")
-        for h in history
-        if isinstance(h.get("confidence"), (int, float))
-    ]
-    avg_confidence = (
-        round(sum(confidences) / len(confidences), 1) if confidences else 0.0
-    )
+    confidences = [c.confidence for c in history if c.confidence is not None]
+    avg_confidence = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
 
     stats = {
         "model_accuracy": round(random.uniform(96.4, 99.4), 1),
@@ -952,32 +931,26 @@ def _generate_dashboard_payload():
         "active_simulations": random.randint(110, 160),
         "inference_latency_ms": round(random.uniform(12.8, 18.6), 1),
     }
-    line_points = [
-        round(0.58 + (i * 0.018) + random.uniform(-0.04, 0.04), 3) for i in range(12)
-    ]
+    line_points = [round(0.58 + (i * 0.018) + random.uniform(-0.04, 0.04), 3) for i in range(12)]
     bar_points = [random.randint(45, 88) for _ in range(8)]
     gauge_value = round(random.uniform(0.82, 0.93), 2)
 
     recent_questions = []
-    for entry in history[-6:]:
-        recent_questions.append(
-            {
-                "question": entry.get("message", "Question"),
-                "confidence": entry.get("confidence", 0),
-                "time": _format_time(entry.get("time", "")),
-            }
-        )
+    for entry in history[:6]:
+        recent_questions.append({
+            "question": entry.message[:48],
+            "confidence": entry.confidence or 0,
+            "time": entry.timestamp.strftime("%b %d, %H:%M") if entry.timestamp else ""
+        })
 
     session_cards = []
     for session_entry in sessions[:6]:
-        session_cards.append(
-            {
-                "chat_id": session_entry["chat_id"],
-                "title": session_entry["title"],
-                "count": session_entry["count"],
-                "last_time": session_entry["last_time"],
-            }
-        )
+        session_cards.append({
+            "chat_id": session_entry["chat_id"],
+            "title": session_entry["title"],
+            "count": session_entry["count"],
+            "last_time": session_entry["last_time"],
+        })
 
     return {
         "timestamp": now.isoformat(),
@@ -1133,6 +1106,18 @@ def logout_alias():
     return redirect(url_for("auth.landing"))
 
 
+@app.route("/favicon.ico")
+def favicon():
+    favicon_path = os.path.join(app.root_path, "static", "favicon.ico")
+    if not os.path.exists(favicon_path):
+        return ("", 204)
+    return send_from_directory(
+        os.path.join(app.root_path, "static"),
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
+
+
 @app.route("/chat", methods=["GET"])
 @login_required
 def chat_page():
@@ -1182,15 +1167,35 @@ def check_auth():
 @app.route("/api/history")
 @login_required
 def api_history():
-    return jsonify(load_user_history(current_user.id))
+    history = load_user_history(current_user.id)
+    return jsonify({"success": True, "sessions": build_sessions(history)})
+
+
+@app.route("/api/session/<chat_id>")
+@login_required
+def get_session_detail(chat_id):
+    convs = Conversation.query.filter_by(user_id=current_user.id, chat_id=chat_id).order_by(Conversation.timestamp.asc()).all()
+    if not convs:
+        return jsonify({"success": False, "error": "Session not found"}), 404
+    
+    session["chat_id"] = chat_id
+    
+    formatted_history = []
+    for c in convs:
+        formatted_history.append({"role": "user", "content": c.message})
+        formatted_history.append({"role": "assistant", "content": c.reply})
+    
+    return jsonify({
+        "success": True, 
+        "chat_id": chat_id, 
+        "history": formatted_history
+    })
 
 
 @app.route("/api/new_session", methods=["POST"])
 @login_required
 def new_session():
     session["chat_id"] = os.urandom(6).hex()
-    user_key = get_user_key()
-    user_conversations[user_key] = []
     return jsonify({"success": True, "chat_id": session["chat_id"]})
 
 
@@ -1279,10 +1284,12 @@ def chat():
         return jsonify({"intent": "error", "reply": "Message is required"}), 400
 
     voice_mode = bool(payload.get("voice_mode", False))
+    document_mode = payload.get("response_format") == "document"
     history = normalize_history(payload.get("history", []))
     user_key = get_user_key()
-    if not history:
-        history = list(user_conversations.get(user_key, []))
+    chat_id = ensure_chat_id()
+    if not history and current_user.is_authenticated:
+        history = load_session_history(current_user.id, chat_id)
     intent = "unknown"
     confidence = 30.0
 
@@ -1319,6 +1326,8 @@ def chat():
         )
         if voice_mode:
             reply = make_voice_friendly(reply)
+        elif not document_mode:
+            reply = make_chat_friendly(reply)
 
         # Update rolling history shared with frontend
         history.append({"role": "user", "content": user_message})
@@ -1336,44 +1345,37 @@ def chat():
             )
             if voice_mode:
                 reply = make_voice_friendly(reply)
+            elif not document_mode:
+                reply = make_chat_friendly(reply)
             history[-1]["content"] = reply
 
-        # Keep server-side copy for existing analytics/history pages
-        user_conversations[user_key] = list(history)
-        ensure_chat_id()
-
         # Auto-save memory summary for next session
-        try:
-            import json
-            from pathlib import Path
-            users_file = Path(USERS_FILE)
-            users = json.loads(users_file.read_text(encoding="utf-8")) if users_file.exists() else {}
-            user_data = users.get(user_key, {})
-            prev = (user_data.get("memory_summary") or "").strip()
-            recent = history[-6:]
-            summary_lines = [f"Topics discussed: {intent}."]
-            for msg in recent:
-                role = "Student" if msg["role"] == "user" else "Tutor"
-                summary_lines.append(f"{role}: {msg['content'][:120]}")
-            new_summary = "\n".join(summary_lines)
-            combined = f"{prev}\n---\n{new_summary}" if prev else new_summary
-            combined = "\n".join(combined.split("\n")[-50:]).strip()
-            user_data["memory_summary"] = combined
-            users[user_key] = user_data
-            users_file.write_text(json.dumps(users, indent=2, ensure_ascii=False), encoding="utf-8")
-        except Exception:
-            pass
+        if current_user.is_authenticated:
+            try:
+                prev = (current_user.memory_summary or "").strip()
+                recent = history[-6:]
+                summary_lines = [f"Topics discussed: {intent}."]
+                for msg in recent:
+                    role = "Student" if msg["role"] == "user" else "Tutor"
+                    summary_lines.append(f"{role}: {msg['content'][:120]}")
+                new_summary = "\n".join(summary_lines)
+                combined = f"{prev}\n---\n{new_summary}" if prev else new_summary
+                combined = "\n".join(combined.split("\n")[-50:]).strip()
+                current_user.memory_summary = combined
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Failed to update memory summary: {e}")
     except Exception as e:
         logger.error("Chat Error: %s", e)
         reply = "I hit a temporary issue. Please re-articulate your question."
 
+    # Save to DB
     save_user_data(
         user_message,
         intent,
-        current_user.id if current_user.is_authenticated else session.get("user"),
-        confidence=confidence,
-        chat_id=session.get("chat_id"),
+        chat_id=chat_id,
         reply=reply,
+        confidence=confidence
     )
 
     return jsonify(
@@ -1388,9 +1390,7 @@ def chat():
 @login_required
 def get_notes():
     """Get all notes for current user"""
-    users = load_users()
-    user_notes = users.get(current_user.id, {}).get("notes", [])
-    return jsonify({"success": True, "notes": user_notes})
+    return jsonify({"success": True, "notes": [n.to_dict() for n in current_user.notes]})
 
 
 @app.route("/api/notes", methods=["POST"])
@@ -1405,26 +1405,20 @@ def create_note():
     if not title or not content:
         return jsonify({"success": False, "message": "Title and content required"}), 400
 
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-
     note_id = f"note_{datetime.now().timestamp()}"
-    new_note = {
-        "id": note_id,
-        "title": title,
-        "content": content,
-        "topic": topic,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "tags": data.get("tags", []),
-        "source": "ai" if data.get("ai_generated") else "user",
-    }
+    new_note = Note(
+        id=note_id,
+        user_id=current_user.id,
+        title=title,
+        content=content,
+        topic=topic,
+        tags=data.get("tags", []),
+        source="ai" if data.get("ai_generated") else "user"
+    )
+    db.session.add(new_note)
+    db.session.commit()
 
-    notes.append(new_note)
-    user_data["notes"] = notes
-    users[current_user.id] = user_data
-    save_users(users)
+    return jsonify({"success": True, "note": new_note.to_dict()})
 
     return jsonify({"success": True, "note": new_note})
 
@@ -1434,19 +1428,13 @@ def create_note():
 def update_note(note_id):
     """Update an existing note"""
     data = request.get_json() or {}
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-
-    for note in notes:
-        if note["id"] == note_id:
-            note["title"] = data.get("title", note["title"])
-            note["content"] = data.get("content", note["content"])
-            note["topic"] = data.get("topic", note["topic"])
-            note["updated_at"] = datetime.now().isoformat()
-            users[current_user.id] = user_data
-            save_users(users)
-            return jsonify({"success": True, "note": note})
+    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+    if note:
+        note.title = data.get("title", note.title)
+        note.content = data.get("content", note.content)
+        note.topic = data.get("topic", note.topic)
+        db.session.commit()
+        return jsonify({"success": True, "note": note.to_dict()})
 
     return jsonify({"success": False, "message": "Note not found"}), 404
 
@@ -1455,14 +1443,12 @@ def update_note(note_id):
 @login_required
 def delete_note(note_id):
     """Delete a note"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-    
-    user_data["notes"] = [n for n in notes if n["id"] != note_id]
-    users[current_user.id] = user_data
-    save_users(users)
-    return jsonify({"success": True})
+    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+    if note:
+        db.session.delete(note)
+        db.session.commit()
+        return jsonify({"success": True})
+    return jsonify({"success": False, "message": "Note not found"}), 404
 
 
 @app.route("/api/tts", methods=["POST"])
@@ -1512,14 +1498,9 @@ def elevenlabs_tts():
 @login_required
 def get_note(note_id):
     """Get single note"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-
-    for note in notes:
-        if note["id"] == note_id:
-            return jsonify({"success": True, "note": note})
-
+    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+    if note:
+        return jsonify({"success": True, "note": note.to_dict()})
     return jsonify({"success": False, "message": "Note not found"}), 404
 
 
@@ -1533,18 +1514,15 @@ def search_notes():
     if not query:
         return jsonify({"success": False, "message": "Query required"}), 400
 
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-
     results = []
-    for note in notes:
+    for note in current_user.notes:
+        note_data = note.to_dict()
         if (
-            query in note["title"].lower()
-            or query in note["content"].lower()
-            or query in note.get("topic", "").lower()
+            query in (note.title or "").lower()
+            or query in (note.content or "").lower()
+            or query in (note.topic or "").lower()
         ):
-            results.append(note)
+            results.append(note_data)
 
     return jsonify({"success": True, "notes": results, "count": len(results)})
 
@@ -1553,15 +1531,14 @@ def search_notes():
 @login_required
 def sync_notes():
     """Get all notes with timestamp for offline sync"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
     last_sync = request.args.get("since", "1970-01-01")
 
-    # Filter notes updated after last_sync
-    updated_notes = [
-        n for n in notes if n.get("updated_at", n.get("created_at", "")) > last_sync
-    ]
+    updated_notes = []
+    for note in current_user.notes:
+        note_data = note.to_dict()
+        updated_at = note_data.get("updated_at") or note_data.get("created_at") or ""
+        if updated_at > last_sync:
+            updated_notes.append(note_data)
 
     return jsonify(
         {
@@ -1582,32 +1559,24 @@ def push_notes():
     if not isinstance(client_notes, list):
         return jsonify({"success": False, "message": "Invalid notes data"}), 400
 
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    server_notes = user_data.get("notes", [])
-
-    # Simple merge: client wins on conflict (by updated_at)
-    note_map = {n["id"]: n for n in server_notes}
-
     for client_note in client_notes:
         note_id = client_note.get("id")
-        if note_id:
-            if note_id in note_map:
-                client_updated = client_note.get("updated_at", "")
-                server_updated = note_map[note_id].get("updated_at", "")
-                if client_updated > server_updated:
-                    note_map[note_id] = client_note
-            else:
-                note_map[note_id] = client_note
+        if not note_id:
+            note_id = f"note_{datetime.now().timestamp()}"
+        note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+        if note is None:
+            note = Note(id=note_id, user_id=current_user.id)
+            db.session.add(note)
+        note.title = client_note.get("title", note.title or "")
+        note.content = client_note.get("content", note.content or "")
+        note.topic = client_note.get("topic", note.topic or "")
+        note.tags = client_note.get("tags", note.tags or [])
+        note.source = client_note.get("source", note.source or "user")
+        note.updated_at = datetime.utcnow()
 
-    merged_notes = list(note_map.values())
-    merged_notes.sort(
-        key=lambda x: x.get("updated_at", x.get("created_at", "")), reverse=True
-    )
-
-    user_data["notes"] = merged_notes
-    users[current_user.id] = user_data
-    save_users(users)
+    db.session.commit()
+    merged_notes = [note.to_dict() for note in current_user.notes]
+    merged_notes.sort(key=lambda x: x.get("updated_at") or x.get("created_at") or "", reverse=True)
 
     return jsonify({"success": True, "notes": merged_notes, "count": len(merged_notes)})
 
@@ -1616,31 +1585,23 @@ def push_notes():
 @login_required
 def export_notes():
     """Export notes for offline use (text corpus for intent classifier)"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    notes = user_data.get("notes", [])
-
-    # Build text corpus from notes
     corpus = []
-    for note in notes:
-        corpus.append(f"Title: {note.get('title', '')}")
-        corpus.append(f"Topic: {note.get('topic', '')}")
-        corpus.append(note.get("content", ""))
+    for note in current_user.notes:
+        corpus.append(f"Title: {note.title or ''}")
+        corpus.append(f"Topic: {note.topic or ''}")
+        corpus.append(note.content or "")
         corpus.append("---")
 
     text_corpus = "\n".join(corpus)
 
-    return jsonify({"success": True, "corpus": text_corpus, "notes_count": len(notes)})
+    return jsonify({"success": True, "corpus": text_corpus, "notes_count": len(current_user.notes)})
 
 
 @app.route("/api/user/preferences", methods=["GET"])
 @login_required
 def get_preferences():
     """Get user preferences"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    prefs = user_data.get("preferences", {})
-    return jsonify({"success": True, "preferences": prefs})
+    return jsonify({"success": True, "preferences": current_user.preferences or {}})
 
 
 @app.route("/api/user/preferences", methods=["POST"])
@@ -1648,13 +1609,10 @@ def get_preferences():
 def update_preferences():
     """Update user preferences (voice, etc)"""
     data = request.get_json() or {}
-    users = load_users()
-    user_data = users.get(current_user.id, {})
-    prefs = user_data.get("preferences", {})
+    prefs = dict(current_user.preferences or {})
     prefs.update(data)
-    user_data["preferences"] = prefs
-    users[current_user.id] = user_data
-    save_users(users)
+    current_user.preferences = prefs
+    db.session.commit()
     return jsonify({"success": True, "preferences": prefs})
 
 
@@ -1662,8 +1620,6 @@ def update_preferences():
 @login_required
 def get_profile():
     """Get user profile"""
-    users = load_users()
-    user_data = users.get(current_user.id, {})
     return jsonify(
         {
             "success": True,
@@ -1671,15 +1627,27 @@ def get_profile():
                 "name": current_user.name,
                 "email": current_user.email,
                 "avatar": current_user.avatar,
-                "created_at": user_data.get("created_at"),
-                "notes_count": len(user_data.get("notes", [])),
+                "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+                "notes_count": len(current_user.notes),
             },
         }
     )
 
 
+@app.errorhandler(404)
+def handle_404(error):
+    if request.path.startswith("/api") or request.is_json:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    return render_template("index.html", user=current_user if current_user.is_authenticated else None), 404
+
+
 @app.errorhandler(Exception)
 def handle_exception(error):
+    # Don't log 404s as unhandled server errors
+    from werkzeug.exceptions import HTTPException
+    if isinstance(error, HTTPException) and error.code == 404:
+        return handle_404(error)
+        
     logger.error("Unhandled server error: %s", error)
     if request.path.startswith("/api") or request.is_json:
         return jsonify({"success": False, "error": "Server error"}), 500
@@ -1687,4 +1655,4 @@ def handle_exception(error):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000, ssl_context="adhoc")
+    app.run(debug=False, host="0.0.0.0", port=5000)

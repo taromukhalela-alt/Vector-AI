@@ -3,9 +3,15 @@
 // ============================================================
 
 const avatarCanvas = document.getElementById("avatar-canvas");
-if (!avatarCanvas || typeof THREE === "undefined") {
+const avatarReady = avatarCanvas && typeof THREE !== "undefined";
+
+if (!avatarReady) {
+  const fallbackAvatarState = { IDLE: "idle", LISTENING: "listening", SPEAKING: "speaking" };
+  window.AvatarState = fallbackAvatarState;
+  window.avatarState = fallbackAvatarState.IDLE;
+  window.speakingAmplitude = 0;
   console.warn("Avatar canvas or Three.js missing.");
-}
+} else {
 
 const avatarRenderer = avatarCanvas
   ? new THREE.WebGLRenderer({
@@ -225,4 +231,5 @@ if (avatarCanvas && avatarRenderer) {
     avatarCamera.updateProjectionMatrix();
   });
   avatarRO.observe(avatarCanvas);
+}
 }

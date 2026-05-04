@@ -63,7 +63,19 @@ def _build_label_encoder(labels) -> LabelEncoder:
 
 
 def train_model() -> Dict[str, float]:
+    # Base corpus from caps_knowledge
     texts, labels = build_training_corpus()
+    
+    # Load enhanced dataset
+    json_path = os.path.join(BASE_DIR, "intent_training_data.json")
+    if os.path.exists(json_path):
+        import json
+        with open(json_path, "r") as f:
+            enhanced_data = json.load(f)
+            for item in enhanced_data:
+                texts.append(item["text"])
+                labels.append(item["intent"])
+        print(f"Loaded {len(enhanced_data)} enhanced examples from JSON.")
     X_train, X_test, y_train, y_test = train_test_split(
         texts,
         labels,
