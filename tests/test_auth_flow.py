@@ -307,6 +307,41 @@ def test_tts_uses_free_tier_friendly_elevenlabs_model(monkeypatch):
     assert captured_payload["model_id"] == "eleven_flash_v2_5"
 
 
+def test_tts_supports_camb_ai_provider(monkeypatch):
+    client = app_module.app.test_client()
+    register_demo_user(client, "tts-camb@example.com")
+    captured = {}
+
+    class FakeCambResponse:
+        status_code = 200
+        text = ""
+
+        def iter_content(self, chunk_size=1024):
+            yield b"audio"
+
+    def fake_post(url, json, headers, **_kwargs):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        return FakeCambResponse()
+
+    monkeypatch.setenv("CAMB_API_KEY", "test-key")
+    monkeypatch.setattr(app_module.requests, "post", fake_post)
+
+    response = client.post(
+        "/api/tts",
+        json={"text": "Hello learner", "provider": "camb", "voice_id": "147320"},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+    assert captured["url"] == "https://client.camb.ai/apis/tts-stream"
+    assert captured["headers"]["x-api-key"] == "test-key"
+    assert captured["json"]["voice_id"] == 147320
+    assert captured["json"]["language"] == "en-us"
+    assert captured["json"]["speech_model"] == "mars-8.1-flash-beta"
+
+
 def test_ai_note_metadata_endpoint(monkeypatch):
     client = app_module.app.test_client()
     register_demo_user(client, "metadata@example.com")

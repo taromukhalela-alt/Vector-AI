@@ -181,6 +181,9 @@ AI_TOOL_RATE_LIMIT_WINDOW = env_int("AI_TOOL_RATE_LIMIT_WINDOW", 300, min_value=
 RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
+CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-8.1-flash-beta")
+CAMB_TTS_LANGUAGE = os.getenv("CAMB_TTS_LANGUAGE", "en-us")
+CAMB_TTS_VOICE_ID = env_int("CAMB_TTS_VOICE_ID", 147320, min_value=1)
 
 rate_limit_events = defaultdict(deque)
 chat_latency_events = defaultdict(lambda: deque(maxlen=50))
@@ -2311,16 +2314,16 @@ Note:
 
 @app.route("/api/tts", methods=["POST"])
 @login_required
-def elevenlabs_tts():
-    """Fetch TTS audio from ElevenLabs"""
+def text_to_speech():
+    """Fetch TTS audio from the configured voice provider."""
     data = request.get_json(silent=True) or {}
     text = data.get("text", "").strip()
-    voice_id = data.get("voice_id", "pNInz6obpgDQGcFmaJgB") # Default to Adam
+    provider = str(data.get("provider", "elevenlabs")).strip().lower()
 
     rate_limited = enforce_rate_limit("tts", TTS_RATE_LIMIT_COUNT, TTS_RATE_LIMIT_WINDOW)
     if rate_limited:
         return rate_limited
-    
+
     if not text:
         return jsonify({"success": False, "message": "Text required"}), 400
     if len(text) > TTS_MAX_INPUT_CHARS:
@@ -2333,9 +2336,51 @@ def elevenlabs_tts():
             ),
             413,
         )
+
+    if provider == "camb":
+        voice_id = data.get("voice_id", CAMB_TTS_VOICE_ID)
+        try:
+            voice_id = int(voice_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Invalid CAMB voice id"}), 400
+        if voice_id < 1:
+            return jsonify({"success": False, "message": "Invalid CAMB voice id"}), 400
+
+        api_key = os.environ.get("CAMB_API_KEY")
+        if not api_key:
+            return jsonify({"success": False, "message": "CAMB AI API key not configured"}), 500
+
+        url = "https://client.camb.ai/apis/tts-stream"
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+        }
+        payload = {
+            "text": text,
+            "voice_id": voice_id,
+            "language": CAMB_TTS_LANGUAGE,
+            "speech_model": CAMB_TTS_MODEL,
+            "output_configuration": {"format": "wav"},
+        }
+
+        try:
+            response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
+            if response.status_code == 200:
+                from flask import Response
+                return Response(response.iter_content(chunk_size=1024), mimetype="audio/wav")
+            logger.error("CAMB AI error: %s", response.text)
+            return jsonify({"success": False, "message": "CAMB AI API error"}), 500
+        except Exception as e:
+            logger.error("CAMB AI exception: %s", str(e))
+            return jsonify({"success": False, "message": "Internal server error"}), 500
+
+    if provider != "elevenlabs":
+        return jsonify({"success": False, "message": "Invalid TTS provider"}), 400
+
+    voice_id = data.get("voice_id", "pNInz6obpgDQGcFmaJgB") # Default to Adam
     if not re.fullmatch(r"[A-Za-z0-9_-]{5,80}", voice_id):
         return jsonify({"success": False, "message": "Invalid voice id"}), 400
-        
+
     api_key = os.environ.get("ELEVENLABS_API_KEY")
     if not api_key:
         return jsonify({"success": False, "message": "ElevenLabs API key not configured"}), 500

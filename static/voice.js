@@ -67,23 +67,29 @@ class VoiceOutput {
   constructor() {
     this.audio = null;
     this.activeSession = 0;
-    this.provider = localStorage.getItem("preferred_tts_provider") || "elevenlabs";
+    this.provider = localStorage.getItem("preferred_tts_provider") || "camb";
     this.voiceId = localStorage.getItem("preferred_elevenlabs_voice") || "pNInz6obpgDQGcFmaJgB"; // Default Adam
+    this.cambVoiceId = localStorage.getItem("preferred_camb_voice") || "147320";
     this.browserVoiceURI = localStorage.getItem("preferred_browser_voice") || "";
     this.synthUtterance = null;
     this._ampInterval = null;
   }
 
   setProvider(provider) {
-    this.provider = provider === "browser" ? "browser" : "elevenlabs";
+    this.provider = ["browser", "camb"].includes(provider) ? provider : "elevenlabs";
     localStorage.setItem("preferred_tts_provider", this.provider);
     this.stop();
   }
 
   setVoiceId(id) {
     if (id && id !== 'default') {
-      this.voiceId = id;
-      localStorage.setItem("preferred_elevenlabs_voice", id);
+      if (this.provider === "camb") {
+        this.cambVoiceId = id;
+        localStorage.setItem("preferred_camb_voice", id);
+      } else {
+        this.voiceId = id;
+        localStorage.setItem("preferred_elevenlabs_voice", id);
+      }
     }
   }
 
@@ -196,9 +202,9 @@ class VoiceOutput {
     }
 
     try {
-      await this.speakWithElevenLabs(clean, onStart, onEnd, sessionId);
+      await this.speakWithCloudTTS(clean, onStart, onEnd, sessionId);
     } catch (e) {
-      console.error("ElevenLabs TTS Error:", e);
+      console.error("Cloud TTS Error:", e);
       if (this.hasBrowserSpeech() && sessionId === this.activeSession) {
         this.speakWithBrowser(clean, onStart, onEnd, sessionId);
         return;
@@ -208,11 +214,15 @@ class VoiceOutput {
     }
   }
 
-  async speakWithElevenLabs(clean, onStart, onEnd, sessionId) {
+  async speakWithCloudTTS(clean, onStart, onEnd, sessionId) {
       const response = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean, voice_id: this.voiceId })
+        body: JSON.stringify({
+          text: clean,
+          provider: this.provider,
+          voice_id: this.provider === "camb" ? this.cambVoiceId : this.voiceId,
+        })
       });
 
       if (!response.ok) throw new Error("TTS failed");

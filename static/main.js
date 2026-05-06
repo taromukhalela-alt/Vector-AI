@@ -453,6 +453,7 @@ function initVectorAI() {
   }
 
   const voiceProviders = [
+    { id: "camb", name: "CAMB AI" },
     { id: "elevenlabs", name: "ElevenLabs" },
     { id: "browser", name: "Speech Synthesis" },
   ];
@@ -463,13 +464,16 @@ function initVectorAI() {
     { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie, natural Australian tutor" },
     { id: "D38z5RcWu1voky8WS1ja", name: "Fin, soft Irish tutor" }
   ];
+  const cambVoices = [
+    { id: "147320", name: "CAMB AI tutor voice" },
+  ];
 
   if (voiceSelects.length || voiceProviderSelects.length) {
     setupVoiceControls();
   }
 
   function setupVoiceControls() {
-    const savedProvider = localStorage.getItem("preferred_tts_provider") || "elevenlabs";
+    const savedProvider = localStorage.getItem("preferred_tts_provider") || "camb";
     populateProviderSelectors();
     syncProviderSelectors(savedProvider);
     if (window.voiceOutput) window.voiceOutput.setProvider(savedProvider);
@@ -477,7 +481,7 @@ function initVectorAI() {
 
     voiceProviderSelects.forEach((select) => {
       select.addEventListener("change", () => {
-        const provider = select.value === "browser" ? "browser" : "elevenlabs";
+        const provider = normalizeVoiceProvider(select.value);
         localStorage.setItem("preferred_tts_provider", provider);
         syncProviderSelectors(provider);
         if (window.voiceOutput) window.voiceOutput.setProvider(provider);
@@ -505,6 +509,10 @@ function initVectorAI() {
     }
   }
 
+  function normalizeVoiceProvider(provider) {
+    return ["browser", "camb", "elevenlabs"].includes(provider) ? provider : "camb";
+  }
+
   function populateProviderSelectors() {
     voiceProviderSelects.forEach((select) => {
       select.innerHTML = "";
@@ -518,7 +526,7 @@ function initVectorAI() {
   }
 
   function currentVoiceProvider() {
-    return localStorage.getItem("preferred_tts_provider") === "browser" ? "browser" : "elevenlabs";
+    return normalizeVoiceProvider(localStorage.getItem("preferred_tts_provider"));
   }
 
   function loadVoiceChoices(provider) {
@@ -526,7 +534,26 @@ function initVectorAI() {
       loadBrowserVoices();
       return;
     }
+    if (provider === "camb") {
+      loadCambVoices();
+      return;
+    }
     loadElevenLabsVoices();
+  }
+
+  function loadCambVoices() {
+    voiceSelects.forEach((select) => {
+      select.innerHTML = "";
+      cambVoices.forEach((voice) => {
+        const option = document.createElement("option");
+        option.value = voice.id;
+        option.textContent = voice.name;
+        select.appendChild(option);
+      });
+    });
+    const savedVoice = localStorage.getItem("preferred_camb_voice") || "147320";
+    syncVoiceSelectors(savedVoice);
+    if (window.voiceOutput) window.voiceOutput.setVoiceId(savedVoice);
   }
 
   function loadElevenLabsVoices() {
