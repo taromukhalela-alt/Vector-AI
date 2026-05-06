@@ -14,3 +14,4 @@ pytest
 authlib
 groq
 google-genai
+psycopg2-binary
