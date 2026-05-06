@@ -180,6 +180,7 @@ AI_TOOL_RATE_LIMIT_COUNT = env_int("AI_TOOL_RATE_LIMIT_COUNT", 12, min_value=1)
 AI_TOOL_RATE_LIMIT_WINDOW = env_int("AI_TOOL_RATE_LIMIT_WINDOW", 300, min_value=1)
 RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
+ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
 
 rate_limit_events = defaultdict(deque)
 chat_latency_events = defaultdict(lambda: deque(maxlen=50))
@@ -2347,7 +2348,7 @@ def elevenlabs_tts():
     }
     payload = {
         "text": text,
-        "model_id": "eleven_monolingual_v1",
+        "model_id": ELEVENLABS_TTS_MODEL,
         "voice_settings": {
             "stability": 0.5,
             "similarity_boost": 0.75

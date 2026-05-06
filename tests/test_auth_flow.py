@@ -278,6 +278,35 @@ def test_tts_rejects_oversized_input():
     assert response.status_code == 413
 
 
+def test_tts_uses_free_tier_friendly_elevenlabs_model(monkeypatch):
+    client = app_module.app.test_client()
+    register_demo_user(client, "tts-model@example.com")
+    captured_payload = {}
+
+    class FakeElevenLabsResponse:
+        status_code = 200
+        text = ""
+
+        def iter_content(self, chunk_size=1024):
+            yield b"audio"
+
+    def fake_post(_url, json, **_kwargs):
+        captured_payload.update(json)
+        return FakeElevenLabsResponse()
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setattr(app_module.requests, "post", fake_post)
+
+    response = client.post(
+        "/api/tts",
+        json={"text": "Hello learner"},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+    assert captured_payload["model_id"] == "eleven_flash_v2_5"
+
+
 def test_ai_note_metadata_endpoint(monkeypatch):
     client = app_module.app.test_client()
     register_demo_user(client, "metadata@example.com")
