@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1d2021">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Vector AI | CAPS Physics and Chemistry Studio</title>
   <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
   <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -66,8 +67,10 @@
 
           <div class="sidebar-label" style="margin-top:16px">Settings</div>
           <div class="control-group">
-            <label for="voice-select" class="control-label">Voice Output</label>
-            <select id="voice-select" class="voice-select"></select>
+            <label for="voice-provider" class="control-label">Voice Engine</label>
+            <select id="voice-provider" class="voice-provider-select"></select>
+            <label for="voice-select" class="control-label">Tutor Voice</label>
+            <select id="voice-select" class="voice-select voice-id-select"></select>
           </div>
           <button class="btn-secondary" id="logout-btn" style="width:100%; margin-top:8px;">Logout</button>
           <div class="sidebar-label" style="margin-top:16px">Quick Start</div>
@@ -154,7 +157,10 @@
       <div class="voice-header">
         <div class="voice-header-meta">
           <span class="voice-status-label" id="voice-status-label">Tap the mic to start</span>
-          <select id="voice-select-overlay" class="voice-select voice-select-overlay"></select>
+          <div class="voice-header-controls">
+            <select id="voice-provider-overlay" class="voice-provider-select voice-select-overlay"></select>
+            <select id="voice-select-overlay" class="voice-select voice-id-select voice-select-overlay"></select>
+          </div>
         </div>
       </div>
 
@@ -192,6 +198,7 @@
 <button class="mobile-fab" id="mobile-fab" title="New session">+</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="{{ url_for('static', filename='security.js') }}"></script>
 <script src="{{ url_for('static', filename='avatar.js') }}"></script>
 <script src="{{ url_for('static', filename='animations.js') }}"></script>
 <script src="{{ url_for('static', filename='voice.js') }}"></script>

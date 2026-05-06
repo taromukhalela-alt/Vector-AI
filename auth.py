@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+import secrets
 from flask import (
     Blueprint,
     render_template,
@@ -17,7 +17,7 @@ from flask_login import (
     current_user,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from database import db, User
+from database import db, User, utc_now
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 login_manager = LoginManager()
@@ -27,7 +27,14 @@ def _chat_redirect():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    if request.is_json or request.method != "GET" or request.path.startswith("/api/"):
+        return jsonify({"success": False, "message": "Authentication required"}), 401
+    return redirect(url_for("auth.login"))
 
 def init_auth(app):
     login_manager.init_app(app)
@@ -106,7 +113,7 @@ def register():
                 {"success": False, "message": "Email already registered"}
             ), 400
 
-        user_id = f"user_{datetime.now().timestamp()}"
+        user_id = f"user_{secrets.token_urlsafe(12)}"
         avatar = f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=random"
         
         new_user = User(
@@ -116,7 +123,7 @@ def register():
             password_hash=generate_password_hash(password),
             provider="local",
             avatar=avatar,
-            created_at=datetime.utcnow(),
+            created_at=utc_now(),
             preferences={"voice": "default"}
         )
         
@@ -135,6 +142,8 @@ def register():
 
 @auth_bp.route("/logout", methods=["GET", "POST"])
 def logout():
+    if request.method == "GET":
+        return redirect(url_for("auth.landing"))
     logout_user()
     session.clear()
     if request.is_json or request.method == "POST":

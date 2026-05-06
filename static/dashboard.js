@@ -46,14 +46,17 @@ const drawLineChart = (canvas) => {
   ctx.clearRect(0, 0, width, height);
 
   const padding = 24;
+  const values = chartData.line
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
   const points = chartData.line.map((value, index) => ({
     x: index,
-    y: value,
+    y: Number(value) || 0,
   }));
 
-  const maxY = 1.05;
-  const minY = 0.4;
-  const scaleX = (width - padding * 2) / (points.length - 1);
+  const maxY = Math.max(1, ...values);
+  const minY = 0;
+  const scaleX = (width - padding * 2) / Math.max(1, points.length - 1);
   const scaleY = (height - padding * 2) / (maxY - minY);
 
   ctx.strokeStyle = "rgba(111, 29, 39, 0.15)";
@@ -95,10 +98,12 @@ const drawBarChart = (canvas) => {
   const { width, height } = canvas;
   ctx.clearRect(0, 0, width, height);
 
-  const data = chartData.bar;
+  const data = chartData.bar.length
+    ? chartData.bar.map((value) => Number(value) || 0)
+    : [0];
   const padding = 20;
   const barWidth = (width - padding * 2) / data.length - 8;
-  const maxVal = Math.max(...data);
+  const maxVal = Math.max(1, ...data);
 
   ctx.fillStyle = "rgba(111, 29, 39, 0.12)";
   ctx.fillRect(0, height - padding - 2, width, 2);
@@ -213,10 +218,12 @@ const applyDashboardData = (payload) => {
     recent_questions.forEach((item) => {
       const wrapper = document.createElement("div");
       wrapper.className = "insight-item";
-      wrapper.innerHTML = `
-        <strong>${item.question}</strong>
-        <span class="insight-value">Confidence: ${item.confidence}% · ${item.time}</span>
-      `;
+      const question = document.createElement("strong");
+      question.textContent = item.question || "Question";
+      const meta = document.createElement("span");
+      meta.className = "insight-value";
+      meta.textContent = `Confidence: ${item.confidence || 0}% · ${item.time || ""}`;
+      wrapper.append(question, meta);
       insightList.appendChild(wrapper);
     });
   }
@@ -226,11 +233,16 @@ const applyDashboardData = (payload) => {
     sessions.forEach((entry) => {
       const card = document.createElement("div");
       card.className = "detail-card";
-      card.innerHTML = `
-        <p class="detail-label">${entry.title}</p>
-        <p class="detail-value">${entry.count} messages</p>
-        <p class="detail-meta">${entry.last_time}</p>
-      `;
+      const title = document.createElement("p");
+      title.className = "detail-label";
+      title.textContent = entry.title || "Session";
+      const count = document.createElement("p");
+      count.className = "detail-value";
+      count.textContent = `${entry.count || 0} messages`;
+      const lastTime = document.createElement("p");
+      lastTime.className = "detail-meta";
+      lastTime.textContent = entry.last_time || "";
+      card.append(title, count, lastTime);
       card.addEventListener("click", () => {
         window.location.href = `/history/${entry.chat_id}`;
       });

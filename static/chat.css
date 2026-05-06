@@ -190,6 +190,7 @@ body {
   font-weight: 500;
 }
 
+.voice-provider-select,
 .voice-select {
   background: var(--bg2);
   color: var(--fg0);
@@ -200,6 +201,7 @@ body {
   cursor: pointer;
 }
 
+.voice-provider-select:focus,
 .voice-select:focus {
   outline: none;
   border-color: var(--aqua);

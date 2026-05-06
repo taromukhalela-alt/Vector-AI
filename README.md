@@ -10,11 +10,11 @@ I'm built as a Flask web application with several interconnected systems:
 
 1. **The Flask Server (app.py)** - I'm the central hub that handles all HTTP requests, manages user sessions, routes traffic between components, and orchestrates responses. When you send me a message, I receive it here, classify your intent, generate a response, and send it back.
 
-2. **Authentication System (auth.py)** - I handle user registration and login through both local accounts (email/password) and OAuth (Google and GitHub). User data is stored in users.json, with each user's notes, preferences, and conversation history isolated by their user ID.
+2. **Authentication System (auth.py)** - I handle user registration and login through local email/password accounts. User profiles, notes, preferences, learner memory, and conversation history are stored in SQLite through SQLAlchemy models.
 
 3. **Knowledge Base (caps_knowledge.py)** - I contain a comprehensive physics and chemistry knowledge base covering all CAPS topics. This includes topic summaries, definitions, formulas, worked examples, and a local solver for standard problems like force calculations, momentum, kinetic energy, wave speed, and Ohm's law.
 
-4. **Physics Engine (physics_engine.py)** - I run real-time physics simulations for projectile motion. I'm made of three parts: a simulator that calculates ground-truth physics using numerical integration, a machine learning learner (Ridge regression) that predicts trajectories from data, and an explainer that compares physics results with ML predictions and generates educational explanations.
+4. **Physics Engine (physics_engine.py)** - I run real-time physics simulations for projectile motion. I'm made of three parts: a simulator that calculates ground-truth physics using numerical integration, a machine learning learner (Ridge regression) that predicts trajectories from data, and an explainer that compares physics results with ML predictions and generates educational explanations. Physics calculations and simulations stay deterministic.
 
 ### The Conversation Flow
 
@@ -30,7 +30,7 @@ When you ask me a question:
 
 ### Animations System
 
-I include interactive 3D animations built with Three.js. When you ask about topics like projectile motion, waves, forces, electricity, or chemistry concepts like gas laws or reaction rates, I can match your question to a relevant animation and launch it.
+I include interactive animations built with Three.js. When you ask about topics like projectile motion, waves, forces, electricity, or chemistry concepts like gas laws or reaction rates, I first use deterministic keyword and intent matching. If that does not find a clear match, an AI semantic router can choose from the known animation list.
 
 The animations are configured in `static/animations.js` and include:
 - Projectile motion with adjustable velocity, angle, and drag
@@ -44,11 +44,12 @@ The animations are configured in `static/animations.js` and include:
 
 I let you create, edit, search, and delete notes. Each note has a title, content, topic, tags, and timestamps. You can create notes manually or save them directly from my chat responses using the "Save as Note" button.
 
-Notes are stored in your user profile in users.json and support:
-- Full-text search
+Notes are stored in SQLite and linked to your user profile. They support:
+- Semantic search over notes and recent chat history
 - Export for offline use
 - Synchronization for offline-first scenarios
-- Training data for the local intent classifier
+- AI-assisted title, topic, tag, summary, and flashcard tools
+- Adaptive practice and answer-checking workflows
 
 ### Voice Mode
 
@@ -72,7 +73,7 @@ AI Generation (Groq API)
         ↓
 Response Formatting (voice/chat modes)
         ↓
-Save to History (data.json)
+Save to SQLite conversation history
         ↓
 User Response + Optional Animation
 ```
@@ -96,8 +97,15 @@ pip install -r requirements.txt
 Create a `.env` file:
 ```
 GROQ_API_KEY=gsk_your_key_here
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+OPENROUTER_EXAM_MODEL=openrouter/free
+OPENROUTER_EXAM_FALLBACK_MODELS=google/gemma-3-27b-it:free,z-ai/glm-4.5-air:free
+OPENROUTER_EXAM_TIMEOUT=60
+OPENROUTER_MODEL_TIMEOUT=15
 SECRET_KEY=your-random-32-char-string
 ALLOWED_ORIGIN=http://localhost:5000
+DATABASE_URL=sqlite:///vector_ai.db
+SESSION_COOKIE_SECURE=false
 ```
 
 ### 3. Run Me
@@ -126,8 +134,8 @@ Vector-AI/
 │   ├── system_prompt.txt
 │   └── intent_prompts.py
 ├── ml_train.py                 # Intent classifier training
-├── users.json                  # User database (auto-created)
-├── data.json                   # Conversation logs
+├── database.py                 # SQLAlchemy models for users, notes, and conversations
+├── migrate_to_sqlite.py        # Legacy JSON-to-SQLite migration helper
 ├── templates/
 │   ├── landing.html            # Public landing page
 │   ├── login.html              # Login/register
@@ -140,10 +148,10 @@ Vector-AI/
 ├── static/
 │   ├── chat.css                # Main styles
 │   ├── style.css               # Animation styles
-│   ├── main.js                 # Chat UI logic
+│   ├── main.js                 # Canonical chat/topics/history UI logic
 │   ├── voice.js                # Speech recognition & TTS
 │   ├── animations.js           # Three.js scenes
-│   ├── notes.js                # Notes CRUD
+│   ├── notes.js                # Notes CRUD, semantic search, and AI note tools
 │   ├── dashboard.js            # Dashboard charts
 │   └── ...                     # Other assets
 └── models/
@@ -154,12 +162,16 @@ Vector-AI/
 ## Key Features
 
 - **AI Chat** - Groq-powered LLaMA 3.3 for detailed CAPS-aligned explanations
-- **3D Animations** - Interactive Three.js simulations for physics and chemistry
+- **Interactive Animations** - Visual simulations for physics and chemistry
 - **Voice Mode** - Speech recognition and text-to-speech for hands-free learning
 - **Smart Notes** - Create, search, and export AI-assisted notes
+- **Semantic Search** - Meaning-based search across notes and history
+- **Adaptive Practice** - AI-generated practice based on weak areas
+- **Answer Checking** - Rubric-style feedback on learner working
+- **Structured Learner Memory** - Compact AI-summarized learner profile
 - **Offline Intent Detection** - Local ML classifier that works without internet
 - **Physics Simulation** - Real-time projectile motion with ML comparison
-- **Secure Authentication** - Local accounts and OAuth (Google/GitHub)
+- **Secure Authentication** - Local accounts with CSRF protection and authenticated AI endpoints
 
 ## Troubleshooting
 
@@ -172,5 +184,12 @@ Vector-AI/
 - **Backend**: Flask, Flask-Login, Flask-CORS, Flask-Caching
 - **AI/ML**: Groq API (LLaMA 3.3), scikit-learn, joblib
 - **Frontend**: Vanilla JavaScript, Three.js, Web Speech API
-- **Auth**: Authlib (OAuth 2.0), Werkzeug (password hashing)
-- **Storage**: JSON file-based (ready for database migration)
+- **Auth**: Flask-Login, Werkzeug password hashing, CSRF tokens
+- **Storage**: SQLite via SQLAlchemy
+
+## Security Notes
+
+- Mutating routes require CSRF tokens.
+- Chat, exam generation, TTS, and AI tool endpoints are authenticated and rate-limited.
+- Request sizes and AI response sizes are capped with environment-configurable limits.
+- Physics calculations, simulations, authentication, CRUD, and unit conversions are deterministic. AI is used only as tutor, coach, summarizer, assessor, and semantic processor.

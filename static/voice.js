@@ -67,8 +67,17 @@ class VoiceOutput {
   constructor() {
     this.audio = null;
     this.activeSession = 0;
+    this.provider = localStorage.getItem("preferred_tts_provider") || "elevenlabs";
     this.voiceId = localStorage.getItem("preferred_elevenlabs_voice") || "pNInz6obpgDQGcFmaJgB"; // Default Adam
+    this.browserVoiceURI = localStorage.getItem("preferred_browser_voice") || "";
+    this.synthUtterance = null;
     this._ampInterval = null;
+  }
+
+  setProvider(provider) {
+    this.provider = provider === "browser" ? "browser" : "elevenlabs";
+    localStorage.setItem("preferred_tts_provider", this.provider);
+    this.stop();
   }
 
   setVoiceId(id) {
@@ -76,6 +85,49 @@ class VoiceOutput {
       this.voiceId = id;
       localStorage.setItem("preferred_elevenlabs_voice", id);
     }
+  }
+
+  setBrowserVoice(uri) {
+    this.browserVoiceURI = uri || "";
+    localStorage.setItem("preferred_browser_voice", this.browserVoiceURI);
+  }
+
+  hasBrowserSpeech() {
+    return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  }
+
+  browserVoices() {
+    return this.hasBrowserSpeech() ? window.speechSynthesis.getVoices() : [];
+  }
+
+  scoreBrowserVoice(voice) {
+    const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
+    const lang = (voice.lang || "").toLowerCase();
+    let score = 0;
+    if (lang.startsWith("en-za")) score += 60;
+    if (lang.startsWith("en-gb") || lang.startsWith("en-us")) score += 45;
+    if (lang.startsWith("en")) score += 30;
+    if (/guy|david|mark|george|daniel|alex|fred|ralph|tom|thomas|oliver|ryan|james|arthur|aaron|liam|callum|adam|male/.test(name)) {
+      score += 80;
+    }
+    if (/natural|premium|enhanced|neural|online/.test(name)) score += 25;
+    if (/female|zira|susan|samantha|victoria|karen|moira|tessa|serena|hazel/.test(name)) {
+      score -= 55;
+    }
+    if (voice.default) score += 8;
+    return score;
+  }
+
+  preferredBrowserVoice() {
+    const voices = this.browserVoices();
+    if (!voices.length) return null;
+    if (this.browserVoiceURI) {
+      const saved = voices.find((voice) => voice.voiceURI === this.browserVoiceURI);
+      if (saved) return saved;
+    }
+    return voices
+      .slice()
+      .sort((a, b) => this.scoreBrowserVoice(b) - this.scoreBrowserVoice(a))[0];
   }
 
   startAmplitudeTracking() {
@@ -99,30 +151,64 @@ class VoiceOutput {
   }
 
   normalizeText(text) {
-    return (text || "")
+    const cleaned = (text || "")
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
       .replace(/`/g, "")
       .replace(/#{1,6}\s/g, "")
       .replace(/F_net|F_s|F_k/g, "F net, F static, F kinetic")
-      .replace(/vÂ²/g, "v squared")
-      .replace(/m\/sÂ²/g, "metres per second squared")
-      .trim()
-      .slice(0, 2000);
+      .replace(/v²|vÂ²/g, "v squared")
+      .replace(/m\/s²|m\/sÂ²/g, "metres per second squared")
+      .replace(/\s+/g, " ")
+      .trim();
+    return this.trimForSpeech(cleaned, 1050);
+  }
+
+  trimForSpeech(text, maxChars) {
+    if (!text || text.length <= maxChars) return text;
+    const clipped = text.slice(0, maxChars);
+    const sentenceEnd = Math.max(
+      clipped.lastIndexOf("."),
+      clipped.lastIndexOf("?"),
+      clipped.lastIndexOf("!")
+    );
+    const ending = " We can keep going after this.";
+    if (sentenceEnd > 360) {
+      return `${clipped.slice(0, sentenceEnd + 1)}${ending}`;
+    }
+    return `${clipped.trim()}...${ending}`;
   }
 
   async speak(text, onStart, onEnd) {
     this.activeSession += 1;
     const sessionId = this.activeSession;
     
-    this.stop();
+    this.stop(false);
     const clean = this.normalizeText(text);
     if (!clean) {
       if (onEnd) onEnd();
       return;
     }
 
+    if (this.provider === "browser") {
+      this.speakWithBrowser(clean, onStart, onEnd, sessionId);
+      return;
+    }
+
     try {
+      await this.speakWithElevenLabs(clean, onStart, onEnd, sessionId);
+    } catch (e) {
+      console.error("ElevenLabs TTS Error:", e);
+      if (this.hasBrowserSpeech() && sessionId === this.activeSession) {
+        this.speakWithBrowser(clean, onStart, onEnd, sessionId);
+        return;
+      }
+      window.avatarState = window.AvatarState?.IDLE || "idle";
+      if (onEnd) onEnd();
+    }
+  }
+
+  async speakWithElevenLabs(clean, onStart, onEnd, sessionId) {
       const response = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -160,20 +246,61 @@ class VoiceOutput {
       };
 
       await this.audio.play();
-
-    } catch (e) {
-      console.error("ElevenLabs TTS Error:", e);
-      window.avatarState = window.AvatarState?.IDLE || "idle";
-      if (onEnd) onEnd();
-    }
   }
 
-  stop() {
-    this.activeSession += 1;
+  speakWithBrowser(clean, onStart, onEnd, sessionId) {
+    if (!this.hasBrowserSpeech()) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    const voice = this.preferredBrowserVoice();
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang || "en-ZA";
+    utterance.rate = 0.92;
+    utterance.pitch = 0.82;
+    utterance.volume = 1;
+    this.synthUtterance = utterance;
+
+    utterance.onstart = () => {
+      if (sessionId !== this.activeSession) return;
+      window.avatarState = window.AvatarState?.SPEAKING || "speaking";
+      this.startAmplitudeTracking();
+      if (onStart) onStart();
+    };
+
+    utterance.onend = () => {
+      if (sessionId !== this.activeSession) return;
+      this.synthUtterance = null;
+      window.avatarState = window.AvatarState?.IDLE || "idle";
+      this.stopAmplitudeTracking();
+      if (onEnd) onEnd();
+    };
+
+    utterance.onerror = () => {
+      if (sessionId !== this.activeSession) return;
+      this.synthUtterance = null;
+      window.avatarState = window.AvatarState?.IDLE || "idle";
+      this.stopAmplitudeTracking();
+      if (onEnd) onEnd();
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.resume();
+  }
+
+  stop(invalidate = true) {
+    if (invalidate) this.activeSession += 1;
     if (this.audio) {
       this.audio.pause();
       this.audio.src = "";
       this.audio = null;
+    }
+    if (this.hasBrowserSpeech()) {
+      window.speechSynthesis.cancel();
+      this.synthUtterance = null;
     }
     this.stopAmplitudeTracking();
     window.avatarState = window.AvatarState?.IDLE || "idle";

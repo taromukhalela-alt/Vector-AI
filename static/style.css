@@ -547,6 +547,7 @@ body {
   text-transform: uppercase;
 }
 
+.voice-provider-select,
 .voice-select,
 .form-input {
   width: 100%;
@@ -560,6 +561,7 @@ body {
   outline: none;
 }
 
+.voice-provider-select:focus,
 .voice-select:focus,
 .form-input:focus {
   border-color: var(--accent);
@@ -1126,6 +1128,13 @@ body {
   background: var(--bg-panel);
 }
 
+.voice-header-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .voice-status-label {
   color: var(--accent);
   font-family: var(--font-mono);
@@ -1575,6 +1584,10 @@ body {
     flex-direction: column;
     align-items: stretch;
     border-radius: var(--radius-lg);
+  }
+
+  .voice-header-controls {
+    flex-direction: column;
   }
 
   .voice-select-overlay {

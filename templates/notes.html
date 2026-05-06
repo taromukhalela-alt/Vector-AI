@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1d2021">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Study Notes - Vector AI</title>
   <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
   <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -267,6 +268,8 @@
         <div style="margin-top: var(--space-lg);">
           <div class="sidebar-section-label">Practice Tools</div>
           <button class="create-note-btn" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">✨ Generate Exam Paper</button>
+          <button class="quick-prompt-chip" onclick="generateAdaptivePractice()" type="button">Adaptive Practice</button>
+          <button class="quick-prompt-chip" onclick="openAnswerCheckModal()" type="button">Check My Working</button>
         </div>
       </aside>
 
@@ -288,6 +291,9 @@
             <button id="download-pdf-btn" class="note-action-btn hidden" onclick="downloadAsPDF()" type="button" title="Download as PDF">PDF</button>
             <button id="toggle-view-btn" class="note-action-btn hidden" onclick="toggleViewEdit()" type="button">Edit</button>
             <button class="note-action-btn ai-gen-btn" onclick="generateAINote()" type="button" style="color:var(--aqua); border-color:var(--aqua);">✨ Generate with AI</button>
+            <button class="note-action-btn" onclick="applyAIMetadata()" type="button">Auto Tags</button>
+            <button class="note-action-btn" onclick="shortenNote()" type="button">Shorten</button>
+            <button class="note-action-btn" onclick="turnIntoFlashcards()" type="button">Flashcards</button>
             <button class="modal-close" onclick="closeModal()">&times;</button>
           </div>
         </div>
@@ -311,6 +317,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='security.js') }}"></script>
   <script src="{{ url_for('static', filename='main.js') }}"></script>
   <script src="{{ url_for('static', filename='notes.js') }}"></script>
 </body>

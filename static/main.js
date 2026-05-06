@@ -6,7 +6,8 @@ function initVectorAI() {
   const newSessionBtn = document.getElementById("new-session-btn");
   const mobileFab = document.getElementById("mobile-fab");
   const topicsGrid = document.getElementById("topics-grid");
-  const voiceSelects = Array.from(document.querySelectorAll(".voice-select"));
+  const voiceSelects = Array.from(document.querySelectorAll(".voice-id-select, .voice-select:not(.voice-provider-select)"));
+  const voiceProviderSelects = Array.from(document.querySelectorAll(".voice-provider-select"));
   const themeToggle = document.getElementById("theme-toggle");
 
   // --- Theme Logic ---
@@ -451,42 +452,145 @@ function initVectorAI() {
     voiceLaunchBtn.style.display = "none";
   }
 
-  if (voiceSelects.length) {
-    loadElevenLabsVoices();
+  const voiceProviders = [
+    { id: "elevenlabs", name: "ElevenLabs" },
+    { id: "browser", name: "Speech Synthesis" },
+  ];
+  const elevenLabsVoices = [
+    { id: "pNInz6obpgDQGcFmaJgB", name: "Adam, deep American tutor" },
+    { id: "N2lVS1w4EtoT3dr4eOWO", name: "Callum, deep transatlantic tutor" },
+    { id: "JBFqnCBrubYjTQNpc2kc", name: "George, deep British tutor" },
+    { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie, natural Australian tutor" },
+    { id: "D38z5RcWu1voky8WS1ja", name: "Fin, soft Irish tutor" }
+  ];
 
-    const savedVoice = localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB';
-    syncVoiceSelectors(savedVoice);
-    if (window.voiceOutput) {
-      window.voiceOutput.setVoiceId(savedVoice);
-    }
+  if (voiceSelects.length || voiceProviderSelects.length) {
+    setupVoiceControls();
+  }
+
+  function setupVoiceControls() {
+    const savedProvider = localStorage.getItem("preferred_tts_provider") || "elevenlabs";
+    populateProviderSelectors();
+    syncProviderSelectors(savedProvider);
+    if (window.voiceOutput) window.voiceOutput.setProvider(savedProvider);
+    loadVoiceChoices(savedProvider);
+
+    voiceProviderSelects.forEach((select) => {
+      select.addEventListener("change", () => {
+        const provider = select.value === "browser" ? "browser" : "elevenlabs";
+        localStorage.setItem("preferred_tts_provider", provider);
+        syncProviderSelectors(provider);
+        if (window.voiceOutput) window.voiceOutput.setProvider(provider);
+        loadVoiceChoices(provider);
+      });
+    });
 
     voiceSelects.forEach((select) => {
-      select.addEventListener('change', () => {
+      select.addEventListener("change", () => {
+        const provider = currentVoiceProvider();
         syncVoiceSelectors(select.value);
-        if (window.voiceOutput) {
+        if (!window.voiceOutput) return;
+        if (provider === "browser") {
+          window.voiceOutput.setBrowserVoice(select.value);
+        } else {
           window.voiceOutput.setVoiceId(select.value);
         }
       });
     });
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        if (currentVoiceProvider() === "browser") loadVoiceChoices("browser");
+      };
+    }
+  }
+
+  function populateProviderSelectors() {
+    voiceProviderSelects.forEach((select) => {
+      select.innerHTML = "";
+      voiceProviders.forEach((provider) => {
+        const option = document.createElement("option");
+        option.value = provider.id;
+        option.textContent = provider.name;
+        select.appendChild(option);
+      });
+    });
+  }
+
+  function currentVoiceProvider() {
+    return localStorage.getItem("preferred_tts_provider") === "browser" ? "browser" : "elevenlabs";
+  }
+
+  function loadVoiceChoices(provider) {
+    if (provider === "browser") {
+      loadBrowserVoices();
+      return;
+    }
+    loadElevenLabsVoices();
   }
 
   function loadElevenLabsVoices() {
-    const elevenLabsVoices = [
-      { id: "pNInz6obpgDQGcFmaJgB", name: "Adam (Deep, American)" },
-      { id: "N2lVS1w4EtoT3dr4eOWO", name: "Callum (Deep, Transatlantic)" },
-      { id: "JBFqnCBrubYjTQNpc2kc", name: "George (Deep, British)" },
-      { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie (Natural, Australian)" },
-      { id: "D38z5RcWu1voky8WS1ja", name: "Fin (Soft, Irish)" }
-    ];
-
     voiceSelects.forEach((select) => {
-      select.innerHTML = '';
+      select.innerHTML = "";
       elevenLabsVoices.forEach((voice) => {
-        const option = document.createElement('option');
+        const option = document.createElement("option");
         option.value = voice.id;
         option.textContent = voice.name;
         select.appendChild(option);
       });
+    });
+    const savedVoice = localStorage.getItem("preferred_elevenlabs_voice") || "pNInz6obpgDQGcFmaJgB";
+    syncVoiceSelectors(savedVoice);
+    if (window.voiceOutput) window.voiceOutput.setVoiceId(savedVoice);
+  }
+
+  function loadBrowserVoices() {
+    const voices = "speechSynthesis" in window ? window.speechSynthesis.getVoices() : [];
+    const rankedVoices = voices.slice().sort((a, b) => scoreBrowserVoice(b) - scoreBrowserVoice(a));
+    const savedVoice = localStorage.getItem("preferred_browser_voice") || "";
+    const selectedVoice = savedVoice || rankedVoices[0]?.voiceURI || "";
+
+    voiceSelects.forEach((select) => {
+      select.innerHTML = "";
+      if (!rankedVoices.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Best available male tutor voice";
+        select.appendChild(option);
+        return;
+      }
+      rankedVoices.forEach((voice) => {
+        const option = document.createElement("option");
+        option.value = voice.voiceURI;
+        option.textContent = `${voice.name} (${voice.lang || "browser"})`;
+        select.appendChild(option);
+      });
+    });
+    syncVoiceSelectors(selectedVoice);
+    if (window.voiceOutput) window.voiceOutput.setBrowserVoice(selectedVoice);
+  }
+
+  function scoreBrowserVoice(voice) {
+    const name = `${voice.name || ""} ${voice.voiceURI || ""}`.toLowerCase();
+    const lang = (voice.lang || "").toLowerCase();
+    let score = 0;
+    if (lang.startsWith("en-za")) score += 60;
+    if (lang.startsWith("en-gb") || lang.startsWith("en-us")) score += 45;
+    if (lang.startsWith("en")) score += 30;
+    if (/guy|david|mark|george|daniel|alex|fred|ralph|tom|thomas|oliver|ryan|james|arthur|aaron|liam|male/.test(name)) {
+      score += 80;
+    }
+    if (/natural|premium|enhanced|neural|online/.test(name)) score += 25;
+    if (/female|zira|susan|samantha|victoria|karen|moira|tessa|serena|hazel/.test(name)) {
+      score -= 55;
+    }
+    if (voice.default) score += 8;
+    return score;
+  }
+
+  function syncProviderSelectors(value) {
+    voiceProviderSelects.forEach((select) => {
+      select.value = value;
     });
   }
 

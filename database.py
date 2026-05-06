@@ -1,9 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
-import json
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -14,7 +17,7 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     provider = db.Column(db.String(20), default='local')
     avatar = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     memory_summary = db.Column(db.Text)
     preferences = db.Column(db.JSON, default=lambda: {"voice": "default"})
     
@@ -43,8 +46,8 @@ class Note(db.Model):
     title = db.Column(db.String(200))
     content = db.Column(db.Text)
     topic = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     tags = db.Column(db.JSON, default=list)
     source = db.Column(db.String(50), default='user')
 
@@ -70,7 +73,7 @@ class Conversation(db.Model):
     reply = db.Column(db.Text, nullable=False)
     intent = db.Column(db.String(50))
     confidence = db.Column(db.Float)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=utc_now)
 
     def to_dict(self):
         return {

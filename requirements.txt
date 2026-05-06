@@ -1,4 +1,5 @@
 Flask
+flask-sqlalchemy
 flask-login
 flask-caching
 flask-cors
@@ -6,8 +7,10 @@ gunicorn
 joblib
 numpy
 python-dotenv
+requests
 scikit-learn
 sympy
 pytest
 authlib
 groq
+google-genai

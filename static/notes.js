@@ -1,6 +1,9 @@
 let notes = [];
 let editingNoteId = null;
 let examSetupModal = null;
+let searchTimer = null;
+let currentNoteTags = [];
+let noteUsedAI = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadNotes();
@@ -89,14 +92,9 @@ function setupEventListeners() {
 
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
-      const q = e.target.value.toLowerCase();
-      const filtered = notes.filter(
-        (n) =>
-          n.title.toLowerCase().includes(q) ||
-          n.content.toLowerCase().includes(q) ||
-          (n.topic && n.topic.toLowerCase().includes(q))
-      );
-      renderNotes(filtered);
+      const q = e.target.value.trim();
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => searchNotes(q), 250);
     });
   }
 
@@ -105,6 +103,37 @@ function setupEventListeners() {
       if (e.target === modal) closeModal();
     });
   }
+}
+
+async function searchNotes(query) {
+  if (!query) {
+    renderNotes(notes);
+    return;
+  }
+  try {
+    const response = await fetch("/api/notes/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      renderNotes(data.notes || []);
+      return;
+    }
+  } catch (error) {
+    console.warn("Semantic search failed, using local filter:", error);
+  }
+  const q = query.toLowerCase();
+  renderNotes(
+    notes.filter(
+      (n) =>
+        n.title.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) ||
+        (n.topic && n.topic.toLowerCase().includes(q)) ||
+        (Array.isArray(n.tags) && n.tags.join(" ").toLowerCase().includes(q))
+    )
+  );
 }
 
 function openModal(note = null, viewOnly = false) {
@@ -123,6 +152,8 @@ function openModal(note = null, viewOnly = false) {
 
   if (note) {
     editingNoteId = note.id;
+    currentNoteTags = Array.isArray(note.tags) ? note.tags.slice(0, 6) : [];
+    noteUsedAI = note.source === "ai";
     titleEl.value = note.title;
     topicEl.value = note.topic || "";
     contentEl.value = note.content;
@@ -152,6 +183,8 @@ function openModal(note = null, viewOnly = false) {
     }
   } else {
     editingNoteId = null;
+    currentNoteTags = [];
+    noteUsedAI = false;
     titleEl.value = "";
     topicEl.value = "";
     contentEl.value = "";
@@ -252,6 +285,7 @@ Use clean markdown for a study document, not chat. Use one main title, short sec
     const data = await response.json();
     if (data && data.reply) {
       contentEl.value = data.reply;
+      noteUsedAI = true;
       if (titleEl.value === "") titleEl.value = `Notes on ${topic}`;
       // Auto-switch to preview
       toggleViewEdit();
@@ -265,8 +299,208 @@ Use clean markdown for a study document, not chat. Use one main title, short sec
   }
 }
 
+function currentNotePayload() {
+  return {
+    title: document.getElementById("note-title")?.value.trim() || "",
+    topic: document.getElementById("note-topic")?.value.trim() || "",
+    content: document.getElementById("note-content")?.value.trim() || "",
+  };
+}
+
+async function runNoteAI(action, buttonText = "Working...") {
+  const buttons = Array.from(document.querySelectorAll(".note-action-btn"));
+  const btn = buttons.find((item) => item.textContent.toLowerCase().includes(action === "metadata" ? "auto" : action));
+  const originalText = btn?.textContent || "";
+  if (btn) {
+    btn.textContent = buttonText;
+    btn.disabled = true;
+  }
+  try {
+    const response = await fetch("/api/notes/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...currentNotePayload() }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "AI note tool failed.");
+    }
+    return data;
+  } finally {
+    if (btn) {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function applyAIMetadata() {
+  try {
+    const data = await runNoteAI("metadata", "Tagging...");
+    const metadata = data.metadata || {};
+    const titleEl = document.getElementById("note-title");
+    const topicEl = document.getElementById("note-topic");
+    if (metadata.title && titleEl) titleEl.value = metadata.title;
+    if (metadata.topic && topicEl) topicEl.value = metadata.topic;
+    noteUsedAI = true;
+    if (Array.isArray(metadata.tags) && metadata.tags.length) {
+      currentNoteTags = metadata.tags.slice(0, 6);
+      const contentEl = document.getElementById("note-content");
+      const existing = contentEl?.value.trim() || "";
+      const tagLine = `\n\nTags: ${currentNoteTags.join(", ")}`;
+      if (contentEl && !existing.toLowerCase().includes("tags:")) {
+        contentEl.value = `${existing}${tagLine}`;
+      }
+    }
+  } catch (error) {
+    alert(error.message || "Could not generate metadata.");
+  }
+}
+
+async function shortenNote() {
+  try {
+    const data = await runNoteAI("shorten", "Shortening...");
+    const contentEl = document.getElementById("note-content");
+    if (contentEl && data.content) {
+      contentEl.value = data.content;
+      noteUsedAI = true;
+      showPreviewMode();
+    }
+  } catch (error) {
+    alert(error.message || "Could not shorten note.");
+  }
+}
+
+async function turnIntoFlashcards() {
+  try {
+    const data = await runNoteAI("flashcards", "Cards...");
+    const cards = Array.isArray(data.flashcards) ? data.flashcards : [];
+    if (!cards.length) return;
+    const markdown = [
+      "# Flashcards",
+      "",
+      ...cards.map((card, index) => `## Card ${index + 1}\n**Q:** ${card.question}\n\n**A:** ${card.answer}`),
+    ].join("\n\n");
+    const contentEl = document.getElementById("note-content");
+    if (contentEl) {
+      contentEl.value = markdown;
+      noteUsedAI = true;
+      showPreviewMode();
+    }
+  } catch (error) {
+    alert(error.message || "Could not create flashcards.");
+  }
+}
+
 async function generateQuestionPaper() {
   openExamSetupModal();
+}
+
+async function generateAdaptivePractice() {
+  const buttons = Array.from(document.querySelectorAll("button"));
+  const practiceBtn = buttons.find((b) => b.textContent.includes("Adaptive Practice"));
+  const originalText = practiceBtn?.textContent || "";
+  if (practiceBtn) {
+    practiceBtn.textContent = "Generating...";
+    practiceBtn.disabled = true;
+  }
+  try {
+    const response = await fetch("/api/practice/adaptive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Could not generate adaptive practice.");
+    }
+    const focus = Array.isArray(data.focus_areas) ? data.focus_areas.join(", ") : "Revision";
+    const questions = (data.questions || [])
+      .map((item, index) => `${index + 1}. [${item.marks || 4} marks] ${item.question}\nSkill: ${item.skill || "practice"}`)
+      .join("\n\n");
+    openModal();
+    setTimeout(() => {
+      document.getElementById("note-title").value = "Adaptive Practice Set";
+      document.getElementById("note-topic").value = focus || "Revision";
+      document.getElementById("note-content").value = `# Adaptive Practice\n\nFocus areas: ${focus}\n\n${questions}`;
+      noteUsedAI = true;
+      showPreviewMode();
+    }, 50);
+  } catch (error) {
+    alert(error.message || "Could not generate adaptive practice.");
+  } finally {
+    if (practiceBtn) {
+      practiceBtn.textContent = originalText;
+      practiceBtn.disabled = false;
+    }
+  }
+}
+
+function openAnswerCheckModal() {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay active";
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Check My Working</h2>
+        <button class="modal-close" type="button" data-close-check>&times;</button>
+      </div>
+      <form id="answer-check-form">
+        <textarea id="check-question" class="form-input" placeholder="Paste the question..." required></textarea>
+        <textarea id="check-working" class="form-input" placeholder="Paste your working..." required></textarea>
+        <textarea id="check-rubric" class="form-input" placeholder="Optional memo or rubric..."></textarea>
+        <div id="check-result" class="form-input" style="display:none; min-height:120px;"></div>
+        <div class="modal-footer">
+          <button type="button" class="note-action-btn" data-close-check>Cancel</button>
+          <button type="submit" class="create-note-btn" style="width:auto;">Check</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay || event.target.closest("[data-close-check]")) {
+      overlay.remove();
+    }
+  });
+  overlay.querySelector("#answer-check-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const submit = event.submitter;
+    const original = submit.textContent;
+    submit.textContent = "Checking...";
+    submit.disabled = true;
+    try {
+      const response = await fetch("/api/answer/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: overlay.querySelector("#check-question").value,
+          working: overlay.querySelector("#check-working").value,
+          rubric: overlay.querySelector("#check-rubric").value,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || "Could not check working.");
+      const assessment = data.assessment || {};
+      const result = overlay.querySelector("#check-result");
+      result.style.display = "block";
+      result.innerHTML = renderMarkdown([
+        "# Feedback",
+        assessment.score !== null ? `Score: ${assessment.score}/${assessment.max_score || "?"}` : "",
+        "## Strengths",
+        ...(assessment.strengths || []).map((item) => `- ${item}`),
+        "## Corrections",
+        ...(assessment.corrections || []).map((item) => `- ${item}`),
+        "## Next Step",
+        assessment.next_step || "",
+      ].filter(Boolean).join("\n"));
+    } catch (error) {
+      alert(error.message || "Could not check working.");
+    } finally {
+      submit.textContent = original;
+      submit.disabled = false;
+    }
+  });
 }
 
 function openExamSetupModal() {
@@ -411,11 +645,33 @@ Rules:
     const response = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: promptText, history: [], response_format: "document" })
+      body: JSON.stringify({
+        message: promptText,
+        history: [],
+        response_format: "document",
+        generation_type: "exam"
+      })
     });
     
-    const data = await response.json();
+    const responseText = await response.text();
+    let data = {};
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      throw new Error(responseText || "The server returned an unreadable response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.reply || data.message || `Server returned ${response.status}.`);
+    }
+
     if (data && data.reply) {
+      const generationFailed = /exam generator took too long|temporary issue while generating|not configured/i.test(data.reply);
+      if (generationFailed) {
+        alert(data.reply);
+        return;
+      }
+
       openModal();
       
       setTimeout(() => {
@@ -427,13 +683,14 @@ Rules:
         if (topicEl) topicEl.value = topic;
         if (contentEl) {
           contentEl.value = data.reply;
+          noteUsedAI = true;
           showPreviewMode();
         }
       }, 50);
     }
   } catch (e) {
     console.error("AI Paper Generation failed:", e);
-    alert("AI Generation failed. Please check your connection and try again.");
+    alert(e.message || "AI generation failed. Please try again.");
   } finally {
     if (examBtn) {
       examBtn.textContent = originalText;
@@ -649,14 +906,14 @@ async function saveNote() {
   const title = document.getElementById("note-title")?.value;
   const topic = document.getElementById("note-topic")?.value;
   const content = document.getElementById("note-content")?.value;
-  const aiGenerated = true; // Assume AI generated since we have the button now
+  const aiGenerated = noteUsedAI;
 
   if (!title || !content) {
     alert("Please fill in title and content");
     return;
   }
 
-  const payload = { title, topic, content, ai_generated: aiGenerated };
+  const payload = { title, topic, content, tags: currentNoteTags, ai_generated: aiGenerated };
   try {
     const response = await fetch(
       editingNoteId ? `/api/notes/${editingNoteId}` : "/api/notes",

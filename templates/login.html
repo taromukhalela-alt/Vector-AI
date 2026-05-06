@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% if register %}Sign Up{% else %}Login{% endif %} - Vector AI</title>
     <link rel="icon" href="{{ url_for('static', filename='icons/favicon.svg') }}" type="image/svg+xml">
     <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -160,6 +161,7 @@
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='security.js') }}"></script>
     <script>
         const form = document.getElementById('auth-form');
         const errorEl = document.getElementById('form-error');
