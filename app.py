@@ -153,6 +153,8 @@ else:
 openrouter_key = os.getenv("OPENROUTER_API_KEY")
 if openrouter_key:
     logger.info("OpenRouter API key loaded (length: %d)", len(openrouter_key))
+    chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "inclusionai/ring-2.6-1t")
+    logger.info("OpenRouter chat model: %s", chat_model)
 else:
     logger.warning("OpenRouter API key NOT found. Set OPENROUTER_API_KEY environment variable.")
 
@@ -1085,10 +1087,79 @@ def generate_response(
             logger.error("OpenRouter generation error: %s", e)
             return "I hit a temporary issue while generating the exam paper. Please try again."
 
+    # Use OpenRouter as default chat provider with inclusionai/ring-2.6-1t
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if api_key:
+        try:
+            chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "inclusionai/ring-2.6-1t")
+            timeout_seconds = env_float("OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0)
+
+            # Build messages array with system prompt and history
+            messages = [{"role": "system", "content": system_prompt}]
+            for item in normalize_history(history):
+                messages.append({"role": item["role"], "content": item["content"]})
+            messages.append({"role": "user", "content": user_message})
+
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+                    "X-Title": os.getenv("OPENROUTER_APP_NAME", "Vector AI"),
+                },
+                json={
+                    "model": chat_model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                    "max_tokens": 2000,
+                },
+                timeout=timeout_seconds,
+            )
+
+            if response.ok:
+                payload = response.json()
+                text = (payload["choices"][0]["message"].get("content") or "").strip()
+                if text:
+                    return text
+
+            # If main model fails, try fallback
+            fallback_model = os.getenv("OPENROUTER_CHAT_FALLBACK", "openrouter/free")
+            if fallback_model and fallback_model != chat_model:
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+                        "X-Title": os.getenv("OPENROUTER_APP_NAME", "Vector AI"),
+                    },
+                    json={
+                        "model": fallback_model,
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                        "max_tokens": 2000,
+                    },
+                    timeout=timeout_seconds,
+                )
+                if response.ok:
+                    payload = response.json()
+                    text = (payload["choices"][0]["message"].get("content") or "").strip()
+                    if text:
+                        return text
+
+            # OpenRouter failed, fall through to Groq or local
+            logger.warning("OpenRouter chat failed, falling back")
+        except Exception as e:
+            logger.warning("OpenRouter chat error: %s", e)
+
+    # Fallback to Groq
     api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
     if not api_key or Groq is None:
         logger.error(
-            "Groq API not available: key=%s, groq=%s", bool(api_key), Groq is not None
+            "Groq API not available: key=%s, groq=%s", bool(api_key), Groq is None
         )
         fallback = local_hint or get_local_science_response(user_message)
         return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
