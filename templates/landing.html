@@ -14,13 +14,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 
         :root {
-            --neon-accent: #b8bb26;
-            --neon-aqua: #8ec07c;
+            --neon-accent: #13900a;
+            --neon-aqua: #2ca579;
             --neon-yellow: #fabd2f;
-            --neon-orange: #fe8019;
-            --neon-blue: #83a598;
-            --neon-red: #fb4934;
-            --grid-color: rgba(184, 187, 38, 0.1);
+            --neon-orange: #ea6e09;
+            --neon-blue: #4b7b69;
+            --neon-red: #f3230b;
+            --grid-color: rgba(15, 15, 15, 0.1);
         }
 
         .landing-body {
@@ -160,6 +160,8 @@
             justify-content: space-between;
             align-items: center;
             background: linear-gradient(to bottom, var(--bg-hard) 0%, transparent 100%);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
         }
 
         .landing-logo {
@@ -169,25 +171,26 @@
         }
 
         .landing-logo-mark {
-            width: 48px;
-            height: 48px;
-            border: 2px solid var(--neon-accent);
+            width: 52px;
+            height: 52px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Orbitron', monospace;
-            font-weight: 700;
-            font-size: 1.4rem;
-            color: var(--neon-accent);
-            text-shadow: 0 0 20px var(--accent-glow);
-            box-shadow: 0 0 30px var(--accent-glow), inset 0 0 20px var(--accent-glow);
+            overflow: hidden;
+            box-shadow: 0 0 30px var(--accent-glow);
             animation: pulseGlow 3s ease-in-out infinite;
         }
 
+        .landing-logo-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 30px var(--accent-glow), inset 0 0 20px var(--accent-glow); }
-            50% { box-shadow: 0 0 50px var(--accent-glow), inset 0 0 30px var(--accent-glow); }
+            0%, 100% { box-shadow: 0 0 30px var(--accent-glow); }
+            50% { box-shadow: 0 0 50px var(--accent-glow), 0 0 60px rgba(19, 144, 10, 0.3); }
         }
 
         .landing-logo-text {
@@ -237,6 +240,7 @@
 
         .nav-link:hover {
             color: var(--neon-accent);
+            -webkit-backdrop-filter: blur(5px);
         }
 
         .nav-link:hover::after {
@@ -753,7 +757,9 @@
     <!-- Navigation -->
     <nav class="landing-nav">
         <div class="landing-logo">
-            <div class="landing-logo-mark">V</div>
+            <div class="landing-logo-mark">
+                <img src="{{ url_for('static', filename='icons/vector-ai-mark.svg') }}" alt="Vector AI">
+            </div>
             <div class="landing-logo-text">Vector<span>AI</span></div>
         </div>
         <div class="landing-nav-links">

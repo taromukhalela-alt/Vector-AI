@@ -1,27 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Vector AI mark</title>
-  <desc id="desc">A lime vector V with an orbit node on a dark rounded square.</desc>
+  <desc id="desc">A V letter with atom orbital rings on a dark rounded square.</desc>
   <defs>
     <linearGradient id="tile" x1="90" y1="52" x2="424" y2="460" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#232827"/>
-      <stop offset="0.55" stop-color="#141817"/>
-      <stop offset="1" stop-color="#0b0e0d"/>
+      <stop offset="0" stop-color="#1a1d1c"/>
+      <stop offset="0.5" stop-color="#121414"/>
+      <stop offset="1" stop-color="#0a0c0b"/>
     </linearGradient>
-    <linearGradient id="lime" x1="132" y1="120" x2="380" y2="390" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#f3ff4f"/>
-      <stop offset="0.45" stop-color="#b8bb26"/>
-      <stop offset="1" stop-color="#7fa66f"/>
+    <linearGradient id="neon" x1="132" y1="120" x2="380" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2ca579"/>
+      <stop offset="0.5" stop-color="#13900a"/>
+      <stop offset="1" stop-color="#0d7006"/>
+    </linearGradient>
+    <linearGradient id="atomGrad" x1="100" y1="100" x2="412" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#13900a"/>
+      <stop offset="0.5" stop-color="#2ca579"/>
+      <stop offset="1" stop-color="#13900a"/>
     </linearGradient>
   </defs>
+
+  <!-- Background tile -->
   <rect width="512" height="512" rx="112" fill="url(#tile)"/>
-  <path d="M112 114h288c24 0 44 20 44 44v196c0 24-20 44-44 44H112c-24 0-44-20-44-44V158c0-24 20-44 44-44Z" fill="none" stroke="#3a403e" stroke-width="8"/>
-  <path d="M101 337c78-135 178-204 300-207" fill="none" stroke="#8ec07c" stroke-width="22" stroke-linecap="round" opacity=".45"/>
-  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="#050706" stroke-width="82" stroke-linecap="round" stroke-linejoin="round" opacity=".78"/>
-  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="#f3ff4f" stroke-width="58" stroke-linecap="round" stroke-linejoin="round" opacity=".2"/>
-  <path d="M132 154l112 214c5 10 19 10 25 0l111-214" fill="none" stroke="url(#lime)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M360 154h48v48" fill="none" stroke="#f3ff4f" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="256" cy="380" r="30" fill="#141817" stroke="#f3ff4f" stroke-width="20"/>
-  <circle cx="132" cy="154" r="21" fill="#141817" stroke="#8ec07c" stroke-width="15"/>
-  <circle cx="380" cy="154" r="21" fill="#141817" stroke="#f3ff4f" stroke-width="15"/>
-  <path d="M158 398h196" stroke="#ebdbb2" stroke-width="12" stroke-linecap="round" opacity=".26"/>
+
+  <!-- Atom orbital rings (behind V) -->
+  <!-- Horizontal ellipse orbit -->
+  <ellipse cx="256" cy="256" rx="180" ry="80" fill="none" stroke="url(#atomGrad)" stroke-width="4" opacity="0.6"
+          transform="rotate(0 256 256)"/>
+
+  <!-- Diagonal ellipse orbit 1 -->
+  <ellipse cx="256" cy="256" rx="180" ry="80" fill="none" stroke="url(#atomGrad)" stroke-width="4" opacity="0.5"
+          transform="rotate(60 256 256)"/>
+
+  <!-- Diagonal ellipse orbit 2 -->
+  <ellipse cx="256" cy="256" rx="180" ry="80" fill="none" stroke="url(#atomGrad)" stroke-width="4" opacity="0.5"
+          transform="rotate(120 256 256)"/>
+
+  <!-- V letter (main) -->
+  <path d="M156 140 L256 360 L356 140" fill="none" stroke="#050706" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M156 140 L256 360 L356 140" fill="none" stroke="#13900a" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/>
+  <path d="M156 140 L256 360 L356 140" fill="none" stroke="url(#neon)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Electron nodes on orbits -->
+  <!-- Node 1: on horizontal orbit -->
+  <circle cx="436" cy="256" r="18" fill="#0a0c0b" stroke="#13900a" stroke-width="8">
+    <animateTransform attributeName="transform" type="rotate" from="0 256 256" to="360 256 256" dur="8s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Node 2: on 60deg orbit -->
+  <circle cx="346" cy="412" r="14" fill="#0a0c0b" stroke="#2ca579" stroke-width="6">
+    <animateTransform attributeName="transform" type="rotate" from="60 256 256" to="420 256 256" dur="10s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Node 3: on 120deg orbit -->
+  <circle cx="166" cy="412" r="14" fill="#0a0c0b" stroke="#13900a" stroke-width="6">
+    <animateTransform attributeName="transform" type="rotate" from="120 256 256" to="480 256 256" dur="12s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Center nucleus -->
+  <circle cx="256" cy="360" r="24" fill="#0a0c0b" stroke="#13900a" stroke-width="10"/>
+  <circle cx="256" cy="360" r="12" fill="#13900a" opacity="0.8"/>
 </svg>
