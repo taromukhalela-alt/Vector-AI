@@ -22,7 +22,7 @@
   --glass:       rgba(29, 32, 33, 0.8);
   --glass-bright: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --blur:        blur(20px);
+  --blur:        blur(9px);
   --shadow:      0 8px 32px rgba(0, 0, 0, 0.3);
   
   /* Shared */
@@ -56,7 +56,7 @@ body.light-theme {
   --glass:       rgba(255, 255, 255, 0.8);
   --glass-bright: rgba(255, 255, 255, 1);
   --glass-border: rgba(0, 0, 0, 0.1);
-  --blur:        blur(20px);
+  --blur:        blur(9px);
   --shadow:      0 8px 32px rgba(0, 0, 0, 0.05);
 
   --card-bg:     rgba(255, 255, 255, 0.9);
@@ -111,6 +111,9 @@ body {
   border-bottom: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
   position: sticky;
+  margin-top: 5px;
+  border-radius: 12px;
+  margin: 12px;
   top: 0;
   z-index: 2000;
   transition: all var(--transition);
@@ -191,6 +194,7 @@ body {
   padding: 4px;
   border-radius: 100px;
   border: 1px solid var(--glass-border);
+  backdrop-filter: var(--blur);
 }
 
 .tab-btn {
@@ -208,13 +212,20 @@ body {
   white-space: nowrap;
 }
 
-.tab-btn:hover { color: var(--accent); }
+.tab-btn:hover { 
+  color: var(--accent);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  transition: all var(--transition);
+}
 
 .tab-btn.active {
   background: var(--accent);
   color: var(--bg-hard);
   font-weight: 700;
   box-shadow: 0 4px 12px var(--accent-glow);
+  opacity: 0.9;
+  transition: all var(--transition);
 }
 
 /* === CHAT LAYOUT === */
@@ -233,6 +244,7 @@ body {
   flex-direction: column;
   gap: var(--space-lg);
   overflow-y: auto;
+  opacity: 0.9;
 }
 
 .sidebar-label {
@@ -341,6 +353,7 @@ body {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+
 }
 
 .chat-input-bar input {
@@ -378,7 +391,7 @@ body {
 }
 
 .send-btn:hover {
-  transform: scale(1.1) rotate(-10deg);
+  transform: scale(1.1);
   box-shadow: 0 0 20px var(--accent-glow);
 }
 
