@@ -1087,7 +1087,29 @@ def generate_response(
             logger.error("OpenRouter generation error: %s", e)
             return "I hit a temporary issue while generating the exam paper. Please try again."
 
-    # Use OpenRouter as default chat provider with inclusionai/ring-2.6-1t
+    # Use Groq as the main chat provider
+    api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
+    if api_key and Groq:
+        try:
+            prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
+            timeout_seconds = 6.0 if local_hint else 10.0
+            text = _groq_generate_with_timeout(prompt, api_key, timeout_seconds)
+            if text:
+                return text
+            # If Groq returned empty, try once more with a shorter prompt (no history)
+            logger.info("Groq returned empty, retrying without history")
+            simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+            text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds)
+            if text:
+                return text
+            # Still empty, fall through to OpenRouter or local
+            logger.info("Groq empty, falling back to OpenRouter")
+        except TimeoutError:
+            logger.error("Groq timeout, falling back to OpenRouter")
+        except Exception as e:
+            logger.warning("Groq error: %s", e)
+
+    # Fallback to OpenRouter
     api_key = os.getenv("OPENROUTER_API_KEY")
     if api_key:
         try:
@@ -1150,51 +1172,15 @@ def generate_response(
                     if text:
                         return text
 
-            # OpenRouter failed, fall through to Groq or local
-            logger.warning("OpenRouter chat failed, falling back")
+            # OpenRouter failed, fall through to local
+            logger.warning("OpenRouter chat failed, falling back to local")
         except Exception as e:
             logger.warning("OpenRouter chat error: %s", e)
 
-    # Fallback to Groq
-    api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
-    if not api_key or Groq is None:
-        logger.error(
-            "Groq API not available: key=%s, groq=%s", bool(api_key), Groq is None
-        )
-        fallback = local_hint or get_local_science_response(user_message)
-        return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
-
-    try:
-        prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
-        # Give the model a bit more room before falling back to local explanations.
-        timeout_seconds = 6.0 if local_hint else 10.0
-        text = _groq_generate_with_timeout(prompt, api_key, timeout_seconds)
-        if text:
-            return text
-        # If Groq returned empty, try once more with a shorter prompt (no history) as fallback
-        logger.info("Groq returned empty, retrying without history")
-        simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
-        text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds)
-        if text:
-            return text
-        # Still empty, use local hint if available
-        if local_hint:
-            logger.info("Groq empty again, using local hint")
-            return local_hint
-        fallback = get_local_science_response(user_message)
-        return fallback or "I couldn't generate a response. Could you try asking differently?"
-    except TimeoutError:
-        logger.error("Groq timeout after %.1fs", timeout_seconds)
-        if local_hint:
-            return local_hint
-        fallback = get_local_science_response(user_message)
-        return fallback or "I'm taking too long. Could you ask a simpler question?"
-    except Exception as e:
-        logger.error("Generation error: %s", e)
-        if local_hint:
-            return local_hint
-        fallback = get_local_science_response(user_message)
-        return fallback or "I hit a temporary issue. Please try again."
+    # All providers failed, use local response
+    logger.error("All AI providers failed, using local response")
+    fallback = local_hint or get_local_science_response(user_message)
+    return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
 
 # -------------------------------
 # Physics knowledge base
