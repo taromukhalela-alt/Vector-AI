@@ -698,6 +698,300 @@
             color: var(--neon-yellow);
         }
 
+        /* How It Works Section */
+        .how-it-works-section {
+            padding: var(--space-lg) var(--space-lg) calc(var(--space-lg) * 2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .step-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(19, 144, 10, 0.2);
+            border-color: var(--neon-accent);
+        }
+
+        .step-number {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            color: var(--neon-accent);
+            letter-spacing: 3px;
+            margin-bottom: var(--space-md);
+            opacity: 0.7;
+        }
+
+        .step-icon {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-md);
+        }
+
+        .step-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1rem;
+            color: var(--fg);
+            margin-bottom: var(--space-sm);
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--fg-muted);
+            line-height: 1.6;
+        }
+
+        .step-connector {
+            position: absolute;
+            top: 50%;
+            right: -30px;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--neon-accent), transparent);
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .step-card:last-child .step-connector {
+            display: none;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+            padding: var(--space-lg) var(--space-lg) calc(var(--space-lg) * 2);
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(180deg, transparent 0%, rgba(19, 144, 10, 0.03) 50%, transparent 100%);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--neon-accent);
+        }
+
+        .testimonial-card.featured {
+            border-color: var(--neon-accent);
+            box-shadow: 0 0 30px rgba(19, 144, 10, 0.15);
+        }
+
+        .testimonial-card.featured::before {
+            content: '★ Featured';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--neon-accent);
+            color: var(--bg-hard);
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .testimonial-stars {
+            color: var(--neon-yellow);
+            font-size: 1.2rem;
+            margin-bottom: var(--space-md);
+            letter-spacing: 2px;
+        }
+
+        .testimonial-text {
+            font-size: 0.95rem;
+            color: var(--fg-muted);
+            line-height: 1.7;
+            margin-bottom: var(--space-md);
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .testimonial-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-accent), var(--neon-aqua));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: var(--bg-hard);
+            font-size: 1.1rem;
+        }
+
+        .testimonial-name {
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .testimonial-grade {
+            font-size: 0.8rem;
+            color: var(--fg-faint);
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: var(--space-lg) var(--space-lg) calc(var(--space-lg) * 2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-sm);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: var(--space-md) var(--space-lg);
+            background: none;
+            border: none;
+            color: var(--fg);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: rgba(19, 144, 10, 0.05);
+        }
+
+        .faq-icon {
+            font-size: 1.5rem;
+            color: var(--neon-accent);
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0 var(--space-lg);
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 300px;
+            padding: 0 var(--space-lg) var(--space-md);
+        }
+
+        .faq-answer p {
+            color: var(--fg-muted);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: calc(var(--space-lg) * 2) var(--space-lg);
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(135deg, rgba(19, 144, 10, 0.08) 0%, rgba(44, 165, 121, 0.05) 100%);
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .cta-content {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: var(--space-md);
+            color: var(--fg);
+        }
+
+        .cta-subtitle {
+            font-size: 1.1rem;
+            color: var(--fg-muted);
+            margin-bottom: var(--space-lg);
+            line-height: 1.6;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+            flex-wrap: wrap;
+        }
+
+        .cta-trust {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .trust-badge {
+            font-size: 0.85rem;
+            color: var(--fg-faint);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         /* Footer */
         .landing-footer {
             padding: var(--space-lg);
@@ -722,12 +1016,38 @@
         }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            .steps-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .step-card:nth-child(2) .step-connector {
+                display: none;
+            }
+
+            .step-card:nth-child(4) .step-connector {
+                display: none;
+            }
+        }
+
         @media (max-width: 768px) {
             .landing-nav-links {
                 display: none;
             }
 
             .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .steps-container {
+                grid-template-columns: 1fr;
+            }
+
+            .step-connector {
+                display: none;
+            }
+
+            .testimonials-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -741,6 +1061,11 @@
 
             .grid-overlay {
                 background-size: 40px 40px;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
@@ -908,6 +1233,166 @@
         </div>
     </section>
 
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works-section">
+        <div class="section-header">
+            <div class="section-label">/// Learning Protocol</div>
+            <h2 class="section-title">How It Works</h2>
+        </div>
+        <div class="steps-container">
+            <div class="step-card">
+                <div class="step-number">01</div>
+                <div class="step-icon">🎤</div>
+                <h3 class="step-title">Ask Your Question</h3>
+                <p class="step-desc">Type or speak any physics or chemistry question. Our neural engine understands CAPS curriculum context.</p>
+                <div class="step-connector"></div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">02</div>
+                <div class="step-icon">🧠</div>
+                <h3 class="step-title">AI Analysis</h3>
+                <p class="step-desc">Vector AI classifies your intent and routes to specialized modules - from simple explanations to complex simulations.</p>
+                <div class="step-connector"></div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">03</div>
+                <div class="step-icon">📺</div>
+                <h3 class="step-title">Visual Learning</h3>
+                <p class="step-desc">Get interactive animations, step-by-step solutions, and real-time visualizations tailored to your question.</p>
+                <div class="step-connector"></div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">04</div>
+                <div class="step-icon">💾</div>
+                <h3 class="step-title">Save & Review</h3>
+                <p class="step-desc">Automatically save notes, export PDFs, and build your personal knowledge base for exam revision.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials-section">
+        <div class="section-header">
+            <div class="section-label">/// User Feedback</div>
+            <h2 class="section-title">Learner Testimonials</h2>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"Vector AI helped me understand projectile motion for the first time. The interactive simulation made everything click!"</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">S</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Sarah M.</div>
+                        <div class="testimonial-grade">Grade 12, Gauteng</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card featured">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"My marks improved from 45% to 78% in Physical Sciences. The voice mode is perfect for studying while commuting."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">T</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Thabo K.</div>
+                        <div class="testimonial-grade">Grade 11, KZN</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p class="testimonial-text">"The CAPS alignment means I'm learning exactly what I need for exams. The note export feature is a game changer."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">J</div>
+                    <div class="testimonial-info">
+                        <div class="testimonial-name">Jessica N.</div>
+                        <div class="testimonial-grade">Grade 10, Western Cape</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+        <div class="section-header">
+            <div class="section-label">/// Knowledge Base</div>
+            <h2 class="section-title">Frequently Asked Questions</h2>
+        </div>
+        <div class="faq-container">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Is Vector AI aligned with CAPS curriculum?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes! Vector AI is specifically trained on the South African CAPS Physical Sciences curriculum. All content, examples, and explanations follow CAPS standards for Grades 10-12.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Can I use Vector AI for exam preparation?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Absolutely. Vector AI can generate practice exam papers, explain past paper questions, and help you revise all topics. The notes feature lets you build a personal study guide.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Does it work without internet?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>The core chat features require internet for AI responses. However, your saved notes are available offline, and we're working on offline mode for basic queries.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Is my data private and secure?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes. Your conversations are encrypted and stored securely. We never share your personal data with third parties. You can delete your history anytime from your profile.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Which browsers support voice mode?</span>
+                    <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Voice mode works best in Chrome and Edge browsers on desktop and Android. iOS Safari has limited support. Ensure you grant microphone permissions when prompted.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to Master Physical Sciences?</h2>
+            <p class="cta-subtitle">Join thousands of South African learners using Vector AI to achieve their academic goals.</p>
+            <div class="cta-buttons">
+                <a href="{{ url_for('auth.register') }}" class="btn-future btn-future-primary">
+                    <span class="btn-corner btn-corner-tl"></span>
+                    <span class="btn-corner btn-corner-tr"></span>
+                    <span class="btn-corner btn-corner-bl"></span>
+                    <span class="btn-corner btn-corner-br"></span>
+                    Start Free Learning
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn-future btn-future-secondary">
+                    Access Your Account
+                </a>
+            </div>
+            <div class="cta-trust">
+                <span class="trust-badge">✓ CAPS Compliant</span>
+                <span class="trust-badge">✓ Free Forever</span>
+                <span class="trust-badge">✓ 24/7 Available</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="landing-footer">
         <p class="footer-credit">
@@ -926,6 +1411,24 @@
             particle.style.animationDelay = Math.random() * 15 + 's';
             particle.style.animationDuration = (10 + Math.random() * 10) + 's';
             particleField.appendChild(particle);
+        }
+
+        // FAQ Toggle
+        function toggleFaq(button) {
+            const item = button.parentElement;
+            const isActive = item.classList.contains('active');
+            
+            // Close all FAQ items
+            document.querySelectorAll('.faq-item').forEach(faq => {
+                faq.classList.remove('active');
+                faq.querySelector('.faq-icon').textContent = '+';
+            });
+            
+            // Open clicked item if it wasn't active
+            if (!isActive) {
+                item.classList.add('active');
+                button.querySelector('.faq-icon').textContent = '−';
+            }
         }
     </script>
 </body>

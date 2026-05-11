@@ -626,6 +626,167 @@ function initVectorAI() {
       select.value = value;
     });
   }
+
+  // === RECENT CHATS VIEWPORT ===
+  const recentChatsViewport = document.getElementById("recent-chats-viewport");
+  const recentChatsList = document.getElementById("recent-chats-list");
+  const recentChatsToggle = document.getElementById("recent-chats-toggle");
+  const recentChatsTab = document.getElementById("recent-chats-tab");
+  const chatMain = document.getElementById("chat-main");
+
+  // Toggle recent chats viewport
+  if (recentChatsToggle) {
+    recentChatsToggle.addEventListener("click", () => {
+      recentChatsViewport.classList.add("hidden");
+      if (recentChatsTab) recentChatsTab.style.display = "block";
+      if (chatMain) chatMain.classList.remove("with-recent-chats");
+    });
+  }
+
+  if (recentChatsTab) {
+    recentChatsTab.addEventListener("click", () => {
+      recentChatsViewport.classList.remove("hidden");
+      recentChatsTab.style.display = "none";
+      if (chatMain) chatMain.classList.add("with-recent-chats");
+    });
+  }
+
+  // Load recent chats for viewport
+  async function loadRecentChatsViewport() {
+    if (!recentChatsList) return;
+
+    try {
+      const res = await fetch("/history");
+      if (!res.ok) throw new Error("Failed to load");
+
+      const data = await res.json();
+      const sessions = data.sessions || [];
+
+      if (sessions.length === 0) {
+        recentChatsList.innerHTML = `
+          <div class="recent-chats-empty">
+            No recent chats.<br>Start a new conversation!
+          </div>
+        `;
+        return;
+      }
+
+      // Clear skeleton loading
+      recentChatsList.innerHTML = "";
+
+      // Show up to 10 most recent sessions
+      sessions.slice(0, 10).forEach((session) => {
+        const item = document.createElement("div");
+        item.className = "recent-chat-item";
+        item.dataset.chatId = session.chat_id;
+
+        const title = session.title || "Untitled Chat";
+        const preview = session.last_message || "No messages yet";
+        const time = session.last_time || "Recently";
+        const count = session.count || 0;
+
+        item.innerHTML = `
+          <div class="recent-chat-title">${escapeHtml(title)}</div>
+          <div class="recent-chat-meta">
+            <span>${count} messages</span>
+            <span>•</span>
+            <span>${escapeHtml(time)}</span>
+          </div>
+          <div class="recent-chat-preview">${escapeHtml(preview.substring(0, 50))}${preview.length > 50 ? "..." : ""}</div>
+        `;
+
+        item.addEventListener("click", () => {
+          // Load this chat session
+          window.location.href = `/chat/${session.chat_id}`;
+        });
+
+        recentChatsList.appendChild(item);
+      });
+    } catch (e) {
+      console.error("Error loading recent chats:", e);
+      recentChatsList.innerHTML = `
+        <div class="recent-chats-empty">
+          Unable to load chats.<br>Please try again.
+        </div>
+      `;
+    }
+  }
+
+  // Load recent chats when chat tab is active
+  const chatTab = document.getElementById("tab-chat");
+  if (chatTab) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          if (chatTab.classList.contains("active")) {
+            loadRecentChatsViewport();
+          }
+        }
+      });
+    });
+    observer.observe(chatTab, { attributes: true });
+
+    // Load immediately if already active
+    if (chatTab.classList.contains("active")) {
+      loadRecentChatsViewport();
+    }
+  }
+
+  // === SKELETON LOADING HELPERS ===
+  window.showSkeleton = function(container, type = "messages") {
+    if (!container) return;
+
+    const skeletons = {
+      messages: `
+        <div class="skeleton skeleton-message assistant"></div>
+        <div class="skeleton skeleton-message user"></div>
+        <div class="skeleton skeleton-message assistant"></div>
+      `,
+      sidebar: `
+        <div class="skeleton skeleton-sidebar-item"></div>
+        <div class="skeleton skeleton-sidebar-item"></div>
+        <div class="skeleton skeleton-sidebar-item"></div>
+      `,
+      card: `
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      `,
+      text: `
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-text long"></div>
+        <div class="skeleton skeleton-text medium"></div>
+        <div class="skeleton skeleton-text short"></div>
+      `
+    };
+
+    container.innerHTML = skeletons[type] || skeletons.messages;
+  };
+
+  window.hideSkeleton = function(container, content = "") {
+    if (!container) return;
+    container.innerHTML = content;
+  };
+
+  // Remove initial skeletons once real content loads
+  setTimeout(() => {
+    const chatHistoryList = document.getElementById("chat-history-list");
+    if (chatHistoryList && chatHistoryList.querySelector(".skeleton")) {
+      loadChatHistory();
+    }
+
+    const chatMessages = document.getElementById("chat-messages");
+    if (chatMessages && chatMessages.querySelector(".skeleton")) {
+      // If no messages yet, show welcome
+      if (chatMessages.children.length <= 3) {
+        chatMessages.innerHTML = `
+          <div class="message system">
+            <strong>Welcome to Vector AI!</strong><br>
+            I'm your CAPS-aligned physics and chemistry tutor. Ask me anything about forces, motion, energy, waves, electricity, or chemical reactions.
+          </div>
+        `;
+      }
+    }
+  }, 500);
 }
 
 if (document.readyState === "loading") {
