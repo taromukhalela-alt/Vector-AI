@@ -267,7 +267,14 @@
 
         <div style="margin-top: var(--space-lg);">
           <div class="sidebar-section-label">Practice Tools</div>
-          <button class="create-note-btn" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">✨ Generate Exam Paper</button>
+          <button class="fancy-button" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">
+            <div class="outline"></div>
+            <div class="state state--default">
+              <p>
+                <span style="--i:0">G</span><span style="--i:1">e</span><span style="--i:2">n</span><span style="--i:3">e</span><span style="--i:4">r</span><span style="--i:5">a</span><span style="--i:6">t</span><span style="--i:7">e</span> <span style="--i:8">E</span><span style="--i:9">x</span><span style="--i:10">a</span><span style="--i:11">m</span> <span style="--i:12">P</span><span style="--i:13">a</span><span style="--i:14">p</span><span style="--i:15">e</span><span style="--i:16">r</span>
+              </p>
+            </div>
+          </button>
           <button class="quick-prompt-chip" onclick="generateAdaptivePractice()" type="button">Adaptive Practice</button>
           <button class="quick-prompt-chip" onclick="openAnswerCheckModal()" type="button">Check My Working</button>
         </div>
