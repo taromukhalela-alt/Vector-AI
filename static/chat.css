@@ -133,47 +133,43 @@ body {
   font-size: 0.9rem;
 }
 
-.btn {
-  border-radius: 8px;
-  border: none;
-  padding: 10px 18px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  transition: all 0.2s;
+/* From Uiverse.io by alexroumi */
+button {
+  padding: 15px 25px;
+  border: unset;
+  border-radius: 15px;
+  color: #212121;
+  z-index: 1;
+  background: #e8e8e8;
+  position: relative;
+  font-weight: 1000;
+  font-size: 17px;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  transition: all 250ms;
+  overflow: hidden;
 }
 
-.btn.primary {
-  background: var(--green);
-  color: var(--bg0);
+button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  border-radius: 15px;
+  background-color: #212121;
+  z-index: -1;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  transition: all 250ms;
 }
 
-.btn.primary:hover {
-  background: #a3b122;
+button:hover {
+  color: #e8e8e8;
 }
 
-.btn.ghost {
-  background: transparent;
-  color: var(--fg1);
-  border: 1px solid var(--bg3);
-}
-
-.btn.ghost:hover {
-  background: var(--bg2);
-  border-color: var(--fg4);
-}
-
-.btn.subtle {
-  background: var(--bg2);
-  color: var(--fg2);
-  border: 1px solid var(--bg3);
-}
-
-.btn.full {
+button:hover::before {
   width: 100%;
 }
 
@@ -314,10 +310,6 @@ body {
   font-size: 0.9rem;
 }
 
-.animation-prompt .btn {
-  padding: 8px 16px;
-}
-
 .hidden {
   display: none !important;
 }
@@ -368,7 +360,7 @@ body {
     opacity: 1;
     transform: translateY(-3px);
   }
-}
+  }
 
 @media (max-width: 900px) {
   .chat-layout {

@@ -129,40 +129,6 @@ body {
   flex-wrap: wrap;
 }
 
-.btn {
-  border-radius: 999px;
-  border: none;
-  padding: 12px 20px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.btn.primary {
-  background: var(--maroon-700);
-  color: var(--white);
-  box-shadow: 0 12px 24px rgba(59, 15, 20, 0.2);
-}
-
-.btn.ghost {
-  background: var(--white);
-  color: var(--maroon-700);
-  border: 1px solid rgba(107, 30, 38, 0.2);
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(59, 15, 20, 0.18);
-}
-
-.btn.full {
-  width: 100%;
-}
-
 .auth-panel {
   display: flex;
   justify-content: center;

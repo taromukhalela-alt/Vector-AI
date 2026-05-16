@@ -482,38 +482,45 @@ body {
 }
 
 /* Buttons */
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg-hard);
-  border: none;
-  padding: 12px;
-  border-radius: var(--radius);
-  font-weight: 700;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all var(--transition);
+
+/* From Uiverse.io by alexroumi */
+button {
+  padding: 15px 25px;
+  border: unset;
+  border-radius: 15px;
+  color: #212121;
+  z-index: 1;
+  background: #e8e8e8;
+  position: relative;
+  font-weight: 1000;
+  font-size: 17px;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  transition: all 250ms;
+  overflow: hidden;
 }
 
-.btn-primary:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 4px 15px var(--accent-glow);
+button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  border-radius: 15px;
+  background-color: #212121;
+  z-index: -1;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+  transition: all 250ms;
 }
 
-.btn-secondary {
-  background: transparent;
-  color: var(--red);
-  border: 1px solid var(--red);
-  padding: 10px;
-  border-radius: var(--radius);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
+button:hover {
+  color: #e8e8e8;
 }
 
-.btn-secondary:hover {
-  background: var(--red);
-  color: white;
+button:hover::before {
+  width: 100%;
 }
 
 /* === INTEGRATED APP SHELL === */
@@ -1829,9 +1836,9 @@ body {
     top: auto;
     bottom: 20px;
     right: 20px;
-    writing-mode: horizontal-tb;
-    border-radius: 100px;
-    padding: var(--space-sm) var(--space-md);
+      writing-mode: horizontal-tb;
+      border-radius: 100px;
+      padding: var(--space-sm) var(--space-md);
   }
 }
 

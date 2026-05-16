@@ -146,31 +146,6 @@ body {
   flex-wrap: wrap;
 }
 
-.btn {
-  border-radius: 999px;
-  border: none;
-  padding: 10px 18px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn.primary {
-  background: var(--maroon-700);
-  color: var(--white);
-}
-
-.btn.ghost {
-  background: var(--white);
-  color: var(--maroon-700);
-  border: 1px solid rgba(107, 30, 38, 0.2);
-}
-
-.btn.subtle {
-  background: rgba(107, 30, 38, 0.08);
-  color: var(--maroon-700);
-  border: 1px solid rgba(107, 30, 38, 0.14);
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

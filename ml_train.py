@@ -44,6 +44,7 @@ def _build_pipeline() -> Pipeline:
             ),
         ]
     )
+
     classifier = SGDClassifier(
         loss="log_loss",
         penalty="l2",
