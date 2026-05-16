@@ -610,91 +610,6 @@
             letter-spacing: 1px;
         }
 
-        /* Terminal Section */
-        .terminal-section {
-            padding: 100px var(--space-lg);
-            position: relative;
-            z-index: 2;
-        }
-
-        .terminal-window {
-            max-width: 900px;
-            margin: 0 auto;
-            background: var(--bg-hard);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
-        }
-
-        .terminal-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-            padding: var(--space-sm) var(--space-md);
-            background: var(--bg-dark);
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .terminal-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .terminal-dot.red { background: var(--neon-red); }
-        .terminal-dot.yellow { background: var(--neon-yellow); }
-        .terminal-dot.green { background: var(--neon-aqua); }
-
-        .terminal-title {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 0.85rem;
-            color: var(--fg-faint);
-            margin-left: var(--space-sm);
-        }
-
-        .terminal-body {
-            padding: var(--space-lg);
-            font-family: var(--font-mono);
-            font-size: 0.95rem;
-            line-height: 1.8;
-            color: var(--fg-muted);
-        }
-
-        .terminal-line {
-            margin-bottom: 8px;
-        }
-
-        .terminal-prompt {
-            color: var(--neon-accent);
-        }
-
-        .terminal-cursor {
-            display: inline-block;
-            width: 10px;
-            height: 18px;
-            background: var(--neon-accent);
-            animation: blink 1s infinite;
-            vertical-align: middle;
-            margin-left: 4px;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        .terminal-output {
-            color: var(--fg);
-        }
-
-        .terminal-highlight {
-            color: var(--neon-aqua);
-        }
-
-        .terminal-warning {
-            color: var(--neon-yellow);
-        }
 
         /* How It Works Section */
         .how-it-works-section {
@@ -1087,7 +1002,6 @@
         </div>
         <div class="landing-nav-links">
             <a href="#features" class="nav-link">Features</a>
-            <a href="#demo" class="nav-link">Demo</a>
             <a href="{{ url_for('auth.login') }}" class="nav-btn">Access Terminal</a>
         </div>
     </nav>
@@ -1201,35 +1115,6 @@
         </div>
     </section>
 
-    <!-- Terminal Demo Section -->
-    <section id="demo" class="terminal-section">
-        <div class="section-header">
-            <div class="section-label">/// Live Interface</div>
-            <h2 class="section-title">System Demo</h2>
-        </div>
-        <div class="terminal-window">
-            <div class="terminal-header">
-                <span class="terminal-dot red"></span>
-                <span class="terminal-dot yellow"></span>
-                <span class="terminal-dot green"></span>
-                <span class="terminal-title">vector-ai-terminal — bash — 80x24</span>
-            </div>
-            <div class="terminal-body">
-                <div class="terminal-line"><span class="terminal-prompt">vector@neural-core:~$</span> initialize_session --user=guest</div>
-                <div class="terminal-line terminal-output">[SYSTEM] Neural link established...</div>
-                <div class="terminal-line terminal-output">[SYSTEM] Loading CAPS curriculum database... <span class="terminal-highlight">COMPLETE</span></div>
-                <div class="terminal-line terminal-output">[SYSTEM] Physics engine ready. Chemistry modules loaded.</div>
-                <div class="terminal-line terminal-output">[SYSTEM] Voice synthesis initialized (en-ZA, af-ZA).</div>
-                <div class="terminal-line"><span class="terminal-prompt">vector@neural-core:~$</span> query "Explain projectile motion with simulation"</div>
-                <div class="terminal-line terminal-output">[AI] Analyzing query... Intent detected: <span class="terminal-highlight">PHYSICS_DEMO</span></div>
-                <div class="terminal-line terminal-output">[AI] Launching interactive simulation...</div>
-                <div class="terminal-line terminal-output"><span class="terminal-warning">→</span> Initial velocity: 25 m/s at 45°</div>
-                <div class="terminal-line terminal-output"><span class="terminal-warning">→</span> Gravity: 9.8 m/s²</div>
-                <div class="terminal-line terminal-output"><span class="terminal-warning">→</span> Max height: 15.9 m | Range: 63.8 m</div>
-                <div class="terminal-line"><span class="terminal-prompt">vector@neural-core:~$</span> <span class="terminal-cursor"></span></div>
-            </div>
-        </div>
-    </section>
 
     <!-- How It Works Section -->
     <section id="how-it-works" class="how-it-works-section">
