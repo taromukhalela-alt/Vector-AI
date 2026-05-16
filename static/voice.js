@@ -63,6 +63,8 @@ class VoiceInput {
   }
 }
 
+const CAMB_AI_VOICE_WORD_LIMIT = 500;
+
 class VoiceOutput {
   constructor() {
     this.audio = null;
@@ -167,12 +169,21 @@ class VoiceOutput {
       .replace(/m\/s²|m\/sÂ²/g, "metres per second squared")
       .replace(/\s+/g, " ")
       .trim();
-    return this.trimForSpeech(cleaned, 1050);
+    const isCamb = this.provider === "camb";
+    return this.trimForSpeech(cleaned, isCamb ? 3200 : 1050, isCamb ? CAMB_AI_VOICE_WORD_LIMIT : null);
   }
 
-  trimForSpeech(text, maxChars) {
-    if (!text || text.length <= maxChars) return text;
-    const clipped = text.slice(0, maxChars);
+  trimForSpeech(text, maxChars, maxWords = null) {
+    if (!text) return text;
+    let clipped = text;
+    if (maxWords) {
+      const words = clipped.split(/\s+/);
+      if (words.length > maxWords) {
+        clipped = `${words.slice(0, maxWords).join(" ")}. We can keep going after this.`;
+      }
+    }
+    if (clipped.length <= maxChars) return clipped;
+    clipped = clipped.slice(0, maxChars);
     const sentenceEnd = Math.max(
       clipped.lastIndexOf("."),
       clipped.lastIndexOf("?"),
@@ -455,6 +466,8 @@ async function onSpeechResult(transcript) {
         message: transcript,
         history: window.conversationHistory || [],
         voice_mode: true,
+        voice_provider: voiceOutput.provider,
+        max_words: voiceOutput.provider === "camb" ? CAMB_AI_VOICE_WORD_LIMIT : undefined,
       }),
     });
 

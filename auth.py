@@ -1,5 +1,7 @@
 import os
+import re
 import secrets
+from urllib.parse import quote_plus
 from flask import (
     Blueprint,
     render_template,
@@ -72,7 +74,7 @@ def login():
                 ), 401
             return render_template("login.html", error="Invalid email or password")
 
-        login_user(user, remember=True)
+        login_user(user, remember=False)
         session["user"] = user.id
         session["chat_id"] = os.urandom(6).hex()
 
@@ -103,9 +105,15 @@ def register():
         if not name or not email or not password:
             return jsonify({"success": False, "message": "All fields required"}), 400
 
-        if len(password) < 6:
+        if len(name) > 100 or len(email) > 120:
+            return jsonify({"success": False, "message": "Name or email is too long"}), 400
+
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            return jsonify({"success": False, "message": "Enter a valid email address"}), 400
+
+        if len(password) < 8:
             return jsonify(
-                {"success": False, "message": "Password must be 6+ characters"}
+                {"success": False, "message": "Password must be at least 8 characters"}
             ), 400
 
         if User.query.filter_by(email=email).first():
@@ -114,7 +122,7 @@ def register():
             ), 400
 
         user_id = f"user_{secrets.token_urlsafe(12)}"
-        avatar = f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=random"
+        avatar = f"https://ui-avatars.com/api/?name={quote_plus(name)}&background=random"
         
         new_user = User(
             id=user_id,
@@ -130,7 +138,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        login_user(new_user, remember=True)
+        login_user(new_user, remember=False)
         session["user"] = new_user.id
         session["chat_id"] = os.urandom(6).hex()
 

@@ -4,6 +4,8 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.bak
+users.json*
 .venv
 env/
 venv/

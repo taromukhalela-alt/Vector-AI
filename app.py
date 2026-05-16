@@ -7,6 +7,7 @@ from flask import (
     redirect,
     url_for,
     send_from_directory,
+    Response,
 )
 from flask_cors import CORS
 from flask_caching import Cache
@@ -109,13 +110,14 @@ def _get_or_create_secret_key():
 app = Flask(__name__)
 app.secret_key = _get_or_create_secret_key()
 app.config["MAX_CONTENT_LENGTH"] = env_int("MAX_REQUEST_BYTES", 1048576, min_value=1024)
+_secure_cookie_default = env_bool("COOKIE_SECURE_DEFAULT", bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER") or os.getenv("PRODUCTION")))
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE=os.getenv("SESSION_COOKIE_SAMESITE", "Lax"),
-    SESSION_COOKIE_SECURE=env_bool("SESSION_COOKIE_SECURE", False),
+    SESSION_COOKIE_SECURE=env_bool("SESSION_COOKIE_SECURE", _secure_cookie_default),
     REMEMBER_COOKIE_HTTPONLY=True,
     REMEMBER_COOKIE_SAMESITE=os.getenv("REMEMBER_COOKIE_SAMESITE", "Lax"),
-    REMEMBER_COOKIE_SECURE=env_bool("REMEMBER_COOKIE_SECURE", False),
+    REMEMBER_COOKIE_SECURE=env_bool("REMEMBER_COOKIE_SECURE", _secure_cookie_default),
 )
 
 
@@ -123,11 +125,27 @@ app.config.update(
 def request_entity_too_large(_error):
     return jsonify({"success": False, "message": "Request body is too large"}), 413
 
-# Configure CORS
-cors_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5000")
-if isinstance(cors_origins, str):
-    cors_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-CORS(app, origins=cors_origins)
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), geolocation=(), payment=(), usb=()",
+    )
+    if request.is_secure or _secure_cookie_default:
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
+    return response
+
+# Configure CORS only for explicitly trusted cross-origin clients.
+cors_origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGIN", "").split(",") if origin.strip()]
+if cors_origins:
+    CORS(app, origins=cors_origins, supports_credentials=False)
 
 # Initialize Database
 from database import db, User, Note, Conversation, utc_now
@@ -171,9 +189,15 @@ VOICE_MAX_OUTPUT_CHARS = env_int("VOICE_MAX_OUTPUT_CHARS", 1200, min_value=300)
 EXAM_MAX_INPUT_CHARS = env_int("EXAM_MAX_INPUT_CHARS", 12000, min_value=1000)
 EXAM_MAX_OUTPUT_CHARS = env_int("EXAM_MAX_OUTPUT_CHARS", 24000, min_value=1000)
 TTS_MAX_INPUT_CHARS = env_int("TTS_MAX_INPUT_CHARS", 2000, min_value=100)
+NOTE_TITLE_MAX_CHARS = env_int("NOTE_TITLE_MAX_CHARS", 160, min_value=20, max_value=500)
+NOTE_TOPIC_MAX_CHARS = env_int("NOTE_TOPIC_MAX_CHARS", 120, min_value=20, max_value=300)
+NOTE_CONTENT_MAX_CHARS = env_int("NOTE_CONTENT_MAX_CHARS", 50000, min_value=1000)
+NOTE_LIST_LIMIT = env_int("NOTE_LIST_LIMIT", 200, min_value=20, max_value=1000)
 
 CHAT_RATE_LIMIT_COUNT = env_int("CHAT_RATE_LIMIT_COUNT", 20, min_value=1)
 CHAT_RATE_LIMIT_WINDOW = env_int("CHAT_RATE_LIMIT_WINDOW", 60, min_value=1)
+AUTH_RATE_LIMIT_COUNT = env_int("AUTH_RATE_LIMIT_COUNT", 8, min_value=1)
+AUTH_RATE_LIMIT_WINDOW = env_int("AUTH_RATE_LIMIT_WINDOW", 300, min_value=1)
 EXAM_RATE_LIMIT_COUNT = env_int("EXAM_RATE_LIMIT_COUNT", 3, min_value=1)
 EXAM_RATE_LIMIT_WINDOW = env_int("EXAM_RATE_LIMIT_WINDOW", 900, min_value=1)
 TTS_RATE_LIMIT_COUNT = env_int("TTS_RATE_LIMIT_COUNT", 30, min_value=1)
@@ -320,12 +344,36 @@ def enforce_rate_limit(scope, limit, window_seconds):
     return None
 
 
+@app.before_request
+def rate_limit_auth_writes():
+    if request.method != "POST" or request.endpoint not in {"auth.login", "auth.register"}:
+        return None
+    return enforce_rate_limit("auth", AUTH_RATE_LIMIT_COUNT, AUTH_RATE_LIMIT_WINDOW)
+
+
 def limit_text(text, max_chars):
     value = text or ""
     if len(value) <= max_chars:
         return value
     suffix = "\n\n[Response shortened because it exceeded the configured safety limit.]"
     return value[: max(0, max_chars - len(suffix))].rstrip() + suffix
+
+
+def limit_words(text, max_words):
+    value = text or ""
+    words = value.split()
+    if len(words) <= max_words:
+        return value
+    return " ".join(words[:max_words]).rstrip() + " We can keep going after this."
+
+
+def clean_limited_text(value, max_chars):
+    cleaned = str(value or "").replace("\x00", "").strip()
+    return cleaned[:max_chars]
+
+
+def valid_note_id(note_id):
+    return bool(re.fullmatch(r"note_[A-Za-z0-9_-]{8,64}", str(note_id or "")))
 
 
 def record_chat_latency(user_id, duration_ms):
@@ -2060,6 +2108,8 @@ def chat():
         return jsonify({"intent": "error", "reply": "Message is required"}), 400
 
     voice_mode = bool(payload.get("voice_mode", False))
+    voice_provider = str(payload.get("voice_provider", "")).strip().lower()
+    voice_max_words = 500 if voice_mode and voice_provider == "camb" else None
     document_mode = payload.get("response_format") == "document"
     generation_type = (payload.get("generation_type") or "").strip().lower()
     is_exam_generation = document_mode and generation_type == "exam"
@@ -2109,6 +2159,11 @@ def chat():
                 deterministic_hint = get_local_science_response(user_message, intent=intent)
 
         system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
+        if voice_max_words:
+            system_prompt = (
+                f"{system_prompt}\n\n"
+                f"For CAMB AI voice mode, keep the spoken answer under {voice_max_words} words."
+            )
         prompt = user_message
         if is_affirmative(user_message):
             last_offer = extract_last_offer(history)
@@ -2143,6 +2198,8 @@ def chat():
         )
         if voice_mode:
             reply = make_voice_friendly(reply)
+            if voice_max_words:
+                reply = limit_words(reply, voice_max_words)
         elif not document_mode:
             reply = make_chat_friendly(reply)
         output_limit = (
@@ -2171,6 +2228,8 @@ def chat():
             )
             if voice_mode:
                 reply = make_voice_friendly(reply)
+                if voice_max_words:
+                    reply = limit_words(reply, voice_max_words)
             elif not document_mode:
                 reply = make_chat_friendly(reply)
             reply = limit_text(reply, output_limit)
@@ -2213,7 +2272,13 @@ def chat():
 @login_required
 def get_notes():
     """Get all notes for current user"""
-    return jsonify({"success": True, "notes": [n.to_dict() for n in current_user.notes]})
+    notes = (
+        Note.query.filter_by(user_id=current_user.id)
+        .order_by(Note.updated_at.desc())
+        .limit(NOTE_LIST_LIMIT)
+        .all()
+    )
+    return jsonify({"success": True, "notes": [n.to_dict() for n in notes]})
 
 
 @app.route("/api/notes", methods=["POST"])
@@ -2221,13 +2286,15 @@ def get_notes():
 def create_note():
     """Create a new AI-assisted note"""
     data = request.get_json(silent=True) or {}
-    title = data.get("title", "").strip()
-    content = data.get("content", "").strip()
-    topic = data.get("topic", "").strip()
+    title = clean_limited_text(data.get("title", ""), NOTE_TITLE_MAX_CHARS)
+    content = clean_limited_text(data.get("content", ""), NOTE_CONTENT_MAX_CHARS)
+    topic = clean_limited_text(data.get("topic", ""), NOTE_TOPIC_MAX_CHARS)
     tags = sanitize_tags(data.get("tags", []))
 
     if not title or not content:
         return jsonify({"success": False, "message": "Title and content required"}), 400
+    if len(str(data.get("content", ""))) > NOTE_CONTENT_MAX_CHARS:
+        return jsonify({"success": False, "message": "Note content is too long"}), 413
 
     note_id = f"note_{secrets.token_urlsafe(12)}"
     new_note = Note(
@@ -2249,12 +2316,16 @@ def create_note():
 @login_required
 def update_note(note_id):
     """Update an existing note"""
+    if not valid_note_id(note_id):
+        return jsonify({"success": False, "message": "Invalid note id"}), 400
     data = request.get_json(silent=True) or {}
     note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
     if note:
-        note.title = data.get("title", note.title)
-        note.content = data.get("content", note.content)
-        note.topic = data.get("topic", note.topic)
+        if "content" in data and len(str(data.get("content", ""))) > NOTE_CONTENT_MAX_CHARS:
+            return jsonify({"success": False, "message": "Note content is too long"}), 413
+        note.title = clean_limited_text(data.get("title", note.title), NOTE_TITLE_MAX_CHARS)
+        note.content = clean_limited_text(data.get("content", note.content), NOTE_CONTENT_MAX_CHARS)
+        note.topic = clean_limited_text(data.get("topic", note.topic), NOTE_TOPIC_MAX_CHARS)
         if "tags" in data:
             note.tags = sanitize_tags(data.get("tags", []))
         db.session.commit()
@@ -2267,6 +2338,8 @@ def update_note(note_id):
 @login_required
 def delete_note(note_id):
     """Delete a note"""
+    if not valid_note_id(note_id):
+        return jsonify({"success": False, "message": "Invalid note id"}), 400
     note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
     if note:
         db.session.delete(note)
@@ -2423,7 +2496,6 @@ def text_to_speech():
         try:
             response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
             if response.status_code == 200:
-                from flask import Response
                 return Response(response.iter_content(chunk_size=1024), mimetype="audio/wav")
             logger.error("CAMB AI error: %s", response.text)
             return jsonify({"success": False, "message": "CAMB AI API error"}), 500
@@ -2460,7 +2532,6 @@ def text_to_speech():
     try:
         response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
         if response.status_code == 200:
-            from flask import Response
             return Response(response.iter_content(chunk_size=1024), mimetype="audio/mpeg")
         else:
             logger.error(f"ElevenLabs error: {response.text}")
@@ -2474,6 +2545,8 @@ def text_to_speech():
 @login_required
 def get_note(note_id):
     """Get single note"""
+    if not valid_note_id(note_id):
+        return jsonify({"success": False, "message": "Invalid note id"}), 400
     note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
     if note:
         return jsonify({"success": True, "note": note.to_dict()})
@@ -2485,13 +2558,19 @@ def get_note(note_id):
 def search_notes():
     """Semantic note search by title, topic, tags, and content."""
     data = request.get_json(silent=True) or {}
-    query = (data.get("query") or "").strip()
+    query = clean_limited_text(data.get("query", ""), 200)
 
     if not query:
         return jsonify({"success": False, "message": "Query required"}), 400
 
     documents = []
-    for note in current_user.notes:
+    notes = (
+        Note.query.filter_by(user_id=current_user.id)
+        .order_by(Note.updated_at.desc())
+        .limit(NOTE_LIST_LIMIT)
+        .all()
+    )
+    for note in notes:
         note_data = note.to_dict()
         documents.append(
             {
@@ -2534,12 +2613,18 @@ def search_notes():
 def semantic_search():
     """Search notes and chat history by meaning using deterministic vector ranking."""
     data = request.get_json(silent=True) or {}
-    query = (data.get("query") or "").strip()
+    query = clean_limited_text(data.get("query", ""), 200)
     if not query:
         return jsonify({"success": False, "message": "Query required"}), 400
 
     documents = []
-    for note in current_user.notes:
+    notes = (
+        Note.query.filter_by(user_id=current_user.id)
+        .order_by(Note.updated_at.desc())
+        .limit(NOTE_LIST_LIMIT)
+        .all()
+    )
+    for note in notes:
         documents.append(
             {
                 "type": "note",

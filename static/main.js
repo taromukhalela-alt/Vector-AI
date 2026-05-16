@@ -57,7 +57,7 @@ function initVectorAI() {
         .replace(/`([^`]+)`/g, "<code>$1</code>")
         .replace(/\n/g, "<br>");
       chatMessages.appendChild(msg);
-      msg.scrollIntoView({ behavior: "smooth", block: "end" });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
       
       // Add "Save as Note" button for assistant messages
       if (role === 'assistant') {
@@ -154,6 +154,7 @@ function initVectorAI() {
       }
       window.conversationHistory = conversationHistory;
       requestAnimationMatch(question);
+      loadRecentChatsViewport(true);
     } catch (error) {
       hideTypingIndicator();
       appendMessage("Connection error. Please try again.", "assistant");
@@ -194,10 +195,26 @@ function initVectorAI() {
     conversationHistory = [];
     window.conversationHistory = conversationHistory;
     if (chatMessages) chatMessages.innerHTML = "";
+    loadRecentChatsViewport(true);
   }
 
   if (newSessionBtn) newSessionBtn.addEventListener("click", handleNewSession);
   if (mobileFab) mobileFab.addEventListener("click", handleNewSession);
+
+  const chatLayout = document.querySelector(".chat-layout");
+  const sidebarCollapseBtn = document.getElementById("sidebar-collapse-btn");
+  const sidebarCollapsed = localStorage.getItem("sidebar_compact") === "true";
+  if (chatLayout && sidebarCollapsed) {
+    chatLayout.classList.add("sidebar-collapsed");
+    if (sidebarCollapseBtn) sidebarCollapseBtn.setAttribute("aria-expanded", "false");
+  }
+  if (chatLayout && sidebarCollapseBtn) {
+    sidebarCollapseBtn.addEventListener("click", () => {
+      const isCollapsed = chatLayout.classList.toggle("sidebar-collapsed");
+      localStorage.setItem("sidebar_compact", isCollapsed ? "true" : "false");
+      sidebarCollapseBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+    });
+  }
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
@@ -633,34 +650,40 @@ function initVectorAI() {
   const recentChatsToggle = document.getElementById("recent-chats-toggle");
   const recentChatsTab = document.getElementById("recent-chats-tab");
   const chatMain = document.getElementById("chat-main");
+  let recentChatsLoaded = false;
+  let recentChatsLoading = false;
 
   // Toggle recent chats viewport
-  if (recentChatsToggle) {
+  if (recentChatsToggle && recentChatsViewport) {
     recentChatsToggle.addEventListener("click", () => {
       recentChatsViewport.classList.add("hidden");
+      if (chatLayout) chatLayout.classList.add("recent-collapsed");
       if (recentChatsTab) recentChatsTab.style.display = "block";
       if (chatMain) chatMain.classList.remove("with-recent-chats");
     });
   }
 
-  if (recentChatsTab) {
+  if (recentChatsTab && recentChatsViewport) {
     recentChatsTab.addEventListener("click", () => {
       recentChatsViewport.classList.remove("hidden");
+      if (chatLayout) chatLayout.classList.remove("recent-collapsed");
       recentChatsTab.style.display = "none";
       if (chatMain) chatMain.classList.add("with-recent-chats");
+      loadRecentChatsViewport();
     });
   }
 
   // Load recent chats for viewport
-  async function loadRecentChatsViewport() {
-    if (!recentChatsList) return;
+  async function loadRecentChatsViewport(force = false) {
+    if (!recentChatsList || recentChatsLoading || (recentChatsLoaded && !force)) return;
+    recentChatsLoading = true;
 
     try {
-      const res = await fetch("/history");
+      const res = await fetch("/api/history");
       if (!res.ok) throw new Error("Failed to load");
 
       const data = await res.json();
-      const sessions = data.sessions || [];
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
 
       if (sessions.length === 0) {
         recentChatsList.innerHTML = `
@@ -668,6 +691,7 @@ function initVectorAI() {
             No recent chats.<br>Start a new conversation!
           </div>
         `;
+        recentChatsLoaded = true;
         return;
       }
 
@@ -681,7 +705,9 @@ function initVectorAI() {
         item.dataset.chatId = session.chat_id;
 
         const title = session.title || "Untitled Chat";
-        const preview = session.last_message || "No messages yet";
+        const entries = Array.isArray(session.messages) ? session.messages : [];
+        const lastEntry = entries[entries.length - 1] || {};
+        const preview = session.last_message || lastEntry.reply || lastEntry.message || "No messages yet";
         const time = session.last_time || "Recently";
         const count = session.count || 0;
 
@@ -696,12 +722,12 @@ function initVectorAI() {
         `;
 
         item.addEventListener("click", () => {
-          // Load this chat session
-          window.location.href = `/chat/${session.chat_id}`;
+          loadSessionIntoChat(session.chat_id);
         });
 
         recentChatsList.appendChild(item);
       });
+      recentChatsLoaded = true;
     } catch (e) {
       console.error("Error loading recent chats:", e);
       recentChatsList.innerHTML = `
@@ -709,28 +735,12 @@ function initVectorAI() {
           Unable to load chats.<br>Please try again.
         </div>
       `;
+    } finally {
+      recentChatsLoading = false;
     }
   }
 
-  // Load recent chats when chat tab is active
-  const chatTab = document.getElementById("tab-chat");
-  if (chatTab) {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === "class") {
-          if (chatTab.classList.contains("active")) {
-            loadRecentChatsViewport();
-          }
-        }
-      });
-    });
-    observer.observe(chatTab, { attributes: true });
-
-    // Load immediately if already active
-    if (chatTab.classList.contains("active")) {
-      loadRecentChatsViewport();
-    }
-  }
+  loadRecentChatsViewport();
 
   // === SKELETON LOADING HELPERS ===
   window.showSkeleton = function(container, type = "messages") {
@@ -769,11 +779,6 @@ function initVectorAI() {
 
   // Remove initial skeletons once real content loads
   setTimeout(() => {
-    const chatHistoryList = document.getElementById("chat-history-list");
-    if (chatHistoryList && chatHistoryList.querySelector(".skeleton")) {
-      loadChatHistory();
-    }
-
     const chatMessages = document.getElementById("chat-messages");
     if (chatMessages && chatMessages.querySelector(".skeleton")) {
       // If no messages yet, show welcome
