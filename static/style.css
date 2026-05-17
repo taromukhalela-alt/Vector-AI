@@ -483,7 +483,7 @@ body {
     border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 700;
-    text-transform: uppercase;
+    text-transform: capitalize;
 }
 
 .quick-prompt-chip:hover {
@@ -495,7 +495,7 @@ body {
 /* Buttons */
 
 /* From Uiverse.io by alexroumi */
-button {
+.uiverse-btn {
   padding: 15px 25px;
   border: unset;
   border-radius: 15px;
@@ -511,7 +511,7 @@ button {
   overflow: hidden;
 }
 
-button::before {
+.uiverse-btn::before {
   content: "";
   position: absolute;
   top: 0;
@@ -526,11 +526,11 @@ button::before {
   transition: all 250ms;
 }
 
-button:hover {
+.uiverse-btn:hover {
   color: #e8e8e8;
 }
 
-button:hover::before {
+.uiverse-btn:hover::before {
   width: 100%;
 }
 
@@ -1130,6 +1130,7 @@ button:hover::before {
   grid-template-rows: auto minmax(280px, 1fr) auto auto;
   gap: var(--space-md);
   padding: var(--space-lg);
+  padding-bottom: 2rem;
 }
 
 .voice-header {

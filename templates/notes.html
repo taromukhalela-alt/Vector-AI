@@ -148,7 +148,7 @@
       border-radius: 100px;
       font-size: 0.7rem;
       font-weight: 700;
-      text-transform: uppercase;
+      text-transform: capitalize;
       letter-spacing: 1px;
       margin-bottom: var(--space-sm);
       width: fit-content;
@@ -217,7 +217,7 @@
     }
 
     /* From Uiverse.io by alexroumi */
-    button {
+    .uiverse-btn {
       padding: 15px 25px;
       border: unset;
       border-radius: 15px;
@@ -233,7 +233,7 @@
       overflow: hidden;
     }
 
-    button::before {
+    .uiverse-btn::before {
       content: "";
       position: absolute;
       top: 0;
@@ -248,11 +248,11 @@
       transition: all 250ms;
     }
 
-    button:hover {
+    .uiverse-btn:hover {
       color: #e8e8e8;
     }
 
-    button:hover::before {
+    .uiverse-btn:hover::before {
       width: 100%;
     }
   </style>
@@ -270,8 +270,10 @@
 
       <nav class="tab-nav" id="tab-nav" role="tablist">
         <a class="tab-btn tab-link" href="/chat">Tutor</a>
+        <a class="tab-btn tab-link" href="/chat?tab=voice">Voice</a>
         <a class="tab-btn tab-link" href="/chat?tab=animations">Lab</a>
         <a class="tab-btn tab-link" href="/chat?tab=topics">Topics</a>
+        <a class="tab-btn tab-link" href="/chat?tab=history">History</a>
         <a class="tab-btn tab-link active" href="/notes">Notes</a>
       </nav>
 
@@ -307,7 +309,7 @@
 
         <div style="margin-top: var(--space-lg);">
           <div class="sidebar-section-label">Practice Tools</div>
-          <button class="fancy-button" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">
+          <button class="fancy-button uiverse-btn" onclick="generateQuestionPaper()" style="background: var(--aqua); color: var(--bg-hard);">
             <div class="outline"></div>
             <div class="state state--default">
               <p>
