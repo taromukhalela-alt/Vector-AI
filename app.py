@@ -1119,6 +1119,7 @@ def generate_response(
     local_hint=None,
     user_key=None,
     provider=None,
+    timeout_seconds=None,
 ):
     if history is None:
         history = []
@@ -1143,13 +1144,13 @@ def generate_response(
 
         try:
             prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
-            timeout_seconds = env_float(
+            timeout = timeout_seconds or env_float(
                 "OPENROUTER_EXAM_TIMEOUT", 60.0, min_value=5.0
             )
             text = _openrouter_generate_with_timeout(
                 prompt,
                 api_key,
-                timeout_seconds,
+                timeout,
                 model=os.getenv("OPENROUTER_EXAM_MODEL", "openrouter/free"),
                 max_tokens=env_int(
                     "OPENROUTER_EXAM_MAX_TOKENS", 4500, min_value=500
@@ -1160,7 +1161,7 @@ def generate_response(
             fallback = get_local_science_response(user_message)
             return fallback or "I couldn't generate the exam paper. Could you try again?"
         except TimeoutError:
-            logger.error("OpenRouter timeout after %.1fs", timeout_seconds)
+            logger.error("OpenRouter timeout after %.1fs", timeout)
             return "The exam generator took too long. Please try again with a narrower topic or fewer marks."
         except Exception as e:
             logger.error("OpenRouter generation error: %s", e)
@@ -1171,8 +1172,8 @@ def generate_response(
     if api_key and Groq:
         try:
             prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
-            timeout_seconds = 6.0 if local_hint else 10.0
-            text = _groq_generate_with_timeout(prompt, api_key, timeout_seconds)
+            groq_timeout = timeout_seconds or (6.0 if local_hint else 10.0)
+            text = _groq_generate_with_timeout(prompt, api_key, groq_timeout)
             if text:
                 return text
             # If Groq returned empty, try once more with a shorter prompt (no history)
@@ -2239,6 +2240,7 @@ def chat():
             local_hint=deterministic_hint,
             user_key=user_key,
             provider="openrouter" if is_exam_generation else None,
+            timeout_seconds=60.0 if document_mode else None,
         )
         if voice_mode:
             reply = make_voice_friendly(reply)
@@ -2269,6 +2271,7 @@ def chat():
                 local_hint=deterministic_hint,
                 user_key=user_key,
                 provider="openrouter" if is_exam_generation else None,
+                timeout_seconds=60.0 if document_mode else None,
             )
             if voice_mode:
                 reply = make_voice_friendly(reply)
