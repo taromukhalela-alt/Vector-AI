@@ -44,18 +44,60 @@ function initVectorAI() {
   function cleanChatText(text, role) {
     const value = text || "";
     if (role !== "assistant") return value;
-    return value.replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+    return value.replace(/\n{3,}/g, "\n\n").trim();
   }
+
+  function renderFormattedContent(text) {
+    if (!text) return '';
+    // If marked is loaded, use it for full markdown
+    if (typeof marked !== 'undefined') {
+      try {
+        marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
+        return marked.parse(text);
+      } catch(e) { /* fallback below */ }
+    }
+    // Fallback: simple markdown
+    return sanitize(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function renderLatex(element) {
+    if (typeof renderMathInElement === 'function') {
+      try {
+        renderMathInElement(element, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError: false
+        });
+      } catch(e) { /* silent */ }
+    }
+  }
+
+  window.renderFormattedContent = renderFormattedContent;
+  window.renderLatex = renderLatex;
 
     function appendMessage(text, role) {
       if (!chatMessages) return;
       const msg = document.createElement("div");
       msg.className = `message ${role}`;
       const displayText = cleanChatText(text, role);
-      msg.innerHTML = sanitize(displayText)
-        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-        .replace(/`([^`]+)`/g, "<code>$1</code>")
-        .replace(/\n/g, "<br>");
+      if (role === 'assistant') {
+        msg.innerHTML = renderFormattedContent(displayText);
+        // Render LaTeX after a tick so KaTeX can process
+        requestAnimationFrame(() => renderLatex(msg));
+      } else {
+        msg.textContent = displayText;
+      }
       chatMessages.appendChild(msg);
       chatMessages.scrollTop = chatMessages.scrollHeight;
       
@@ -64,7 +106,7 @@ function initVectorAI() {
         const noteBtn = document.createElement('button');
         noteBtn.className = 'note-action-btn';
         noteBtn.textContent = 'Save as Note';
-        noteBtn.onclick = () => saveResponseAsNote(displayText);
+        noteBtn.onclick = () => saveResponseAsNote(text);
         msg.appendChild(noteBtn);
       }
     }
@@ -448,11 +490,14 @@ function initVectorAI() {
       const role = entry.username ? "user" : "assistant";
       const msg = document.createElement("div");
       msg.className = `history-msg ${role}`;
+      const content = entry.message || entry.reply || "";
+      const contentHtml = role === "assistant" ? renderFormattedContent(content) : escapeHtml(content).replace(/\n/g, "<br>");
       msg.innerHTML = `
-        <div>${escapeHtml(entry.message || entry.reply || "").replace(/\n/g, "<br>")}</div>
+        <div>${contentHtml}</div>
         <div class="msg-meta">${formatHistoryTime(entry.time)} · ${entry.topic || ""}</div>
       `;
       detail.appendChild(msg);
+      if (role === "assistant") renderLatex(msg);
     });
   }
 

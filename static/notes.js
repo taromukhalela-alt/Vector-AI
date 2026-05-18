@@ -50,6 +50,7 @@ function renderNotes(notesToRender = notes) {
       </div>
     `;
     grid.appendChild(card);
+    renderLatexInElement(card);
   });
 }
 
@@ -66,7 +67,30 @@ function simpleMarkdown(text) {
 }
 
 function renderMarkdown(text) {
-  return simpleMarkdown(text || "");
+  if (!text) return "";
+  if (typeof marked !== "undefined") {
+    try {
+      marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
+      return marked.parse(text);
+    } catch (e) { /* fallback */ }
+  }
+  return simpleMarkdown(text);
+}
+
+function renderLatexInElement(el) {
+  if (typeof renderMathInElement === "function") {
+    try {
+      renderMathInElement(el, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "\\[", right: "\\]", display: true },
+        ],
+        throwOnError: false,
+      });
+    } catch (e) { /* silent */ }
+  }
 }
 
 function viewNote(noteId) {
@@ -163,6 +187,7 @@ function openModal(note = null, viewOnly = false) {
       contentEl.style.display = "none";
       previewContainer.style.display = "block";
       previewEl.innerHTML = renderMarkdown(note.content);
+      renderLatexInElement(previewEl);
       titleEl.style.display = "none";
       topicEl.style.display = "none";
       if (footer) footer.style.display = "none";
@@ -229,6 +254,7 @@ function toggleViewEdit() {
     contentEl.style.display = "none";
     previewContainer.style.display = "block";
     previewEl.innerHTML = renderMarkdown(contentEl.value);
+    renderLatexInElement(previewEl);
     if (toggleBtn) toggleBtn.textContent = "Edit";
     if (pdfBtn && contentEl.value.trim()) pdfBtn.classList.remove("hidden");
   }
@@ -246,6 +272,7 @@ function showPreviewMode() {
   contentEl.style.display = "none";
   previewContainer.style.display = "block";
   previewEl.innerHTML = renderMarkdown(contentEl.value);
+  renderLatexInElement(previewEl);
   if (titleEl) titleEl.style.display = "block";
   if (topicEl) topicEl.style.display = "block";
   if (toggleBtn) {
