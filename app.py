@@ -187,7 +187,7 @@ CHAT_MAX_INPUT_CHARS = env_int("CHAT_MAX_INPUT_CHARS", 4000, min_value=100)
 CHAT_MAX_OUTPUT_CHARS = env_int("CHAT_MAX_OUTPUT_CHARS", 6000, min_value=500)
 VOICE_MAX_OUTPUT_CHARS = env_int("VOICE_MAX_OUTPUT_CHARS", 1200, min_value=300)
 EXAM_MAX_INPUT_CHARS = env_int("EXAM_MAX_INPUT_CHARS", 12000, min_value=1000)
-EXAM_MAX_OUTPUT_CHARS = env_int("EXAM_MAX_OUTPUT_CHARS", 24000, min_value=1000)
+EXAM_MAX_OUTPUT_CHARS = env_int("EXAM_MAX_OUTPUT_CHARS", 60000, min_value=1000)
 TTS_MAX_INPUT_CHARS = env_int("TTS_MAX_INPUT_CHARS", 2000, min_value=100)
 NOTE_TITLE_MAX_CHARS = env_int("NOTE_TITLE_MAX_CHARS", 160, min_value=20, max_value=500)
 NOTE_TOPIC_MAX_CHARS = env_int("NOTE_TOPIC_MAX_CHARS", 120, min_value=20, max_value=300)
@@ -2248,7 +2248,7 @@ def chat():
             reply = make_chat_friendly(reply)
         output_limit = (
             EXAM_MAX_OUTPUT_CHARS
-            if is_exam_generation
+            if document_mode
             else VOICE_MAX_OUTPUT_CHARS
             if voice_mode
             else CHAT_MAX_OUTPUT_CHARS

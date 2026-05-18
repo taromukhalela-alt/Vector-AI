@@ -728,176 +728,89 @@ Rules:
 }
 
 async function downloadAsPDF() {
-  if (!window.jspdf?.jsPDF) {
-    alert("PDF tools are still loading. Please try again in a moment.");
+  if (typeof html2pdf === 'undefined') {
+    alert("PDF exporter is still loading. Please try again in a moment.");
     return;
   }
 
-  const { jsPDF } = window.jspdf;
   const title = document.getElementById("note-title")?.value.trim() || "Vector AI Notes";
   const topic = document.getElementById("note-topic")?.value.trim() || "CAPS Physical Sciences";
-  const content = document.getElementById("note-content")?.value.trim() || document.getElementById("note-preview")?.innerText || "";
-  if (!content) {
+  let contentHtml = "";
+
+  const previewEl = document.getElementById("note-preview");
+  const contentEl = document.getElementById("note-content");
+
+  // Determine what to print: preview HTML or rendered content
+  if (previewEl && previewEl.style.display !== "none" && previewEl.innerHTML.trim()) {
+    contentHtml = previewEl.innerHTML;
+  } else if (contentEl && contentEl.value.trim()) {
+    contentHtml = renderMarkdown(contentEl.value);
+  }
+
+  if (!contentHtml) {
     alert("There is no note content to export.");
     return;
   }
 
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 48;
-  const contentWidth = pageWidth - margin * 2;
-  const colors = {
-    ink: [30, 32, 33],
-    muted: [102, 92, 84],
-    accent: [184, 187, 38],
-    aqua: [142, 192, 124],
-    panel: [248, 248, 240],
-    rule: [222, 220, 205],
+  // Create an off-screen container for the PDF content
+  const pdfContainer = document.createElement("div");
+  pdfContainer.style.padding = "20px";
+  pdfContainer.style.fontFamily = "Inter, sans-serif";
+  pdfContainer.style.color = "#121415"; // Dark ink
+  
+  // Header
+  const header = document.createElement("div");
+  header.style.borderBottom = "2px solid #32910a";
+  header.style.paddingBottom = "10px";
+  header.style.marginBottom = "20px";
+  header.innerHTML = `
+    <h1 style="margin:0;font-size:24px;color:#121415;">${escapeHtml(title)}</h1>
+    <div style="font-size:12px;color:#666;margin-top:4px;">
+      <b>Vector AI</b> &middot; ${escapeHtml(topic)} &middot; ${new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+    </div>
+  `;
+  pdfContainer.appendChild(header);
+
+  // Body content wrapper
+  const bodyWrap = document.createElement("div");
+  bodyWrap.className = "markdown-body";
+  bodyWrap.style.fontSize = "12px";
+  bodyWrap.style.lineHeight = "1.6";
+  bodyWrap.innerHTML = contentHtml;
+  pdfContainer.appendChild(bodyWrap);
+
+  // Render LaTeX explicitly on the cloned container
+  renderLatexInElement(bodyWrap);
+
+  const opt = {
+    margin:       [15, 15, 15, 15],
+    filename:     `${safeFileName(title)}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
-  let y = margin;
 
-  const logo = await loadImageData("/static/icons/pwa-192.png").catch(() => null);
-
-  function setColor(rgb) {
-    doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-  }
-
-  function drawHeader() {
-    if (logo) doc.addImage(logo, "PNG", margin, 28, 30, 30);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    setColor(colors.ink);
-    doc.text("VECTOR AI", logo ? margin + 40 : margin, 42);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    setColor(colors.muted);
-    doc.text("CAPS Physical Sciences", logo ? margin + 40 : margin, 55);
-    doc.setDrawColor(...colors.rule);
-    doc.line(margin, 70, pageWidth - margin, 70);
-  }
-
-  function drawFooter(pageNumber, pageCount) {
-    doc.setDrawColor(...colors.rule);
-    doc.line(margin, pageHeight - 42, pageWidth - margin, pageHeight - 42);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    setColor(colors.muted);
-    doc.text(topic, margin, pageHeight - 26);
-    doc.text(`Page ${pageNumber} of ${pageCount}`, pageWidth - margin, pageHeight - 26, { align: "right" });
-  }
-
-  function addPage() {
-    doc.addPage();
-    y = 92;
-    drawHeader();
-  }
-
-  function ensureSpace(height) {
-    if (y + height > pageHeight - 64) addPage();
-  }
-
-  function cleanInline(text) {
-    return (text || "")
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function writeWrapped(text, options = {}) {
-    const fontSize = options.fontSize || 10.5;
-    const lineHeight = options.lineHeight || fontSize * 1.45;
-    const x = options.x || margin;
-    const width = options.width || contentWidth;
-    const fontStyle = options.fontStyle || "normal";
-    const color = options.color || colors.ink;
-    const indent = options.indent || 0;
-    const bullet = options.bullet || "";
-    const lines = doc.splitTextToSize(cleanInline(text), width - indent - (bullet ? 14 : 0));
-    ensureSpace(lines.length * lineHeight + 4);
-    doc.setFont("helvetica", fontStyle);
-    doc.setFontSize(fontSize);
-    setColor(color);
-    lines.forEach((line, index) => {
-      const lineX = x + indent + (bullet ? 14 : 0);
-      if (bullet && index === 0) doc.text(bullet, x + indent, y);
-      doc.text(line, lineX, y);
-      y += lineHeight;
-    });
-    y += options.after || 2;
-  }
-
-  function writeHeading(text, level) {
-    const size = level === 1 ? 17 : level === 2 ? 13 : 11.5;
-    const height = level === 1 ? 34 : 26;
-    ensureSpace(height);
-    y += level === 1 ? 12 : 8;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(size);
-    setColor(level === 1 ? colors.ink : colors.aqua);
-    doc.text(cleanInline(text), margin, y);
-    y += level === 1 ? 10 : 7;
-    if (level <= 2) {
-      doc.setDrawColor(...(level === 1 ? colors.accent : colors.rule));
-      doc.line(margin, y, pageWidth - margin, y);
+  try {
+    const examBtn = document.getElementById("generate-note-btn");
+    let originalText = "";
+    if (examBtn) {
+      originalText = examBtn.textContent;
+      examBtn.textContent = "Exporting PDF...";
+      examBtn.disabled = true;
     }
-    y += level === 1 ? 18 : 14;
-  }
 
-  function writeRule() {
-    ensureSpace(24);
-    doc.setDrawColor(...colors.rule);
-    doc.line(margin, y + 8, pageWidth - margin, y + 8);
-    y += 24;
-  }
+    await html2pdf().set(opt).from(pdfContainer).save();
 
-  doc.setFillColor(...colors.panel);
-  doc.roundedRect(margin, margin, contentWidth, 116, 12, 12, "F");
-  if (logo) doc.addImage(logo, "PNG", margin + 18, margin + 20, 54, 54);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(23);
-  setColor(colors.ink);
-  doc.text(cleanInline(title), margin + (logo ? 88 : 22), margin + 44, { maxWidth: contentWidth - (logo ? 110 : 44) });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  setColor(colors.muted);
-  doc.text(topic, margin + (logo ? 88 : 22), margin + 70);
-  doc.text(new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" }), margin + (logo ? 88 : 22), margin + 88);
-  y = margin + 152;
-
-  const lines = content.split(/\r?\n/);
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) {
-      y += 8;
-      continue;
+    if (examBtn) {
+      examBtn.textContent = originalText;
+      examBtn.disabled = false;
     }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (/^-{3,}$/.test(line)) {
-      writeRule();
-    } else if (heading) {
-      const headingText = heading[2];
-      if (/^memorandum\b/i.test(headingText) && y > margin + 180) addPage();
-      writeHeading(headingText, heading[1].length);
-    } else if (/^[-*]\s+/.test(line)) {
-      writeWrapped(line.replace(/^[-*]\s+/, ""), { bullet: "-", indent: 12, color: colors.ink });
-    } else if (/^\d+[\).\s]/.test(line)) {
-      writeWrapped(line, { indent: 8, color: colors.ink });
-    } else {
-      writeWrapped(line, { color: colors.ink });
-    }
+  } catch (err) {
+    console.error("PDF Export error:", err);
+    alert("Failed to export PDF.");
   }
-
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i += 1) {
-    doc.setPage(i);
-    drawFooter(i, pageCount);
-  }
-
-  doc.save(`${safeFileName(title)}.pdf`);
 }
+
 
 function loadImageData(url) {
   return new Promise((resolve, reject) => {
