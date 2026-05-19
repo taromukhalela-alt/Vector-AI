@@ -107,7 +107,7 @@ def _get_or_create_secret_key():
     return key
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="frontend/dist", static_url_path="")
 app.secret_key = _get_or_create_secret_key()
 app.config["MAX_CONTENT_LENGTH"] = env_int("MAX_REQUEST_BYTES", 1048576, min_value=1024)
 _secure_cookie_default = env_bool("COOKIE_SECURE_DEFAULT", bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER") or os.getenv("PRODUCTION")))
@@ -1933,67 +1933,26 @@ def simulate_physics():
 # Routes
 # -------------------------------
 @app.route("/")
-def home():
-    if current_user.is_authenticated:
-        return redirect(url_for("chat_page"))
-    return redirect(url_for("auth.landing"))
-
-
-@app.route("/assistant")
-def assistant():
-    return redirect(url_for("chat_page"))
+@app.route("/chat", methods=["GET"])
+@app.route("/notes", methods=["GET"])
+@app.route("/animations", methods=["GET"])
+@app.route("/assistant", methods=["GET"])
+def serve_spa():
+    return send_from_directory("frontend/dist", "index.html")
 
 
 @app.route("/logout", methods=["GET", "POST"])
 def logout_alias():
-    if request.method == "GET":
-        return redirect(url_for("auth.landing"))
-    logout_user()
-    session.clear()
-    if request.is_json or request.method == "POST":
-        return jsonify({"success": True, "redirect": url_for("auth.landing")})
-    return redirect(url_for("auth.landing"))
+    if request.method == "POST":
+        logout_user()
+        session.clear()
+        return jsonify({"success": True})
+    return send_from_directory("frontend/dist", "index.html")
 
 
 @app.route("/favicon.ico")
 def favicon():
-    favicon_path = os.path.join(app.root_path, "static", "favicon.ico")
-    if not os.path.exists(favicon_path):
-        return ("", 204)
-    return send_from_directory(
-        os.path.join(app.root_path, "static"),
-        "favicon.ico",
-        mimetype="image/vnd.microsoft.icon",
-    )
-
-
-@app.route("/chat", methods=["GET"])
-@login_required
-def chat_page():
-    session["user"] = current_user.id
-    get_user_key()
-    ensure_chat_id()
-    return render_template("index.html", user=current_user)
-
-
-@app.route("/notes")
-@login_required
-def notes_page():
-    session["user"] = current_user.id
-    return render_template("notes.html", user=current_user)
-
-
-@app.route("/animations")
-@login_required
-def animations():
-    args = {"tab": "animations"}
-    anim = request.args.get("anim")
-    q = request.args.get("q")
-    if anim:
-        args["anim"] = anim
-    if q:
-        args["q"] = q
-    return redirect(url_for("chat_page", **args))
+    return send_from_directory("frontend/dist", "favicon.svg")
 
 
 @app.route("/check_auth")

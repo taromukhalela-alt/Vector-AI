@@ -10,6 +10,7 @@ from flask import (
     session,
     redirect,
     url_for,
+    send_from_directory,
 )
 from flask_login import (
     LoginManager,
@@ -25,7 +26,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 login_manager = LoginManager()
 
 def _chat_redirect():
-    return url_for("chat_page")
+    return "/"
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -46,7 +47,7 @@ def init_auth(app):
 
 @auth_bp.route("/landing")
 def landing():
-    return render_template("landing.html")
+    return send_from_directory("frontend/dist", "index.html")
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -82,7 +83,7 @@ def login():
             return jsonify({"success": True, "redirect": _chat_redirect()})
         return redirect(_chat_redirect())
 
-    return render_template("login.html")
+    return send_from_directory("frontend/dist", "index.html")
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -146,7 +147,7 @@ def register():
             return jsonify({"success": True, "redirect": _chat_redirect()})
         return redirect(_chat_redirect())
 
-    return render_template("login.html", register=True)
+    return send_from_directory("frontend/dist", "index.html")
 
 @auth_bp.route("/logout", methods=["GET", "POST"])
 def logout():
@@ -158,12 +159,23 @@ def logout():
         return jsonify({"success": True, "redirect": url_for("auth.landing")})
     return redirect(url_for("auth.landing"))
 
+CSRF_SESSION_KEY = "_csrf_token"
+
+def get_csrf_token():
+    token = session.get(CSRF_SESSION_KEY)
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session[CSRF_SESSION_KEY] = token
+    return token
+
 @auth_bp.route("/check")
 def check_auth():
+    token = get_csrf_token()
     if current_user.is_authenticated:
         return jsonify(
             {
                 "authenticated": True,
+                "csrf_token": token,
                 "user": {
                     "id": current_user.id,
                     "email": current_user.email,
@@ -172,4 +184,4 @@ def check_auth():
                 },
             }
         )
-    return jsonify({"authenticated": False})
+    return jsonify({"authenticated": False, "csrf_token": token})
