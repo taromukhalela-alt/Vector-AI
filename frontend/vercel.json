@@ -2,35 +2,35 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vector-ai.up.railway.app/api/:path*"
+      "destination": "https://vector-ai-1uiq.onrender.com/api/:path*"
     },
     {
       "source": "/auth/:path*",
-      "destination": "https://vector-ai.up.railway.app/auth/:path*"
+      "destination": "https://vector-ai-1uiq.onrender.com/auth/:path*"
     },
     {
       "source": "/chat",
-      "destination": "https://vector-ai.up.railway.app/chat"
+      "destination": "https://vector-ai-1uiq.onrender.com/chat"
     },
     {
       "source": "/match-animation",
-      "destination": "https://vector-ai.up.railway.app/match-animation"
+      "destination": "https://vector-ai-1uiq.onrender.com/match-animation"
     },
     {
       "source": "/voice-tutor",
-      "destination": "https://vector-ai.up.railway.app/voice-tutor"
+      "destination": "https://vector-ai-1uiq.onrender.com/voice-tutor"
     },
     {
       "source": "/check_auth",
-      "destination": "https://vector-ai.up.railway.app/check_auth"
+      "destination": "https://vector-ai-1uiq.onrender.com/check_auth"
     },
     {
       "source": "/logout",
-      "destination": "https://vector-ai.up.railway.app/logout"
+      "destination": "https://vector-ai-1uiq.onrender.com/logout"
     },
     {
       "source": "/favicon.ico",
-      "destination": "https://vector-ai.up.railway.app/favicon.ico"
+      "destination": "https://vector-ai-1uiq.onrender.com/favicon.ico"
     },
     {
       "source": "/:path*",
