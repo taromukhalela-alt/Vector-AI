@@ -98,20 +98,20 @@ const Landing = ({ onNavigate }) => {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-semibold text-xs tracking-widest uppercase mb-8 shadow-inner animate-pulse">
           <Sparkles className="w-3.5 h-3.5" />
-          Neural STEM Interface
+          AI ACCELERATED PHYSICS
         </div>
 
         {/* Title */}
         <h1 className="font-black text-4xl sm:text-6xl md:text-7xl tracking-tight leading-tight uppercase mb-8">
-          Vectors of Mind, <br />
+          AI Accelerated Physics, <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-            Syllabus of Power
+            Made For YOU, at 14
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="text-zinc-400 text-base sm:text-xl leading-relaxed max-w-3xl mb-12">
-          South Africa's premium CAPS-aligned STEM Operating System. Fusing interactive 2D simulations, real-time speech tutoring, and semantic notes to unlock science mastery.
+          South Africa's premium CAPS-aligned AI-Accelerated Physics platform. Fusing interactive 2D simulations, real-time speech tutoring, and semantic notes to unlock science mastery.
         </p>
 
         {/* Stats Grid */}
@@ -141,7 +141,7 @@ const Landing = ({ onNavigate }) => {
             onClick={() => onNavigate(isAuthenticated ? 'chat' : 'auth')}
             className="flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-bold rounded-lg tracking-wider uppercase text-sm shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all cursor-pointer"
           >
-            Launch STEM OS
+            Launch Vector AI now
             <ArrowRight className="w-4 h-4 stroke-[3px]" />
           </button>
         </div>
@@ -211,7 +211,7 @@ const Landing = ({ onNavigate }) => {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-zinc-900 px-6 py-12 text-center text-zinc-500 text-xs tracking-wider">
-        <p className="mb-2">Vector AI STEM Operating System — Developed by Taro Mukhalela</p>
+        <p className="mb-2">Vector AI: AI-Accelerated Learning — Developed by Taro Mukhalela</p>
         <p className="opacity-60">© {new Date().getFullYear()} Vector AI. All Rights Reserved.</p>
       </footer>
     </div>
