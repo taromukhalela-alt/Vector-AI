@@ -241,9 +241,9 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-53px)] md:h-screen overflow-hidden relative">
+    <div className="flex h-full overflow-hidden relative">
       {/* Session History Sidebar (left inside tab) */}
-      <div className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-100/40 dark:bg-zinc-900/30 flex flex-col transition-all duration-300 ${
+      <div className={`shrink-0 border-r border-zinc-200/50 dark:border-zinc-800/40 bg-white/40 dark:bg-zinc-900/30 backdrop-blur-md flex flex-col transition-all duration-300 ${
         sidebarOpen ? 'w-64' : 'w-0 overflow-hidden border-r-0'
       }`}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">

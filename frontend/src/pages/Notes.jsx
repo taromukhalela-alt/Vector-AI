@@ -83,8 +83,8 @@ const Notes = () => {
 
     try {
       const isNew = !selectedNote || selectedNote.isTemp;
-      const url = isNew ? '/api/notes' : `/api/notes/${selectedNote.id}/sync`;
-      const method = 'POST';
+      const url = isNew ? '/api/notes' : `/api/notes/${selectedNote.id}`;
+      const method = isNew ? 'POST' : 'PUT';
 
       const res = await fetch(url, {
         method,

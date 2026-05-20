@@ -2354,6 +2354,74 @@ def delete_note(note_id):
     return jsonify({"success": False, "message": "Note not found"}), 404
 
 
+@app.route("/api/notes/generate", methods=["POST"])
+@login_required
+def generate_ai_note():
+    """Generate a comprehensive study guide/note for a topic using AI"""
+    rate_limited = enforce_rate_limit(
+        "ai_tools", AI_TOOL_RATE_LIMIT_COUNT, AI_TOOL_RATE_LIMIT_WINDOW
+    )
+    if rate_limited:
+        return rate_limited
+
+    data = request.get_json(silent=True) or {}
+    topic = (data.get("topic") or "").strip()
+    if not topic:
+        return jsonify({"success": False, "message": "Topic is required"}), 400
+
+    user_message = f"Generate a comprehensive study guide/notes about: {topic}"
+    system_prompt = (
+        f"{PHYSICS_SYSTEM_PROMPT}\n\n"
+        "## DOCUMENT GENERATION MODE\n"
+        "You are now generating a full-length study document, NOT a chat reply.\n"
+        "CRITICAL: Write an extremely comprehensive, detailed document. Aim for at least 2000-9000 words.\n"
+        "Use full markdown formatting: headings (# ## ###), bullet points, numbered lists, bold, and LaTeX math ($...$ and $$...$$).\n"
+        "Structure the document with clear sections, subsections, worked examples with step-by-step solutions, "
+        "key definitions, important formulas, diagrams described in words, exam tips, and practice questions.\n"
+        "Cover every sub-topic thoroughly. Do NOT summarize or cut short. The student needs comprehensive notes they can study from.\n"
+        "Include at least 3-5 worked examples with full calculations.\n"
+        "End with a summary of key formulas and 5-10 practice questions.\n"
+    )
+
+    try:
+        user_key = get_user_key()
+        reply = generate_response(
+            user_message,
+            history=[],
+            system_prompt=system_prompt,
+            user_key=user_key,
+            timeout_seconds=60.0
+        )
+        reply = limit_text(reply, EXAM_MAX_OUTPUT_CHARS)
+
+        # Infer metadata
+        meta = infer_note_metadata(f"{topic} Study Guide", topic, reply)
+        title = meta.get("title") or f"{topic} Study Guide"
+        inferred_topic = meta.get("topic") or topic
+        tags = meta.get("tags") or [topic.lower()]
+
+        # Save to DB
+        note_id = f"note_{secrets.token_urlsafe(12)}"
+        new_note = Note(
+            id=note_id,
+            user_id=current_user.id,
+            title=title,
+            content=reply,
+            topic=inferred_topic,
+            tags=tags,
+            source="ai"
+        )
+        db.session.add(new_note)
+        db.session.commit()
+
+        return jsonify({"success": True, "note": new_note.to_dict()})
+    except Exception as e:
+        logger.error("AI Note generation error: %s", e)
+        return jsonify({"success": False, "message": "Failed to generate study guide. Please try again."}), 500
+
+
+
+
 @app.route("/api/notes/ai", methods=["POST"])
 @login_required
 def ai_note_tools():
