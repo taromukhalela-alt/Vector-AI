@@ -45,7 +45,19 @@ const Notes = () => {
   useEffect(() => {
     fetchNotes();
   }, []);
+  
+  useEffect(() => {
+  fetchNotes();
+}, []);
 
+useEffect(() => {
+  if (typeof window.html2pdf === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+  }
+}, []);
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
     setStatusType(type);
