@@ -10,3 +10,4 @@ users.json*
 env/
 venv/
 .DS_Store
+.env
