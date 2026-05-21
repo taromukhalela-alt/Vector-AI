@@ -112,7 +112,7 @@ const Landing = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="relative min-h-[100vh] h-auto overflow-x-hidden overflow-y-auto bg-zinc-950 text-zinc-100 font-sans select-none">
+    <div className="relative min-h-[100vh] h-auto overflow-x overflow-y-auto bg-zinc-950 text-zinc-100 font-sans select-none">
 
       {/* ─── Ambient Background ─── */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)] pointer-events-none z-0" />
