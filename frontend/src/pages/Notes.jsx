@@ -23,6 +23,7 @@ const Notes = () => {
   // AI note generation state
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Alerts
   const [statusMessage, setStatusMessage] = useState('');
@@ -244,114 +245,116 @@ useEffect(() => {
   const handleDownloadPDF = async () => {
     if (!selectedNote) return;
 
+    setIsExportingPdf(true);
+    showStatus('Preparing PDF export...', 'success');
+
     try {
       await ensureHtml2pdfLoaded();
-      setHtml2pdfReady(true);
+      showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
+
+      // Create offscreen print container
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.padding = '35px 30px';
+      pdfContainer.style.fontFamily = 'Inter, sans-serif';
+      pdfContainer.style.color = '#18181b'; // zinc-900 ink
+
+      // Styled Branded Header
+      const header = document.createElement('div');
+      header.style.display = 'flex';
+      header.style.justifyContent = 'space-between';
+      header.style.alignItems = 'center';
+      header.style.borderBottom = '2.5px solid #10b981'; // vibrant emerald accent
+      header.style.paddingBottom = '14px';
+      header.style.marginBottom = '28px';
+
+      header.innerHTML = `
+        <div>
+          <h1 style="margin: 0; font-size: 22px; color: #18181b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${selectedNote.title}</h1>
+          <p style="margin: 4px 0 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase;">Topic: ${selectedNote.topic || 'General'}</p>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 12px; font-weight: 900; color: #10b981; letter-spacing: 1px;">VECTOR AI</div>
+          <div style="font-size: 9px; color: #71717a; font-weight: 700; margin-top: 2px; text-transform: uppercase;">CAPS STEM OS</div>
+        </div>
+      `;
+      pdfContainer.appendChild(header);
+
+      // Document Body Content wrapper
+      const bodyWrap = document.createElement('div');
+      bodyWrap.style.fontSize = '12px';
+      bodyWrap.style.lineHeight = '1.6';
+      bodyWrap.style.color = '#27272a';
+
+      // Parse markdown into HTML inside bodyWrap
+      const { marked } = await import('marked');
+      marked.setOptions({ breaks: true, gfm: true });
+      bodyWrap.innerHTML = marked.parse(selectedNote.content || '');
+      pdfContainer.appendChild(bodyWrap);
+
+      // Subtly Branded Footer
+      const footer = document.createElement('div');
+      footer.style.borderTop = '1px solid #e4e4e7';
+      footer.style.paddingTop = '14px';
+      footer.style.marginTop = '45px';
+      footer.style.display = 'flex';
+      footer.style.justifyContent = 'space-between';
+      footer.style.alignItems = 'center';
+      footer.style.fontSize = '9px';
+      footer.style.color = '#71717a';
+      footer.style.fontWeight = '600';
+      footer.style.textTransform = 'uppercase';
+
+      footer.innerHTML = `
+        <span>Built by Taro Mukhalela &middot; Vector AI STEM OS</span>
+        <span>Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      `;
+      pdfContainer.appendChild(footer);
+
+      // Inject KaTeX styles dynamically to offscreen container
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
+      pdfContainer.appendChild(link);
+
+      document.body.appendChild(pdfContainer);
+
+      // Auto-render math in the container
+      try {
+        renderMathInElement(pdfContainer, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true },
+          ],
+          throwOnError: false,
+        });
+      } catch (e) {
+        console.error('KaTeX print render error', e);
+      }
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2.2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        await window.html2pdf().set(opt).from(pdfContainer).save();
+        showStatus('PDF guide downloaded successfully!');
+      } catch (err) {
+        console.error(err);
+        showStatus('Failed to generate PDF document', 'error');
+      } finally {
+        document.body.removeChild(pdfContainer);
+      }
     } catch (err) {
       console.error('PDF exporter load error', err);
       alert('PDF exporter is still loading or failed to load. Please refresh the page if the issue persists.');
-      return;
-    }
-
-    showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
-
-    // Create offscreen print container
-    const pdfContainer = document.createElement('div');
-    pdfContainer.style.padding = '35px 30px';
-    pdfContainer.style.fontFamily = 'Inter, sans-serif';
-    pdfContainer.style.color = '#18181b'; // zinc-900 ink
-
-    // Styled Branded Header
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.borderBottom = '2.5px solid #10b981'; // vibrant emerald accent
-    header.style.paddingBottom = '14px';
-    header.style.marginBottom = '28px';
-
-    header.innerHTML = `
-      <div>
-        <h1 style="margin: 0; font-size: 22px; color: #18181b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${selectedNote.title}</h1>
-        <p style="margin: 4px 0 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase;">Topic: ${selectedNote.topic || 'General'}</p>
-      </div>
-      <div style="text-align: right;">
-        <div style="font-size: 12px; font-weight: 900; color: #10b981; letter-spacing: 1px;">VECTOR AI</div>
-        <div style="font-size: 9px; color: #71717a; font-weight: 700; margin-top: 2px; text-transform: uppercase;">CAPS STEM OS</div>
-      </div>
-    `;
-    pdfContainer.appendChild(header);
-
-    // Document Body Content wrapper
-    const bodyWrap = document.createElement('div');
-    bodyWrap.style.fontSize = '12px';
-    bodyWrap.style.lineHeight = '1.6';
-    bodyWrap.style.color = '#27272a';
-
-    // Parse markdown into HTML inside bodyWrap
-    const { marked } = await import('marked');
-    marked.setOptions({ breaks: true, gfm: true });
-    bodyWrap.innerHTML = marked.parse(selectedNote.content || '');
-    pdfContainer.appendChild(bodyWrap);
-
-    // Subtly Branded Footer
-    const footer = document.createElement('div');
-    footer.style.borderTop = '1px solid #e4e4e7';
-    footer.style.paddingTop = '14px';
-    footer.style.marginTop = '45px';
-    footer.style.display = 'flex';
-    footer.style.justifyContent = 'space-between';
-    footer.style.alignItems = 'center';
-    footer.style.fontSize = '9px';
-    footer.style.color = '#71717a';
-    footer.style.fontWeight = '600';
-    footer.style.textTransform = 'uppercase';
-
-    footer.innerHTML = `
-      <span>Built by Taro Mukhalela &middot; Vector AI STEM OS</span>
-      <span>Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-    `;
-    pdfContainer.appendChild(footer);
-
-    // Inject KaTeX styles dynamically to offscreen container
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-    pdfContainer.appendChild(link);
-
-    document.body.appendChild(pdfContainer);
-
-    // Auto-render math in the container
-    try {
-      renderMathInElement(pdfContainer, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false },
-          { left: '\\(', right: '\\)', display: false },
-          { left: '\\[', right: '\\]', display: true },
-        ],
-        throwOnError: false,
-      });
-    } catch (e) {
-      console.error('KaTeX print render error', e);
-    }
-
-    const opt = {
-      margin:       [10, 10, 10, 10],
-      filename:     `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2.2, useCORS: true, letterRendering: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    try {
-      await window.html2pdf().set(opt).from(pdfContainer).save();
-      showStatus('PDF guide downloaded successfully!');
-    } catch (err) {
-      console.error(err);
-      showStatus('Failed to generate PDF document', 'error');
     } finally {
-      document.body.removeChild(pdfContainer);
+      setIsExportingPdf(false);
     }
   };
 
@@ -514,10 +517,15 @@ useEffect(() => {
 
                 <button
                   onClick={handleDownloadPDF}
-                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                  disabled={isExportingPdf}
+                  className={`p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors ${isExportingPdf ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed' : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 cursor-pointer'}`}
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  PDF
+                  {isExportingPdf ? (
+                    <span className="inline-flex h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  {isExportingPdf ? 'Exporting...' : 'PDF'}
                 </button>
 
                 <button
