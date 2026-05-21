@@ -31,7 +31,7 @@ const Layout = ({ currentTab, onTabChange, children }) => {
   const activeLabel = tabs.find(t => t.id === currentTab)?.label || '';
 
   return (
-    <div className="h-screen overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
+    <div className="flex h-screen flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
 
       {/* ═══ FLOATING NAVBAR ═══ */}
       <nav className="floating-bar top-[var(--float-gap)] anim-fade-down bg-white/70 dark:bg-zinc-900/65 border border-zinc-200/50 dark:border-zinc-800/40 shadow-lg shadow-black/[.04] dark:shadow-black/20">
@@ -153,17 +153,16 @@ const Layout = ({ currentTab, onTabChange, children }) => {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main
-        className="absolute inset-0 overflow-y-auto"
+        className="flex-1 overflow-y-auto"
         style={{
           paddingTop: 'calc(var(--navbar-h) + var(--float-gap) * 2 + 4px)',
-          paddingBottom: 'calc(var(--status-h) + var(--float-gap) * 2 + 4px)',
         }}
       >
         <div className="h-full anim-fade-in d-150">{children}</div>
       </main>
 
-      {/* ═══ FLOATING STATUS BAR ═══ */}
-      <footer className="floating-bar bottom-[var(--float-gap)] anim-fade-up d-300 bg-white/65 dark:bg-zinc-900/60 border border-zinc-200/40 dark:border-zinc-800/30 shadow-lg shadow-black/[.03] dark:shadow-black/15">
+      {/* ═══ SEPARATED STATUS BAR ═══ */}
+      <footer className="relative w-full bg-white/95 dark:bg-zinc-900/95 border-t border-zinc-200/50 dark:border-zinc-800/40 shadow-sm shadow-black/[.05]">
         <div className="flex items-center justify-between px-4 h-[var(--status-h)] text-[10px] font-semibold tracking-wider uppercase select-none">
 
           {/* Left: connection + tab */}

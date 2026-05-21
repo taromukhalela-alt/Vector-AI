@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { 
@@ -12,6 +12,7 @@ const Notes = () => {
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
+  const html2pdfLoader = useRef(null);
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -45,19 +46,58 @@ const Notes = () => {
   useEffect(() => {
     fetchNotes();
   }, []);
-  
-  useEffect(() => {
-  fetchNotes();
-}, []);
 
-useEffect(() => {
-  if (typeof window.html2pdf === 'undefined') {
+const ensureHtml2pdfLoaded = () => {
+  if (typeof window.html2pdf !== 'undefined') {
+    return Promise.resolve(window.html2pdf);
+  }
+
+  if (html2pdfLoader.current) {
+    return html2pdfLoader.current;
+  }
+
+  const existingScript = document.querySelector('script[src*="html2pdf"]');
+  html2pdfLoader.current = new Promise((resolve, reject) => {
+    const handleLoad = () => {
+      if (typeof window.html2pdf !== 'undefined') {
+        resolve(window.html2pdf);
+      } else {
+        reject(new Error('html2pdf loaded but window.html2pdf is undefined'));
+      }
+    };
+
+    const handleError = () => reject(new Error('Failed to load html2pdf.js from CDN'));
+
+    if (existingScript) {
+      if (existingScript.getAttribute('data-loaded') === 'true') {
+        handleLoad();
+      } else {
+        existingScript.addEventListener('load', handleLoad, { once: true });
+        existingScript.addEventListener('error', handleError, { once: true });
+      }
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.async = true;
+    script.onload = () => {
+      script.setAttribute('data-loaded', 'true');
+      handleLoad();
+    };
+    script.onerror = handleError;
     document.body.appendChild(script);
-  }
+  });
+
+  return html2pdfLoader.current;
+};
+
+useEffect(() => {
+  ensureHtml2pdfLoaded().catch((err) => {
+    console.error('PDF exporter failed to load', err);
+  });
 }, []);
+
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
     setStatusType(type);
@@ -203,8 +243,13 @@ useEffect(() => {
   // Brand and download PDF
   const handleDownloadPDF = async () => {
     if (!selectedNote) return;
-    if (typeof window.html2pdf === 'undefined') {
-      alert('PDF exporter is still loading. Please try again in a moment.');
+
+    try {
+      await ensureHtml2pdfLoaded();
+      setHtml2pdfReady(true);
+    } catch (err) {
+      console.error('PDF exporter load error', err);
+      alert('PDF exporter is still loading or failed to load. Please refresh the page if the issue persists.');
       return;
     }
 
