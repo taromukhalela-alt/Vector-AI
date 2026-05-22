@@ -63,7 +63,7 @@ const Notes = () => {
       const existingScript = document.querySelector('script[data-html2pdf-loader]');
       if (!existingScript) {
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js';
         script.async = true;
         script.dataset.html2pdfLoader = 'true';
 
