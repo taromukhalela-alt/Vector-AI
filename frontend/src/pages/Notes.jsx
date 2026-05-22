@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
   Sparkles, CheckCircle, Save, HelpCircle 
 } from 'lucide-react';
-import renderMathInElement from 'katex/dist/contrib/auto-render';
+import { marked } from 'marked';
 
 const Notes = () => {
   const { csrfToken } = useAuth();
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
-  const html2pdfLoader = useRef(null);
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -48,56 +47,151 @@ const Notes = () => {
     fetchNotes();
   }, []);
 
-const ensureHtml2pdfLoaded = () => {
-  if (typeof window.html2pdf !== 'undefined') {
-    return Promise.resolve(window.html2pdf);
-  }
-
-  if (html2pdfLoader.current) {
-    return html2pdfLoader.current;
-  }
-
-  const existingScript = document.querySelector('script[src*="html2pdf"]');
-  html2pdfLoader.current = new Promise((resolve, reject) => {
-    const handleLoad = () => {
-      if (typeof window.html2pdf !== 'undefined') {
-        resolve(window.html2pdf);
-      } else {
-        reject(new Error('html2pdf loaded but window.html2pdf is undefined'));
-      }
-    };
-
-    const handleError = () => reject(new Error('Failed to load html2pdf.js from CDN'));
-
-    if (existingScript) {
-      if (existingScript.getAttribute('data-loaded') === 'true') {
-        handleLoad();
-      } else {
-        existingScript.addEventListener('load', handleLoad, { once: true });
-        existingScript.addEventListener('error', handleError, { once: true });
-      }
-      return;
+  const renderInlineToken = (token) => {
+    switch (token.type) {
+      case 'text':
+        return token.text || '';
+      case 'strong':
+        return { text: renderInline(token.tokens), bold: true };
+      case 'em':
+        return { text: renderInline(token.tokens), italics: true };
+      case 'codespan':
+        return { text: token.text || '', font: 'Courier', fillColor: '#f5f5f5' };
+      case 'link':
+        return {
+          text: token.text || token.href,
+          link: token.href,
+          color: '#047857',
+          decoration: 'underline',
+        };
+      case 'image':
+        return token.alt || '';
+      case 'del':
+        return { text: renderInline(token.tokens), decoration: 'lineThrough' };
+      case 'br':
+        return '\n';
+      case 'html':
+        return token.text || '';
+      default:
+        return token.text || '';
     }
+  };
 
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.async = true;
-    script.onload = () => {
-      script.setAttribute('data-loaded', 'true');
-      handleLoad();
+  const renderInline = (tokens = []) => tokens.flatMap(renderInlineToken);
+
+  const renderListItem = (item) => {
+    if (item.tokens) {
+      return item.tokens.flatMap((child) => {
+        if (child.type === 'paragraph') {
+          return { text: renderInline(child.tokens), margin: [0, 0, 0, 0] };
+        }
+        return renderInlineToken(child);
+      });
+    }
+    return item.text || '';
+  };
+
+  const renderToken = (token) => {
+    switch (token.type) {
+      case 'heading':
+        return {
+          text: renderInline(token.tokens || [{ type: 'text', text: token.text || '' }]),
+          style: token.depth === 1 ? 'heading1' : token.depth === 2 ? 'heading2' : 'heading3',
+          margin: [0, token.depth === 1 ? 14 : 10, 0, 6],
+        };
+      case 'paragraph':
+        return { text: renderInline(token.tokens || [{ type: 'text', text: token.text || '' }]), style: 'paragraph' };
+      case 'code':
+        return { text: token.text || '', style: 'code' };
+      case 'blockquote':
+        return { stack: renderTokens(token.tokens || []), style: 'quote', margin: [10, 4, 0, 8] };
+      case 'list':
+        return token.ordered
+          ? { ol: token.items.map(renderListItem), style: 'list', margin: [0, 4, 0, 8] }
+          : { ul: token.items.map(renderListItem), style: 'list', margin: [0, 4, 0, 8] };
+      case 'table':
+        return {
+          table: {
+            widths: token.header.map(() => '*'),
+            body: [
+              token.header.map((cell) => ({ text: String(cell), style: 'tableHeader' })),
+              ...token.rows.map((row) => row.map((cell) => ({ text: String(cell), style: 'tableCell' }))),
+            ],
+          },
+          layout: 'lightHorizontalLines',
+          margin: [0, 6, 0, 8],
+        };
+      case 'space':
+        return [];
+      default:
+        return { text: token.text || '', style: 'paragraph' };
+    }
+  };
+
+  const renderTokens = (tokens) => tokens.flatMap(renderToken);
+
+  const buildPdfDefinition = (note) => {
+    const tokens = marked.lexer(note.content || '');
+    const content = [
+      { text: note.title || 'Study Note', style: 'title' },
+      { text: `Topic: ${note.topic || 'General'}`, style: 'subtitle' },
+      { text: '', margin: [0, 0, 0, 10] },
+      ...renderTokens(tokens),
+    ];
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [40, 60, 40, 60],
+      footer: (currentPage, pageCount) => ({
+        columns: [
+          { text: 'Generated by Vector AI', style: 'footer', alignment: 'left' },
+          { text: `Page ${currentPage} of ${pageCount}`, style: 'footer', alignment: 'right' },
+        ],
+        margin: [40, 0, 40, 0],
+      }),
+      content,
+      styles: {
+        title: { fontSize: 22, bold: true, margin: [0, 0, 0, 8] },
+        subtitle: { fontSize: 10, color: '#10b981', italics: true, margin: [0, 0, 0, 16] },
+        heading1: { fontSize: 16, bold: true, margin: [0, 10, 0, 4] },
+        heading2: { fontSize: 14, bold: true, margin: [0, 8, 0, 4] },
+        heading3: { fontSize: 12, bold: true, margin: [0, 6, 0, 4] },
+        paragraph: { fontSize: 11, margin: [0, 0, 0, 8], lineHeight: 1.5 },
+        code: { fontSize: 10, font: 'Courier', fillColor: '#f5f5f5', margin: [0, 2, 0, 8] },
+        quote: { italics: true, color: '#4b5563' },
+        list: { fontSize: 11, margin: [0, 0, 0, 8], lineHeight: 1.5 },
+        tableHeader: { bold: true, fillColor: '#f3f4f6', margin: [0, 4, 0, 4] },
+        tableCell: { margin: [0, 4, 0, 4] },
+        footer: { fontSize: 8, italics: true, color: '#6b7280' },
+      },
+      defaultStyle: { fontSize: 11, lineHeight: 1.5, font: 'Helvetica' },
     };
-    script.onerror = handleError;
-    document.body.appendChild(script);
-  });
+  };
 
-  return html2pdfLoader.current;
-};
+  const handleDownloadPDF = async () => {
+    if (!selectedNote) return;
 
-useEffect(() => {
-  ensureHtml2pdfLoaded().catch((err) => {
-    console.error('PDF exporter failed to load', err);
-  });
-}, []);
+    setIsExportingPdf(true);
+    showStatus('Building structured PDF export...', 'success');
+
+    try {
+      const pdfMakeModule = await import('pdfmake/build/pdfmake');
+      const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+      const pdfMake = pdfMakeModule.default || pdfMakeModule;
+      const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+      pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || pdfFonts.default?.pdfMake?.vfs;
+
+      const docDefinition = buildPdfDefinition(selectedNote);
+      const filename = `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'study_note'}.pdf`;
+      pdfMake.createPdf(docDefinition).download(filename);
+      showStatus('Structured PDF downloaded successfully!');
+    } catch (err) {
+      console.error('PDF export failed', err);
+      showStatus('Failed to generate structured PDF', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
@@ -238,123 +332,6 @@ useEffect(() => {
       showStatus('Network error during AI generation', 'error');
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  // Brand and download PDF
-  const handleDownloadPDF = async () => {
-    if (!selectedNote) return;
-
-    setIsExportingPdf(true);
-    showStatus('Preparing PDF export...', 'success');
-
-    try {
-      await ensureHtml2pdfLoaded();
-      showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
-
-      // Create offscreen print container
-      const pdfContainer = document.createElement('div');
-      pdfContainer.style.padding = '35px 30px';
-      pdfContainer.style.fontFamily = 'Inter, sans-serif';
-      pdfContainer.style.color = '#18181b'; // zinc-900 ink
-
-      // Styled Branded Header
-      const header = document.createElement('div');
-      header.style.display = 'flex';
-      header.style.justifyContent = 'space-between';
-      header.style.alignItems = 'center';
-      header.style.borderBottom = '2.5px solid #10b981'; // vibrant emerald accent
-      header.style.paddingBottom = '14px';
-      header.style.marginBottom = '28px';
-
-      header.innerHTML = `
-        <div>
-          <h1 style="margin: 0; font-size: 22px; color: #18181b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${selectedNote.title}</h1>
-          <p style="margin: 4px 0 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase;">Topic: ${selectedNote.topic || 'General'}</p>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 12px; font-weight: 900; color: #10b981; letter-spacing: 1px;">VECTOR AI</div>
-          <div style="font-size: 9px; color: #71717a; font-weight: 700; margin-top: 2px; text-transform: uppercase;">CAPS STEM OS</div>
-        </div>
-      `;
-      pdfContainer.appendChild(header);
-
-      // Document Body Content wrapper
-      const bodyWrap = document.createElement('div');
-      bodyWrap.style.fontSize = '12px';
-      bodyWrap.style.lineHeight = '1.6';
-      bodyWrap.style.color = '#27272a';
-
-      // Parse markdown into HTML inside bodyWrap
-      const { marked } = await import('marked');
-      marked.setOptions({ breaks: true, gfm: true });
-      bodyWrap.innerHTML = marked.parse(selectedNote.content || '');
-      pdfContainer.appendChild(bodyWrap);
-
-      // Subtly Branded Footer
-      const footer = document.createElement('div');
-      footer.style.borderTop = '1px solid #e4e4e7';
-      footer.style.paddingTop = '14px';
-      footer.style.marginTop = '45px';
-      footer.style.display = 'flex';
-      footer.style.justifyContent = 'space-between';
-      footer.style.alignItems = 'center';
-      footer.style.fontSize = '9px';
-      footer.style.color = '#71717a';
-      footer.style.fontWeight = '600';
-      footer.style.textTransform = 'uppercase';
-
-      footer.innerHTML = `
-        <span>Built by Taro Mukhalela &middot; Vector AI STEM OS</span>
-        <span>Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-      `;
-      pdfContainer.appendChild(footer);
-
-      // Inject KaTeX styles dynamically to offscreen container
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-      pdfContainer.appendChild(link);
-
-      document.body.appendChild(pdfContainer);
-
-      // Auto-render math in the container
-      try {
-        renderMathInElement(pdfContainer, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-            { left: '\\(', right: '\\)', display: false },
-            { left: '\\[', right: '\\]', display: true },
-          ],
-          throwOnError: false,
-        });
-      } catch (e) {
-        console.error('KaTeX print render error', e);
-      }
-
-      const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2.2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      try {
-        await window.html2pdf().set(opt).from(pdfContainer).save();
-        showStatus('PDF guide downloaded successfully!');
-      } catch (err) {
-        console.error(err);
-        showStatus('Failed to generate PDF document', 'error');
-      } finally {
-        document.body.removeChild(pdfContainer);
-      }
-    } catch (err) {
-      console.error('PDF exporter load error', err);
-      alert('PDF exporter is still loading or failed to load. Please refresh the page if the issue persists.');
-    } finally {
-      setIsExportingPdf(false);
     }
   };
 
