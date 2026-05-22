@@ -12,6 +12,8 @@ const Notes = () => {
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
+  const pdfMakeRef = useRef(null);
+  const [isPdfMakeReady, setIsPdfMakeReady] = useState(false);
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +47,24 @@ const Notes = () => {
 
   useEffect(() => {
     fetchNotes();
+  }, []);
+
+  useEffect(() => {
+    const loadPdfMake = async () => {
+      try {
+        const pdfMakeModule = await import('pdfmake/build/pdfmake');
+        const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+        const pdfMake = pdfMakeModule.default || pdfMakeModule;
+        const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+        pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || pdfFonts.default?.pdfMake?.vfs;
+        pdfMakeRef.current = pdfMake;
+        setIsPdfMakeReady(true);
+      } catch (err) {
+        console.error('Failed to load PDF library', err);
+      }
+    };
+
+    loadPdfMake();
   }, []);
 
   const renderInlineToken = (token) => {
@@ -170,17 +190,16 @@ const Notes = () => {
 
   const handleDownloadPDF = async () => {
     if (!selectedNote) return;
+    if (!isPdfMakeReady || !pdfMakeRef.current) {
+      showStatus('PDF export is still loading. Please try again in a moment.', 'error');
+      return;
+    }
 
     setIsExportingPdf(true);
     showStatus('Building structured PDF export...', 'success');
 
     try {
-      const pdfMakeModule = await import('pdfmake/build/pdfmake');
-      const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
-      const pdfMake = pdfMakeModule.default || pdfMakeModule;
-      const pdfFonts = pdfFontsModule.default || pdfFontsModule;
-      pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || pdfFonts.default?.pdfMake?.vfs;
-
+      const pdfMake = pdfMakeRef.current;
       const docDefinition = buildPdfDefinition(selectedNote);
       const filename = `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'study_note'}.pdf`;
       pdfMake.createPdf(docDefinition).download(filename);

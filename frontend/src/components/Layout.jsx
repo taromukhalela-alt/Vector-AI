@@ -34,7 +34,7 @@ const Layout = ({ currentTab, onTabChange, children }) => {
     <div className="flex h-screen flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
 
       {/* ═══ FLOATING NAVBAR ═══ */}
-      <nav className="floating-bar top-[var(--float-gap)] anim-fade-down bg-white/70 dark:bg-zinc-900/65 border border-zinc-200/50 dark:border-zinc-800/40 shadow-lg shadow-black/[.04] dark:shadow-black/20">
+      <nav className="floating-bar top-[var(--float-gap)] anim-fade-down glass-backdrop bg-white/70 dark:bg-zinc-900/65 border border-zinc-200/50 dark:border-zinc-800/40 shadow-lg shadow-black/[.04] dark:shadow-black/20">
         <div className="flex items-center justify-between px-3 h-[var(--navbar-h)]">
 
           {/* Logo */}
@@ -93,7 +93,7 @@ const Layout = ({ currentTab, onTabChange, children }) => {
               {userMenu && (
                 <>
                   <div className="fixed inset-0 z-[150]" onClick={() => setUserMenu(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/60 dark:border-zinc-800/50 rounded-xl shadow-2xl p-1.5 z-[200] anim-scale-in">
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white/90 dark:bg-zinc-900/90 glass-backdrop border border-zinc-200/60 dark:border-zinc-800/50 rounded-xl shadow-2xl p-1.5 z-[200] anim-scale-in">
                     <div className="px-3 py-2 border-b border-zinc-200/40 dark:border-zinc-800/40 mb-1">
                       <p className="text-xs font-bold truncate">{user?.name || 'Learner'}</p>
                       <p className="text-[10px] text-zinc-400 font-medium">CAPS Student</p>
