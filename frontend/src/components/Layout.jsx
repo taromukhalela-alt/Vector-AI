@@ -39,8 +39,8 @@ const Layout = ({ currentTab, onTabChange, children }) => {
 
           {/* Logo */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-black text-base shadow-lg shadow-emerald-500/25 anim-glow">
-              V
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 anim-glow">
+              <Zap className="w-4 h-4" />
             </div>
             <div className="hidden sm:block">
               <span className="font-extrabold text-sm tracking-tight block leading-none">Vector AI</span>

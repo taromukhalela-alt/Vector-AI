@@ -6,14 +6,15 @@ import {
   Sparkles, CheckCircle, Save, HelpCircle 
 } from 'lucide-react';
 import { marked } from 'marked';
+import renderMathInElement from 'katex/dist/contrib/auto-render';
 
 const Notes = () => {
   const { csrfToken } = useAuth();
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
-  const pdfMakeRef = useRef(null);
-  const [isPdfMakeReady, setIsPdfMakeReady] = useState(false);
+  const html2pdfLoader = useRef(null);
+  const [isHtml2pdfReady, setIsHtml2pdfReady] = useState(false);
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -49,22 +50,61 @@ const Notes = () => {
     fetchNotes();
   }, []);
 
-  useEffect(() => {
-    const loadPdfMake = async () => {
-      try {
-        const pdfMakeModule = await import('pdfmake/build/pdfmake');
-        const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
-        const pdfMake = pdfMakeModule.default || pdfMakeModule;
-        const pdfFonts = pdfFontsModule.default || pdfFontsModule;
-        pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs || pdfFonts.default?.pdfMake?.vfs;
-        pdfMakeRef.current = pdfMake;
-        setIsPdfMakeReady(true);
-      } catch (err) {
-        console.error('Failed to load PDF library', err);
-      }
-    };
+  const ensureHtml2pdfLoaded = () => {
+    if (typeof window === 'undefined') {
+      return Promise.reject(new Error('Window is not available'));
+    }
 
-    loadPdfMake();
+    if (typeof window.html2pdf !== 'undefined') {
+      setIsHtml2pdfReady(true);
+      return Promise.resolve(window.html2pdf);
+    }
+
+    if (html2pdfLoader.current) {
+      return html2pdfLoader.current;
+    }
+
+    html2pdfLoader.current = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[src*="html2pdf"]');
+
+      const handleLoad = () => {
+        if (typeof window.html2pdf !== 'undefined') {
+          setIsHtml2pdfReady(true);
+          resolve(window.html2pdf);
+        } else {
+          reject(new Error('html2pdf loaded but window.html2pdf is undefined'));
+        }
+      };
+
+      const handleError = () => reject(new Error('Failed to load html2pdf.js from CDN'));
+
+      if (existingScript) {
+        if (existingScript.getAttribute('data-loaded') === 'true') {
+          handleLoad();
+        } else {
+          existingScript.addEventListener('load', handleLoad, { once: true });
+          existingScript.addEventListener('error', handleError, { once: true });
+        }
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.async = true;
+        script.onload = () => {
+          script.setAttribute('data-loaded', 'true');
+          handleLoad();
+        };
+        script.onerror = handleError;
+        document.body.appendChild(script);
+      }
+    });
+
+    return html2pdfLoader.current;
+  };
+
+  useEffect(() => {
+    ensureHtml2pdfLoaded().catch((err) => {
+      console.error('PDF exporter failed to load', err);
+    });
   }, []);
 
   const renderInlineToken = (token) => {
@@ -190,24 +230,114 @@ const Notes = () => {
 
   const handleDownloadPDF = async () => {
     if (!selectedNote) return;
-    if (!isPdfMakeReady || !pdfMakeRef.current) {
-      showStatus('PDF export is still loading. Please try again in a moment.', 'error');
-      return;
-    }
 
     setIsExportingPdf(true);
-    showStatus('Building structured PDF export...', 'success');
+    showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
 
     try {
-      const pdfMake = pdfMakeRef.current;
-      const docDefinition = buildPdfDefinition(selectedNote);
+      await ensureHtml2pdfLoaded();
+
+      const pdfContainer = document.createElement('div');
+      pdfContainer.style.position = 'fixed';
+      pdfContainer.style.top = '-9999px';
+      pdfContainer.style.left = '-9999px';
+      pdfContainer.style.width = '794px';
+      pdfContainer.style.padding = '35px 30px';
+      pdfContainer.style.fontFamily = 'Inter, sans-serif';
+      pdfContainer.style.background = '#ffffff';
+      pdfContainer.style.color = '#18181b';
+      pdfContainer.style.boxSizing = 'border-box';
+      pdfContainer.style.lineHeight = '1.6';
+      pdfContainer.style.zIndex = '-9999';
+
+      const header = document.createElement('div');
+      header.style.display = 'flex';
+      header.style.justifyContent = 'space-between';
+      header.style.alignItems = 'flex-start';
+      header.style.borderBottom = '2.5px solid #10b981';
+      header.style.paddingBottom = '14px';
+      header.style.marginBottom = '28px';
+
+      header.innerHTML = `
+        <div>
+          <h1 style="margin:0;font-size:22px;color:#18181b;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">${selectedNote.title}</h1>
+          <p style="margin:4px 0 0 0;font-size:11px;color:#71717a;font-weight:600;text-transform:uppercase;">Topic: ${selectedNote.topic || 'General'}</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;font-weight:900;color:#10b981;letter-spacing:1px;">VECTOR AI</div>
+          <div style="font-size:9px;color:#71717a;font-weight:700;margin-top:2px;text-transform:uppercase;">CAPS STEM OS</div>
+        </div>
+      `;
+      pdfContainer.appendChild(header);
+
+      const bodyWrap = document.createElement('div');
+      bodyWrap.style.fontSize = '12px';
+      bodyWrap.style.color = '#27272a';
+      bodyWrap.innerHTML = marked.parse(selectedNote.content || '');
+      pdfContainer.appendChild(bodyWrap);
+
+      const footer = document.createElement('div');
+      footer.style.borderTop = '1px solid #e4e4e7';
+      footer.style.paddingTop = '14px';
+      footer.style.marginTop = '45px';
+      footer.style.display = 'flex';
+      footer.style.justifyContent = 'space-between';
+      footer.style.alignItems = 'center';
+      footer.style.fontSize = '9px';
+      footer.style.color = '#71717a';
+      footer.style.fontWeight = '600';
+      footer.style.textTransform = 'uppercase';
+
+      footer.innerHTML = `
+        <span>Built by Taro Mukhalela · Vector AI STEM OS</span>
+        <span>Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      `;
+      pdfContainer.appendChild(footer);
+
+      const styleId = 'vector-ai-katex-pdf-style';
+      let styleLink = document.getElementById(styleId);
+      if (!styleLink) {
+        styleLink = document.createElement('link');
+        styleLink.id = styleId;
+        styleLink.rel = 'stylesheet';
+        styleLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
+        document.head.appendChild(styleLink);
+      }
+
+      document.body.appendChild(pdfContainer);
+
+      try {
+        renderMathInElement(pdfContainer, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true },
+          ],
+          throwOnError: false,
+        });
+      } catch (e) {
+        console.error('KaTeX print render error', e);
+      }
+
       const filename = `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'study_note'}.pdf`;
-      pdfMake.createPdf(docDefinition).download(filename);
-      showStatus('Structured PDF downloaded successfully!');
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2.2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+
+      await window.html2pdf().set(opt).from(pdfContainer).save();
+      showStatus('PDF guide downloaded successfully!');
     } catch (err) {
       console.error('PDF export failed', err);
-      showStatus('Failed to generate structured PDF', 'error');
+      showStatus('Failed to generate PDF document', 'error');
     } finally {
+      if (pdfContainer.parentNode) {
+        document.body.removeChild(pdfContainer);
+      }
       setIsExportingPdf(false);
     }
   };
