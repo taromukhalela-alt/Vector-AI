@@ -7,9 +7,6 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
-import * as html2pdfModule from 'html2pdf.js';
-
-const html2pdf = html2pdfModule?.default || html2pdfModule;
 
 const Notes = () => {
   const { csrfToken } = useAuth();
@@ -58,17 +55,44 @@ const Notes = () => {
       throw new Error('Window is not available');
     }
 
-    if (isHtml2pdfReady && html2pdf) {
-      return html2pdf;
+    if (isHtml2pdfReady && window.html2pdf && typeof window.html2pdf === 'function') {
+      return window.html2pdf;
+    }
+
+    const loadFromCdn = async () => {
+      const existingScript = document.querySelector('script[data-html2pdf-loader]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.min.js';
+        script.async = true;
+        script.dataset.html2pdfLoader = 'true';
+
+        const loadPromise = new Promise((resolve, reject) => {
+          script.addEventListener('load', () => resolve(window.html2pdf));
+          script.addEventListener('error', () => reject(new Error('Failed to load html2pdf.js from CDN')));
+        });
+
+        document.head.appendChild(script);
+        return await loadPromise;
+      }
+
+      if (window.html2pdf && typeof window.html2pdf === 'function') {
+        return window.html2pdf;
+      }
+
+      return await new Promise((resolve, reject) => {
+        existingScript.addEventListener('load', () => resolve(window.html2pdf));
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load html2pdf.js from CDN')));
+      });
+    };
+
+    const loadedFromCdn = await loadFromCdn();
+    if (!loadedFromCdn || typeof loadedFromCdn !== 'function') {
+      throw new Error('html2pdf library failed to initialize from CDN');
     }
 
     setIsHtml2pdfReady(true);
-
-    const loaded = html2pdf || window.html2pdf || (await import('html2pdf.js')).default || (await import('html2pdf.js'));
-    if (!loaded || typeof loaded !== 'function') {
-      throw new Error('html2pdf library failed to initialize');
-    }
-    return loaded;
+    return loadedFromCdn;
   };
 
   useEffect(() => {
