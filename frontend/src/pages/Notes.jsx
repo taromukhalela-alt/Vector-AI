@@ -254,16 +254,29 @@ const Notes = () => {
       header.style.paddingBottom = '14px';
       header.style.marginBottom = '28px';
 
-      header.innerHTML = `
-        <div>
-          <h1 style="margin:0;font-size:22px;color:#18181b;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">${selectedNote.title}</h1>
-          <p style="margin:4px 0 0 0;font-size:11px;color:#71717a;font-weight:600;text-transform:uppercase;">Topic: ${selectedNote.topic || 'General'}</p>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:12px;font-weight:900;color:#10b981;letter-spacing:1px;">VECTOR AI</div>
-          <div style="font-size:9px;color:#71717a;font-weight:700;margin-top:2px;text-transform:uppercase;">CAPS STEM OS</div>
-        </div>
-      `;
+      const headerLeft = document.createElement('div');
+      const headerTitle = document.createElement('h1');
+      headerTitle.style.cssText = 'margin:0;font-size:22px;color:#18181b;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
+      headerTitle.textContent = selectedNote.title;
+      const headerTopic = document.createElement('p');
+      headerTopic.style.cssText = 'margin:4px 0 0 0;font-size:11px;color:#71717a;font-weight:600;text-transform:uppercase;';
+      headerTopic.textContent = `Topic: ${selectedNote.topic || 'General'}`;
+      headerLeft.appendChild(headerTitle);
+      headerLeft.appendChild(headerTopic);
+
+      const headerRight = document.createElement('div');
+      headerRight.style.textAlign = 'right';
+      const brandName = document.createElement('div');
+      brandName.style.cssText = 'font-size:12px;font-weight:900;color:#10b981;letter-spacing:1px;';
+      brandName.textContent = 'VECTOR AI';
+      const brandSub = document.createElement('div');
+      brandSub.style.cssText = 'font-size:9px;color:#71717a;font-weight:700;margin-top:2px;text-transform:uppercase;';
+      brandSub.textContent = 'CAPS STEM OS';
+      headerRight.appendChild(brandName);
+      headerRight.appendChild(brandSub);
+
+      header.appendChild(headerLeft);
+      header.appendChild(headerRight);
       pdfContainer.appendChild(header);
 
       const bodyWrap = document.createElement('div');
