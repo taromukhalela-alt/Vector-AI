@@ -1,0 +1,57 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://vector-ai.up.railway.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/auth/*"
+  to = "https://vector-ai.up.railway.app/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/chat"
+  to = "https://vector-ai.up.railway.app/chat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/match-animation"
+  to = "https://vector-ai.up.railway.app/match-animation"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/voice-tutor"
+  to = "https://vector-ai.up.railway.app/voice-tutor"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/check_auth"
+  to = "https://vector-ai.up.railway.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/logout"
+  to = "https://vector-ai.up.railway.app/logout"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/favicon.ico"
+  to = "https://vector-ai.up.railway.app/favicon.ico"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
