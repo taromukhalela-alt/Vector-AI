@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "html2pdf.js": "^0.14.0",
     "katex": "^0.16.47",
     "lucide-react": "^1.16.0",
     "marked": "^18.0.4",

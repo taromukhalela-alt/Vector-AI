@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { 
@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
+import html2pdf from 'html2pdf.js';
 
 const Notes = () => {
   const { csrfToken } = useAuth();
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
-  const html2pdfLoader = useRef(null);
   const [isHtml2pdfReady, setIsHtml2pdfReady] = useState(false);
   
   // Edit form states
@@ -55,50 +55,12 @@ const Notes = () => {
       return Promise.reject(new Error('Window is not available'));
     }
 
-    if (typeof window.html2pdf !== 'undefined') {
-      setIsHtml2pdfReady(true);
-      return Promise.resolve(window.html2pdf);
+    if (isHtml2pdfReady) {
+      return Promise.resolve(html2pdf);
     }
 
-    if (html2pdfLoader.current) {
-      return html2pdfLoader.current;
-    }
-
-    html2pdfLoader.current = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector('script[src*="html2pdf"]');
-
-      const handleLoad = () => {
-        if (typeof window.html2pdf !== 'undefined') {
-          setIsHtml2pdfReady(true);
-          resolve(window.html2pdf);
-        } else {
-          reject(new Error('html2pdf loaded but window.html2pdf is undefined'));
-        }
-      };
-
-      const handleError = () => reject(new Error('Failed to load html2pdf.js from CDN'));
-
-      if (existingScript) {
-        if (existingScript.getAttribute('data-loaded') === 'true') {
-          handleLoad();
-        } else {
-          existingScript.addEventListener('load', handleLoad, { once: true });
-          existingScript.addEventListener('error', handleError, { once: true });
-        }
-      } else {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.async = true;
-        script.onload = () => {
-          script.setAttribute('data-loaded', 'true');
-          handleLoad();
-        };
-        script.onerror = handleError;
-        document.body.appendChild(script);
-      }
-    });
-
-    return html2pdfLoader.current;
+    setIsHtml2pdfReady(true);
+    return Promise.resolve(html2pdf);
   };
 
   useEffect(() => {
@@ -329,7 +291,7 @@ const Notes = () => {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
 
-      await window.html2pdf().set(opt).from(pdfContainer).save();
+      await html2pdf().set(opt).from(pdfContainer).save();
       showStatus('PDF guide downloaded successfully!');
     } catch (err) {
       console.error('PDF export failed', err);
