@@ -22,7 +22,7 @@
     },
     {
       "source": "/check_auth",
-      "destination": "https://vector-ai.up.railway.app/api/:path*"
+      "destination": "https://vector-ai.up.railway.app/check_auth"
     },
     {
       "source": "/logout",
