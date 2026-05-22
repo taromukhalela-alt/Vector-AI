@@ -1167,6 +1167,35 @@ def generate_response(
             logger.error("OpenRouter generation error: %s", e)
             return "I hit a temporary issue while generating the exam paper. Please try again."
 
+    if provider == "groq":
+        api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
+        if not api_key or not Groq:
+            logger.error("Groq API not available for exam generation")
+            fallback = local_hint or get_local_science_response(user_message)
+            return fallback or "Groq is not configured for exam generation. Please try again."
+        
+        try:
+            prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
+            groq_timeout = timeout_seconds or 60.0
+            text = _groq_generate_with_timeout(prompt, api_key, groq_timeout)
+            if text:
+                logger.info("Groq successfully generated exam response")
+                return text
+            # If Groq returned empty, retry with a shorter prompt
+            logger.info("Groq returned empty for exam, retrying without history")
+            simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+            text = _groq_generate_with_timeout(simple_prompt, api_key, groq_timeout)
+            if text:
+                return text
+            fallback = get_local_science_response(user_message)
+            return fallback or "I couldn't generate the exam paper. Could you try again?"
+        except TimeoutError:
+            logger.error("Groq timeout after %.1fs for exam generation", groq_timeout)
+            return "The exam generator took too long. Please try again with a narrower topic or fewer marks."
+        except Exception as e:
+            logger.error("Groq generation error for exam: %s", e)
+            return "I hit a temporary issue while generating the exam paper. Please try again."
+
     # Use Groq as the main chat provider
     api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
     if api_key and Groq:
@@ -2198,7 +2227,7 @@ def chat():
             system_prompt,
             local_hint=deterministic_hint,
             user_key=user_key,
-            provider="openrouter" if is_exam_generation else None,
+            provider="groq" if is_exam_generation else None,
             timeout_seconds=60.0 if document_mode else None,
         )
         if voice_mode:
@@ -2229,7 +2258,7 @@ def chat():
                 system_prompt,
                 local_hint=deterministic_hint,
                 user_key=user_key,
-                provider="openrouter" if is_exam_generation else None,
+                provider="groq" if is_exam_generation else None,
                 timeout_seconds=60.0 if document_mode else None,
             )
             if voice_mode:
