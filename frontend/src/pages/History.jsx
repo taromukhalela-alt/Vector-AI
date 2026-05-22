@@ -6,6 +6,20 @@ const History = ({ onResumeSession }) => {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+
+  useEffect(() => {
+    const handleResize = () => setSidebarOpen(window.innerWidth >= 768);
+    if (typeof window !== 'undefined') {
+      handleResize();
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   const fetchSessions = async () => {
     try {
@@ -34,6 +48,9 @@ const History = ({ onResumeSession }) => {
           ...sess,
           messages: data.history || []
         });
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          setSidebarOpen(false);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -42,8 +59,16 @@ const History = ({ onResumeSession }) => {
 
   return (
     <div className="flex h-[calc(100vh-53px)] md:h-screen overflow-hidden relative">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Session list sidebar */}
-      <aside className="w-64 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-100/40 dark:bg-zinc-900/30 flex flex-col">
+      <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
+        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
+      }`}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
             <HistoryIcon className="w-3.5 h-3.5 text-emerald-500" />
@@ -101,6 +126,12 @@ const History = ({ onResumeSession }) => {
               </div>
 
               <button
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden px-3 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-semibold uppercase tracking-wider rounded-xl transition hover:bg-zinc-300 dark:hover:bg-zinc-700"
+              >
+                Sessions
+              </button>
+              <button
                 onClick={() => onResumeSession(selectedSession.chat_id)}
                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
               >
@@ -115,7 +146,7 @@ const History = ({ onResumeSession }) => {
                 {selectedSession.messages.map((msg, index) => (
                   <div 
                     key={index}
-                    className={`flex flex-col max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed border ${
+                    className={`flex flex-col max-w-full sm:max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed break-words border ${
                       msg.role === 'user'
                         ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-100 self-end rounded-tr-none'
                         : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'

@@ -13,7 +13,20 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  
+  useEffect(() => {
+    const handleResize = () => setSidebarOpen(window.innerWidth >= 768);
+    if (typeof window !== 'undefined') {
+      handleResize();
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
   
   // Voice preferences
   const [ttsProvider, setTtsProvider] = useState(() => localStorage.getItem('preferred_tts_provider') || 'camb');
@@ -243,8 +256,14 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   return (
     <div className="flex h-full overflow-hidden relative">
       {/* Session History Sidebar (left inside tab) */}
-      <div className={`shrink-0 border-r border-zinc-200/50 dark:border-zinc-800/40 bg-white/40 dark:bg-zinc-900/30 backdrop-blur-md flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'w-64' : 'w-0 overflow-hidden border-r-0'
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <div className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md flex flex-col transition-all duration-300 ${
+        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
       }`}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -321,7 +340,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
       {/* Toggle Sidebar Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute left-0 bottom-4 z-40 p-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-r-lg border border-l-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer hidden md:block"
+        className="absolute left-0 bottom-4 z-40 p-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-r-lg border border-l-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer md:block"
       >
         {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
       </button>

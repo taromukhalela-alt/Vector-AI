@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
-import html2pdf from 'html2pdf.js';
+import * as html2pdfModule from 'html2pdf.js';
+
+const html2pdf = html2pdfModule?.default || html2pdfModule;
 
 const Notes = () => {
   const { csrfToken } = useAuth();
@@ -26,6 +28,7 @@ const Notes = () => {
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Alerts
   const [statusMessage, setStatusMessage] = useState('');
@@ -50,17 +53,22 @@ const Notes = () => {
     fetchNotes();
   }, []);
 
-  const ensureHtml2pdfLoaded = () => {
+  const ensureHtml2pdfLoaded = async () => {
     if (typeof window === 'undefined') {
-      return Promise.reject(new Error('Window is not available'));
+      throw new Error('Window is not available');
     }
 
-    if (isHtml2pdfReady) {
-      return Promise.resolve(html2pdf);
+    if (isHtml2pdfReady && html2pdf) {
+      return html2pdf;
     }
 
     setIsHtml2pdfReady(true);
-    return Promise.resolve(html2pdf);
+
+    const loaded = html2pdf || window.html2pdf || (await import('html2pdf.js')).default || (await import('html2pdf.js'));
+    if (!loaded || typeof loaded !== 'function') {
+      throw new Error('html2pdf library failed to initialize');
+    }
+    return loaded;
   };
 
   useEffect(() => {
@@ -196,10 +204,12 @@ const Notes = () => {
     setIsExportingPdf(true);
     showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
 
-    try {
-      await ensureHtml2pdfLoaded();
+    let pdfContainer = null;
 
-      const pdfContainer = document.createElement('div');
+    try {
+      const html2pdfLib = await ensureHtml2pdfLoaded();
+
+      pdfContainer = document.createElement('div');
       pdfContainer.style.position = 'fixed';
       pdfContainer.style.top = '-9999px';
       pdfContainer.style.left = '-9999px';
@@ -291,13 +301,13 @@ const Notes = () => {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
 
-      await html2pdf().set(opt).from(pdfContainer).save();
+      await html2pdfLib().set(opt).from(pdfContainer).save();
       showStatus('PDF guide downloaded successfully!');
     } catch (err) {
       console.error('PDF export failed', err);
-      showStatus('Failed to generate PDF document', 'error');
+      showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
     } finally {
-      if (pdfContainer.parentNode) {
+      if (pdfContainer && pdfContainer.parentNode) {
         document.body.removeChild(pdfContainer);
       }
       setIsExportingPdf(false);
@@ -316,6 +326,9 @@ const Notes = () => {
     setEditTopic(note.topic || 'General');
     setEditContent(note.content || '');
     setIsEditing(false);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleCreateNote = () => {
@@ -464,8 +477,16 @@ const Notes = () => {
         </div>
       )}
 
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Left Sidebar: Notes & AI generator */}
-      <aside className="w-64 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-100/40 dark:bg-zinc-900/30 flex flex-col hidden md:flex">
+      <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
+        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
+      }`}>
         
         {/* Search */}
         <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
@@ -548,9 +569,15 @@ const Notes = () => {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header toolbar */}
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="md:hidden py-2 px-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] uppercase tracking-wider font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+                >
+                  Notes
+                </button>
                 {isEditing ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <input
                       type="text"
                       value={editTitle}

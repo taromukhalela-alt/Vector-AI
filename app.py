@@ -1153,7 +1153,7 @@ def generate_response(
                 timeout,
                 model=os.getenv("OPENROUTER_EXAM_MODEL", "openrouter/free"),
                 max_tokens=env_int(
-                    "OPENROUTER_EXAM_MAX_TOKENS", 4500, min_value=500
+                    "OPENROUTER_EXAM_MAX_TOKENS", 9000, min_value=500
                 ),
             )
             if text:
@@ -2374,7 +2374,7 @@ def generate_ai_note():
         f"{PHYSICS_SYSTEM_PROMPT}\n\n"
         "## DOCUMENT GENERATION MODE\n"
         "You are now generating a full-length study document, NOT a chat reply.\n"
-        "CRITICAL: Write an extremely comprehensive, detailed document. Aim for at least 2000-9000 words.\n"
+        "CRITICAL: Write an extremely comprehensive, detailed document. Aim for approximately 5000-9000 tokens.\n"
         "Use full markdown formatting: headings (# ## ###), bullet points, numbered lists, bold, and LaTeX math ($...$ and $$...$$).\n"
         "Structure the document with clear sections, subsections, worked examples with step-by-step solutions, "
         "key definitions, important formulas, diagrams described in words, exam tips, and practice questions.\n"
@@ -2390,7 +2390,8 @@ def generate_ai_note():
             history=[],
             system_prompt=system_prompt,
             user_key=user_key,
-            timeout_seconds=60.0
+            provider='openrouter',
+            timeout_seconds=120.0
         )
         reply = limit_text(reply, EXAM_MAX_OUTPUT_CHARS)
 
