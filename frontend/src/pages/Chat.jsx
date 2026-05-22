@@ -53,7 +53,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   ];
 
   const cambVoices = [
-    { id: '147320', name: 'CAMB AI Tutor' },
+    { id: '147320', name: 'Silas Blackwood' },
   ];
 
   const promptChips = [
@@ -259,7 +259,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setSidebarOpen(true)}
         />
       )}
       <div className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md flex flex-col transition-all duration-300 ${
