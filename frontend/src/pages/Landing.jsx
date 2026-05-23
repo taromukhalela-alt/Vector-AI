@@ -158,7 +158,7 @@ const Landing = ({ onNavigate }) => {
 
         {/* Subtitle */}
         <p className="anim-fade-up d-400 text-zinc-400 text-base sm:text-lg leading-relaxed max-w-2xl mb-14">
-          South Africa's premium CAPS-aligned platform made by teenager. Interactive 2D simulations, real-time speech tutoring, and semantic notes — fused to unlock physical science mastery.
+          South Africa's premium CAPS-aligned platform made by a teenager. Interactive 2D simulations, real-time speech tutoring, and semantic notes — fused to unlock physical science mastery.
         </p>
 
         {/* Stats */}
