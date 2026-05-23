@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import {
@@ -31,7 +31,7 @@ const Layout = ({ currentTab, onTabChange, children }) => {
   const activeLabel = tabs.find(t => t.id === currentTab)?.label || '';
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
+    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
 
       {/* ═══ FLOATING NAVBAR ═══ */}
       <nav className="floating-bar top-[var(--float-gap)] anim-fade-down glass-backdrop bg-white/70 dark:bg-zinc-900/65 border border-zinc-200/50 dark:border-zinc-800/40 shadow-lg shadow-black/[.04] dark:shadow-black/20">
@@ -153,16 +153,43 @@ const Layout = ({ currentTab, onTabChange, children }) => {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto min-h-0"
         style={{
           paddingTop: 'calc(var(--navbar-h) + var(--float-gap) * 2 + 4px)',
+          paddingBottom: 'calc(var(--mobile-tab-h) + env(safe-area-inset-bottom))',
         }}
       >
         <div className="h-full anim-fade-in d-150">{children}</div>
       </main>
 
+      <nav className="md:hidden fixed inset-x-2 bottom-2 z-[120] glass-backdrop rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/85 dark:bg-zinc-900/85 shadow-2xl shadow-black/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-6 gap-0.5 p-1.5">
+          {tabs.map((item) => {
+            const Icon = item.icon;
+            const active = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onTabChange(item.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                  active
+                    ? 'bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="max-w-full truncate">{item.label.replace('CAPS ', '').replace(' Tutor', '')}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* ═══ SEPARATED STATUS BAR ═══ */}
-      <footer className="relative w-full bg-white/95 dark:bg-zinc-900/95 border-t border-zinc-200/50 dark:border-zinc-800/40 shadow-sm shadow-black/[.05]">
+      <footer className="relative hidden w-full bg-white/95 dark:bg-zinc-900/95 border-t border-zinc-200/50 dark:border-zinc-800/40 shadow-sm shadow-black/[.05] md:block">
         <div className="flex items-center justify-between px-4 h-[var(--status-h)] text-[10px] font-semibold tracking-wider uppercase select-none">
 
           {/* Left: connection + tab */}

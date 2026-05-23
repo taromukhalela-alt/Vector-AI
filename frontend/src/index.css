@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================
    VECTOR AI – FLOATING STEM OS DESIGN SYSTEM
@@ -7,15 +9,25 @@
 :root {
   --navbar-h: 52px;
   --status-h: 34px;
+  --mobile-tab-h: 76px;
   --float-gap: 12px;
   --glass-blur: 18px;
   --float-radius: 16px;
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    min-height: 100dvh;
+  }
+
   body {
     @apply bg-zinc-100 text-zinc-900 transition-colors duration-200 dark:bg-zinc-950 dark:text-zinc-50 font-sans;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -113,6 +125,8 @@
   border-radius: var(--float-radius);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  transform: translateZ(0);
+  will-change: backdrop-filter;
   transition: box-shadow .3s ease, border-color .3s ease;
 }
 
@@ -121,6 +135,32 @@
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   background-clip: border-box;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+
+/* Tailwind v4 emits CSS-variable based filters. These direct fallbacks keep
+   glass/blur effects working in stricter browser engines and production builds. */
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.backdrop-blur-xl {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+.blur-\[100px\] {
+  filter: blur(100px);
+}
+.blur-\[120px\] {
+  filter: blur(120px);
+}
+.blur-\[140px\] {
+  filter: blur(140px);
 }
 
 /* ─── Scrollbar ─── */
@@ -146,4 +186,16 @@
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(16,185,129,0.08);
+}
+
+/* ─── Mobile math/code guardrails ─── */
+.prose .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
 }

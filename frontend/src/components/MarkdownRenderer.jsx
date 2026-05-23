@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { marked } from 'marked';
-import katex from 'katex';
+import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 
@@ -13,8 +13,8 @@ const MarkdownRenderer = ({ content }) => {
       try {
         marked.setOptions({ breaks: true, gfm: true });
         const html = marked.parse(content || '');
-        containerRef.current.innerHTML = html;
-      } catch (err) {
+        containerRef.current.innerHTML = DOMPurify.sanitize(html);
+      } catch {
         containerRef.current.textContent = content || '';
       }
 

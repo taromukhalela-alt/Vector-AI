@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { History as HistoryIcon, MessageSquare, Clock, ArrowRight, BookOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { History as HistoryIcon, MessageSquare, Clock, ArrowRight } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const History = ({ onResumeSession }) => {
@@ -36,6 +36,7 @@ const History = ({ onResumeSession }) => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSessions();
   }, []);
 
@@ -58,7 +59,7 @@ const History = ({ onResumeSession }) => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-53px)] md:h-screen overflow-hidden relative">
+    <div className="flex h-full min-h-0 overflow-hidden relative">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -141,14 +142,14 @@ const History = ({ onResumeSession }) => {
             </div>
 
             {/* Messages body thread */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="max-w-4xl mx-auto space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6">
+              <div className="max-w-4xl mx-auto flex flex-col gap-3 sm:gap-4">
                 {selectedSession.messages.map((msg, index) => (
                   <div 
                     key={index}
-                    className={`flex flex-col max-w-full sm:max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed break-words border ${
+                    className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-2xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
                       msg.role === 'user'
-                        ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-100 self-end rounded-tr-none'
+                        ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
                         : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
                     }`}
                   >
