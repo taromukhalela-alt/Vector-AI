@@ -150,15 +150,15 @@ const Landing = ({ onNavigate }) => {
 
         {/* Title */}
         <h1 className="anim-fade-up d-200 font-black text-4xl sm:text-6xl md:text-7xl tracking-tight leading-[1.08] uppercase mb-8">
-          AI Accelerated Physics,<br />
+          Master Physical Science,<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 anim-gradient drop-shadow-[0_0_40px_rgba(16,185,129,0.25)]">
-            Made For YOU, at 14
+            Conviniently
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="anim-fade-up d-400 text-zinc-400 text-base sm:text-lg leading-relaxed max-w-2xl mb-14">
-          South Africa's premium CAPS-aligned platform. Interactive 2D simulations, real-time speech tutoring, and semantic notes — fused to unlock science mastery.
+          South Africa's premium CAPS-aligned platform made by a teenager. Interactive 2D simulations, real-time speech tutoring, and semantic notes — fused to unlock physical science mastery.
         </p>
 
         {/* Stats */}
@@ -194,9 +194,9 @@ const Landing = ({ onNavigate }) => {
         <div className="max-w-6xl mx-auto">
           <Reveal className="text-center mb-16">
             <h2 className="text-[11px] font-bold text-emerald-400 uppercase tracking-[.2em] mb-3 flex items-center justify-center gap-2">
-              <Zap className="w-3.5 h-3.5" /> Core Modules
+              <Zap className="w-3.5 h-3.5" /> App Features
             </h2>
-            <h3 className="text-3xl sm:text-4xl font-black uppercase tracking-wide">Accelerated Scientific Discovery</h3>
+            <h3 className="text-3xl sm:text-4xl font-black uppercase tracking-wide">Features</h3>
           </Reveal>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
