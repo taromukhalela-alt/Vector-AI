@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect, useRef } from 'react';
 import AvatarCanvas from '../components/AvatarCanvas';
-import { Mic, MicOff, AlertCircle, Volume2, Info } from 'lucide-react';
+import { Mic, MicOff, AlertCircle, Info } from 'lucide-react';
 
 const Voice = ({ onMatchAnimation, csrfToken }) => {
   const [status, setStatus] = useState('Tap the mic to start');
@@ -14,6 +13,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const [frequencyData, setFrequencyData] = useState(null);
   const [micError, setMicError] = useState(false);
 
+  const isSpeakingRef = useRef(false);
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
   const synthUtteranceRef = useRef(null);
@@ -21,6 +21,11 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const activeSessionRef = useRef(0);
   const audioContextRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const conversationHistoryRef = useRef([]);
+
+  useEffect(() => {
+    isSpeakingRef.current = isSpeaking;
+  }, [isSpeaking]);
 
   // Sync settings with localStorage
   const ttsProvider = localStorage.getItem('preferred_tts_provider') || 'camb';
@@ -62,13 +67,14 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       if (interim) setYouTranscript(interim + '...');
       if (final) {
         setYouTranscript(final.trim());
+        // eslint-disable-next-line react-hooks/immutability
         handleSpeechInput(final.trim());
       }
     };
 
     rec.onend = () => {
       setIsListening(false);
-      if (!isSpeaking) {
+      if (!isSpeakingRef.current) {
         setAvatarState('idle');
       }
     };
@@ -85,15 +91,16 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
 
     recognitionRef.current = rec;
 
-    // Start Audio Analyser for frequency animations
-    setupAudioAnalyser();
-
     return () => {
+      // eslint-disable-next-line react-hooks/immutability
       stopAllVoiceState();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setupAudioAnalyser = async () => {
+    if (audioContextRef.current) return;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -120,13 +127,14 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
 
   const stopAllVoiceState = () => {
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (_) {}
+      try { recognitionRef.current.stop(); } catch { /* noop */ }
     }
     stopSpeaking();
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     if (audioContextRef.current) {
       audioContextRef.current.stream.getTracks().forEach(t => t.stop());
-      try { audioContextRef.current.audioCtx.close(); } catch (_) {}
+      try { audioContextRef.current.audioCtx.close(); } catch { /* noop */ }
+      audioContextRef.current = null;
     }
   };
 
@@ -176,7 +184,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         },
         body: JSON.stringify({
           message: transcriptText,
-          history: window.conversationHistory || [],
+          history: conversationHistoryRef.current,
           voice_mode: true,
           voice_provider: ttsProvider,
           max_words: ttsProvider === 'camb' ? 500 : undefined,
@@ -184,17 +192,31 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       });
 
       const data = await response.json();
-      window.conversationHistory = Array.isArray(data.history) ? data.history : window.conversationHistory;
-      if (window.conversationHistory?.length > 14) {
-        window.conversationHistory = window.conversationHistory.slice(-14);
-      }
+      conversationHistoryRef.current = Array.isArray(data.history)
+        ? data.history.slice(-14)
+        : conversationHistoryRef.current;
 
       const reply = data.reply || '';
       setAiTranscript(reply);
 
       // Trigger simulation matching
       if (onMatchAnimation) {
-        onMatchAnimation(transcriptText);
+        try {
+          const matchRes = await fetch('/match-animation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({ question: transcriptText }),
+          });
+          const matchData = await matchRes.json();
+          if (matchData?.animation_id) {
+            onMatchAnimation(matchData.animation_id, matchData.animation_label);
+          }
+        } catch (matchError) {
+          console.warn('Voice simulation match failed', matchError);
+        }
       }
 
       // Speak response
@@ -344,7 +366,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     setAvatarState('idle');
   };
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     if (isSpeaking) {
       stopSpeaking();
       setStatus('Tap the mic to start');
@@ -361,15 +383,19 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     if (recognitionRef.current) {
       setMicError(false);
       try {
+        await setupAudioAnalyser();
         recognitionRef.current.start();
-      } catch (_) {}
+      } catch {
+        setMicError(true);
+        setStatus('Microphone unavailable');
+      }
     } else {
       alert('Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
     }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-53px)] md:h-screen bg-zinc-950 p-6 items-center justify-center relative overflow-hidden select-none">
+    <div className="flex h-full min-h-0 flex-col bg-zinc-950 p-3 sm:p-6 items-center justify-center relative overflow-hidden select-none">
       {/* Mic Permission Alert */}
       {micError && (
         <div className="absolute top-4 inset-x-6 max-w-md mx-auto z-50 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-start gap-3 shadow-lg">
@@ -382,7 +408,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       )}
 
       {/* Avatar Container */}
-      <div className="flex-1 w-full flex items-center justify-center relative max-w-lg">
+      <div className="min-h-0 flex-1 w-full flex items-center justify-center relative max-w-lg">
         <AvatarCanvas 
           avatarState={avatarState} 
           speakingAmplitude={speakingAmplitude} 
@@ -400,7 +426,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       </div>
 
       {/* Transcripts Display */}
-      <div className="w-full max-w-xl bg-zinc-900/40 border border-zinc-900 rounded-2xl p-5 mb-6 backdrop-blur-md space-y-4">
+      <div className="w-full max-w-xl bg-zinc-900/40 border border-zinc-900 rounded-2xl p-3 sm:p-5 mb-4 sm:mb-6 backdrop-blur-md space-y-3 sm:space-y-4">
         <div>
           <div className="text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider mb-1">You said:</div>
           <p className="text-sm font-semibold text-zinc-300 min-h-[20px] leading-relaxed italic">
@@ -411,7 +437,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         {aiTranscript && (
           <div className="pt-3 border-t border-zinc-900">
             <div className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-wider mb-1">AI Tutor reply:</div>
-            <p className="text-sm font-medium text-zinc-200 leading-relaxed max-h-[140px] overflow-y-auto">
+            <p className="text-sm font-medium text-zinc-200 leading-relaxed max-h-24 sm:max-h-[140px] overflow-y-auto">
               {aiTranscript}
             </p>
           </div>
@@ -419,7 +445,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       </div>
 
       {/* Control Mic Bar */}
-      <div className="mb-6 flex flex-col items-center gap-3">
+      <div className="mb-4 sm:mb-6 flex flex-col items-center gap-2 sm:gap-3">
         <button
           onClick={toggleMic}
           className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer ${

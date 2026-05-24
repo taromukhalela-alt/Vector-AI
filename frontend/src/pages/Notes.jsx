@@ -1,19 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
-  Sparkles, CheckCircle, Save, HelpCircle 
+  Sparkles, CheckCircle, Save
 } from 'lucide-react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
+
+let html2pdfPromise = null;
+
+const loadHtml2pdf = async () => {
+  if (!html2pdfPromise) {
+    html2pdfPromise = import('html2pdf.js').then((module) => {
+      const html2pdf = module.default || module;
+      if (typeof html2pdf !== 'function') {
+        throw new Error('html2pdf library failed to initialize');
+      }
+      return html2pdf;
+    });
+  }
+
+  return html2pdfPromise;
+};
+
+const renderSafeMarkdown = (content) => {
+  marked.setOptions({ breaks: true, gfm: true });
+  return DOMPurify.sanitize(marked.parse(content || ''));
+};
 
 const Notes = () => {
   const { csrfToken } = useAuth();
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
-  const [isHtml2pdfReady, setIsHtml2pdfReady] = useState(false);
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -31,6 +52,17 @@ const Notes = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState('success');
 
+  const handleSelectNote = (note) => {
+    setSelectedNote(note);
+    setEditTitle(note.title);
+    setEditTopic(note.topic || 'General');
+    setEditContent(note.content || '');
+    setIsEditing(false);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   const fetchNotes = async (query = '') => {
     try {
       const res = await fetch(`/api/notes${query ? `?q=${encodeURIComponent(query)}` : ''}`);
@@ -47,180 +79,10 @@ const Notes = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const ensureHtml2pdfLoaded = async () => {
-    if (typeof window === 'undefined') {
-      throw new Error('Window is not available');
-    }
-
-    if (isHtml2pdfReady && window.html2pdf && typeof window.html2pdf === 'function') {
-      return window.html2pdf;
-    }
-
-    const loadFromCdn = async () => {
-      const existingScript = document.querySelector('script[data-html2pdf-loader]');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js';
-        script.async = true;
-        script.dataset.html2pdfLoader = 'true';
-
-        const loadPromise = new Promise((resolve, reject) => {
-          script.addEventListener('load', () => resolve(window.html2pdf));
-          script.addEventListener('error', () => reject(new Error('Failed to load html2pdf.js from CDN')));
-        });
-
-        document.head.appendChild(script);
-        return await loadPromise;
-      }
-
-      if (window.html2pdf && typeof window.html2pdf === 'function') {
-        return window.html2pdf;
-      }
-
-      return await new Promise((resolve, reject) => {
-        existingScript.addEventListener('load', () => resolve(window.html2pdf));
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load html2pdf.js from CDN')));
-      });
-    };
-
-    const loadedFromCdn = await loadFromCdn();
-    if (!loadedFromCdn || typeof loadedFromCdn !== 'function') {
-      throw new Error('html2pdf library failed to initialize from CDN');
-    }
-
-    setIsHtml2pdfReady(true);
-    return loadedFromCdn;
-  };
-
-  useEffect(() => {
-    ensureHtml2pdfLoaded().catch((err) => {
-      console.error('PDF exporter failed to load', err);
-    });
-  }, []);
-
-  const renderInlineToken = (token) => {
-    switch (token.type) {
-      case 'text':
-        return token.text || '';
-      case 'strong':
-        return { text: renderInline(token.tokens), bold: true };
-      case 'em':
-        return { text: renderInline(token.tokens), italics: true };
-      case 'codespan':
-        return { text: token.text || '', font: 'Courier', fillColor: '#f5f5f5' };
-      case 'link':
-        return {
-          text: token.text || token.href,
-          link: token.href,
-          color: '#047857',
-          decoration: 'underline',
-        };
-      case 'image':
-        return token.alt || '';
-      case 'del':
-        return { text: renderInline(token.tokens), decoration: 'lineThrough' };
-      case 'br':
-        return '\n';
-      case 'html':
-        return token.text || '';
-      default:
-        return token.text || '';
-    }
-  };
-
-  const renderInline = (tokens = []) => tokens.flatMap(renderInlineToken);
-
-  const renderListItem = (item) => {
-    if (item.tokens) {
-      return item.tokens.flatMap((child) => {
-        if (child.type === 'paragraph') {
-          return { text: renderInline(child.tokens), margin: [0, 0, 0, 0] };
-        }
-        return renderInlineToken(child);
-      });
-    }
-    return item.text || '';
-  };
-
-  const renderToken = (token) => {
-    switch (token.type) {
-      case 'heading':
-        return {
-          text: renderInline(token.tokens || [{ type: 'text', text: token.text || '' }]),
-          style: token.depth === 1 ? 'heading1' : token.depth === 2 ? 'heading2' : 'heading3',
-          margin: [0, token.depth === 1 ? 14 : 10, 0, 6],
-        };
-      case 'paragraph':
-        return { text: renderInline(token.tokens || [{ type: 'text', text: token.text || '' }]), style: 'paragraph' };
-      case 'code':
-        return { text: token.text || '', style: 'code' };
-      case 'blockquote':
-        return { stack: renderTokens(token.tokens || []), style: 'quote', margin: [10, 4, 0, 8] };
-      case 'list':
-        return token.ordered
-          ? { ol: token.items.map(renderListItem), style: 'list', margin: [0, 4, 0, 8] }
-          : { ul: token.items.map(renderListItem), style: 'list', margin: [0, 4, 0, 8] };
-      case 'table':
-        return {
-          table: {
-            widths: token.header.map(() => '*'),
-            body: [
-              token.header.map((cell) => ({ text: String(cell), style: 'tableHeader' })),
-              ...token.rows.map((row) => row.map((cell) => ({ text: String(cell), style: 'tableCell' }))),
-            ],
-          },
-          layout: 'lightHorizontalLines',
-          margin: [0, 6, 0, 8],
-        };
-      case 'space':
-        return [];
-      default:
-        return { text: token.text || '', style: 'paragraph' };
-    }
-  };
-
-  const renderTokens = (tokens) => tokens.flatMap(renderToken);
-
-  const buildPdfDefinition = (note) => {
-    const tokens = marked.lexer(note.content || '');
-    const content = [
-      { text: note.title || 'Study Note', style: 'title' },
-      { text: `Topic: ${note.topic || 'General'}`, style: 'subtitle' },
-      { text: '', margin: [0, 0, 0, 10] },
-      ...renderTokens(tokens),
-    ];
-
-    return {
-      pageSize: 'A4',
-      pageMargins: [40, 60, 40, 60],
-      footer: (currentPage, pageCount) => ({
-        columns: [
-          { text: 'Generated by Vector AI', style: 'footer', alignment: 'left' },
-          { text: `Page ${currentPage} of ${pageCount}`, style: 'footer', alignment: 'right' },
-        ],
-        margin: [40, 0, 40, 0],
-      }),
-      content,
-      styles: {
-        title: { fontSize: 22, bold: true, margin: [0, 0, 0, 8] },
-        subtitle: { fontSize: 10, color: '#10b981', italics: true, margin: [0, 0, 0, 16] },
-        heading1: { fontSize: 16, bold: true, margin: [0, 10, 0, 4] },
-        heading2: { fontSize: 14, bold: true, margin: [0, 8, 0, 4] },
-        heading3: { fontSize: 12, bold: true, margin: [0, 6, 0, 4] },
-        paragraph: { fontSize: 11, margin: [0, 0, 0, 8], lineHeight: 1.5 },
-        code: { fontSize: 10, font: 'Courier', fillColor: '#f5f5f5', margin: [0, 2, 0, 8] },
-        quote: { italics: true, color: '#4b5563' },
-        list: { fontSize: 11, margin: [0, 0, 0, 8], lineHeight: 1.5 },
-        tableHeader: { bold: true, fillColor: '#f3f4f6', margin: [0, 4, 0, 4] },
-        tableCell: { margin: [0, 4, 0, 4] },
-        footer: { fontSize: 8, italics: true, color: '#6b7280' },
-      },
-      defaultStyle: { fontSize: 11, lineHeight: 1.5, font: 'Helvetica' },
-    };
-  };
 
   const handleDownloadPDF = async () => {
     if (!selectedNote) return;
@@ -231,7 +93,7 @@ const Notes = () => {
     let pdfContainer = null;
 
     try {
-      const html2pdfLib = await ensureHtml2pdfLoaded();
+      const html2pdfLib = await loadHtml2pdf();
 
       pdfContainer = document.createElement('div');
       pdfContainer.style.position = 'fixed';
@@ -245,6 +107,87 @@ const Notes = () => {
       pdfContainer.style.boxSizing = 'border-box';
       pdfContainer.style.lineHeight = '1.6';
       pdfContainer.style.zIndex = '-9999';
+
+      const pdfStyle = document.createElement('style');
+      pdfStyle.textContent = `
+        .vector-pdf-body {
+          font-size: 12px;
+          color: #27272a;
+          line-height: 1.65;
+        }
+        .vector-pdf-body h1,
+        .vector-pdf-body h2,
+        .vector-pdf-body h3,
+        .vector-pdf-body h4 {
+          color: #18181b;
+          font-weight: 800;
+          line-height: 1.2;
+          margin: 18px 0 8px;
+          page-break-after: avoid;
+        }
+        .vector-pdf-body h1 { font-size: 21px; }
+        .vector-pdf-body h2 { font-size: 17px; border-bottom: 1px solid #d4d4d8; padding-bottom: 4px; }
+        .vector-pdf-body h3 { font-size: 14px; color: #047857; }
+        .vector-pdf-body p { margin: 0 0 10px; }
+        .vector-pdf-body ul,
+        .vector-pdf-body ol { margin: 0 0 12px 20px; padding: 0; }
+        .vector-pdf-body li { margin: 3px 0; padding-left: 2px; }
+        .vector-pdf-body strong { font-weight: 800; color: #18181b; }
+        .vector-pdf-body a { color: #047857; text-decoration: underline; }
+        .vector-pdf-body blockquote {
+          margin: 12px 0;
+          padding: 8px 12px;
+          border-left: 3px solid #10b981;
+          background: #f0fdf4;
+          color: #3f3f46;
+        }
+        .vector-pdf-body code {
+          font-family: "Courier New", monospace;
+          font-size: 11px;
+          background: #f4f4f5;
+          color: #18181b;
+          border-radius: 3px;
+          padding: 1px 4px;
+        }
+        .vector-pdf-body pre {
+          margin: 12px 0;
+          padding: 10px 12px;
+          background: #f4f4f5;
+          border: 1px solid #e4e4e7;
+          border-radius: 6px;
+          white-space: pre-wrap;
+          page-break-inside: avoid;
+        }
+        .vector-pdf-body pre code {
+          padding: 0;
+          background: transparent;
+          border-radius: 0;
+        }
+        .vector-pdf-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          page-break-inside: avoid;
+        }
+        .vector-pdf-body th,
+        .vector-pdf-body td {
+          border: 1px solid #d4d4d8;
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: top;
+        }
+        .vector-pdf-body th {
+          background: #f4f4f5;
+          color: #18181b;
+          font-weight: 800;
+        }
+        .vector-pdf-body .katex-display {
+          margin: 12px 0;
+          overflow: visible;
+          page-break-inside: avoid;
+        }
+      `;
+      pdfContainer.appendChild(pdfStyle);
 
       const header = document.createElement('div');
       header.style.display = 'flex';
@@ -280,9 +223,8 @@ const Notes = () => {
       pdfContainer.appendChild(header);
 
       const bodyWrap = document.createElement('div');
-      bodyWrap.style.fontSize = '12px';
-      bodyWrap.style.color = '#27272a';
-      bodyWrap.innerHTML = marked.parse(selectedNote.content || '');
+      bodyWrap.className = 'vector-pdf-body';
+      bodyWrap.innerHTML = renderSafeMarkdown(selectedNote.content);
       pdfContainer.appendChild(bodyWrap);
 
       const footer = document.createElement('div');
@@ -297,21 +239,13 @@ const Notes = () => {
       footer.style.fontWeight = '600';
       footer.style.textTransform = 'uppercase';
 
-      footer.innerHTML = `
-        <span>Built by Taro Mukhalela · Vector AI STEM OS</span>
-        <span>Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-      `;
+      const footerBrand = document.createElement('span');
+      footerBrand.textContent = 'Built by Taro Mukhalela - Vector AI STEM OS';
+      const footerDate = document.createElement('span');
+      footerDate.textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      footer.appendChild(footerBrand);
+      footer.appendChild(footerDate);
       pdfContainer.appendChild(footer);
-
-      const styleId = 'vector-ai-katex-pdf-style';
-      let styleLink = document.getElementById(styleId);
-      if (!styleLink) {
-        styleLink = document.createElement('link');
-        styleLink.id = styleId;
-        styleLink.rel = 'stylesheet';
-        styleLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-        document.head.appendChild(styleLink);
-      }
 
       document.body.appendChild(pdfContainer);
 
@@ -412,17 +346,6 @@ const Notes = () => {
     setStatusMessage(msg);
     setStatusType(type);
     setTimeout(() => setStatusMessage(''), 3000);
-  };
-
-  const handleSelectNote = (note) => {
-    setSelectedNote(note);
-    setEditTitle(note.title);
-    setEditTopic(note.topic || 'General');
-    setEditContent(note.content || '');
-    setIsEditing(false);
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setSidebarOpen(false);
-    }
   };
 
   const handleCreateNote = () => {
@@ -559,7 +482,7 @@ const Notes = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-53px)] md:h-screen overflow-hidden relative">
+    <div className="flex h-full min-h-0 overflow-hidden relative">
       
       {/* Alert banner */}
       {statusMessage && (

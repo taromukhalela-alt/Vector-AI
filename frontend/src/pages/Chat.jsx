@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { 
-  Send, Plus, MessageSquare, History, Settings, Volume2, 
-  ChevronLeft, ChevronRight, Bookmark, CheckCircle, AlertTriangle 
+  Send, Plus, MessageSquare, History,
+  ChevronLeft, ChevronRight, Bookmark, CheckCircle
 } from 'lucide-react';
 
-const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
+const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const { csrfToken } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState('');
@@ -37,6 +37,8 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   const [saveSuccess, setSaveSuccess] = useState('');
   
   const messagesEndRef = useRef(null);
+  const consumedPromptRef = useRef('');
+  const consumedResumeRef = useRef('');
 
   const voiceProviders = [
     { id: 'camb', name: 'CAMB AI' },
@@ -95,16 +97,19 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions();
     updateBrowserVoices();
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update default voice id when provider changes
   useEffect(() => {
     localStorage.setItem('preferred_tts_provider', ttsProvider);
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (ttsProvider === 'camb') {
       const saved = localStorage.getItem('preferred_camb_voice') || '147320';
       setVoiceId(saved);
@@ -119,6 +124,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
         setVoiceId(browserVoices[0].voiceURI);
       }
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [ttsProvider, browserVoices]);
 
   // Save selected voice ID
@@ -213,18 +219,33 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
           if (matchData && matchData.animation_id && onMatchAnimation) {
             onMatchAnimation(matchData.animation_id, matchData.animation_label);
           }
-        } catch (_) {}
+        } catch (matchError) {
+          console.warn('Simulation match failed', matchError);
+        }
       } else {
         setMessages([...updatedMessages, { role: 'assistant', content: "I'm having a bit of trouble responding right now. Please try again." }]);
       }
       
       loadSessions();
-    } catch (error) {
+    } catch {
       setMessages([...updatedMessages, { role: 'assistant', content: 'Connection issue. Could not reach AI Tutor.' }]);
     } finally {
       setIsSending(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialPrompt || consumedPromptRef.current === initialPrompt) return;
+    consumedPromptRef.current = initialPrompt;
+    handleSendMessage(initialPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
+
+  useEffect(() => {
+    if (!resumeChatId || consumedResumeRef.current === resumeChatId) return;
+    consumedResumeRef.current = resumeChatId;
+    handleResumeSession(resumeChatId);
+  }, [resumeChatId]);
 
   // Save response as a Note
   const handleSaveAsNote = async (text) => {
@@ -254,12 +275,12 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
   };
 
   return (
-    <div className="flex h-full overflow-hidden relative">
+    <div className="flex h-full min-h-0 overflow-hidden relative">
       {/* Session History Sidebar (left inside tab) */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(true)}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
       <div className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md flex flex-col transition-all duration-300 ${
@@ -340,7 +361,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
       {/* Toggle Sidebar Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute left-0 bottom-4 z-40 p-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-r-lg border border-l-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer md:block"
+        className="absolute left-0 bottom-4 z-40 hidden p-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-r-lg border border-l-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer md:block"
       >
         {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
       </button>
@@ -356,7 +377,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
         )}
 
         {/* Message Thread */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6">
@@ -381,13 +402,13 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 max-w-4xl mx-auto">
+            <div className="flex max-w-4xl mx-auto flex-col gap-3 sm:gap-4">
               {messages.map((msg, index) => (
                 <div 
                   key={index}
-                  className={`flex flex-col max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed border ${
+                  className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-2xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
                     msg.role === 'user'
-                      ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-100 self-end rounded-tr-none'
+                      ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
                       : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
                   }`}
                 >
@@ -428,7 +449,7 @@ const Chat = ({ onMatchAnimation, currentAnimation, onNavigate }) => {
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/40 dark:bg-zinc-900/10">
+        <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-900/80 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] glass-backdrop">
           <div className="max-w-4xl mx-auto flex items-center gap-2">
             <textarea
               rows={1}

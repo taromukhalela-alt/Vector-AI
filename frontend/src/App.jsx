@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
@@ -47,7 +47,7 @@ function App() {
   }
 
   // Sync animation matches from Chat/Voice tabs
-  const handleMatchAnimation = (animId, animLabel) => {
+  const handleMatchAnimation = (animId) => {
     setActiveAnim(animId);
   };
 
@@ -69,6 +69,8 @@ function App() {
         <Chat 
           onMatchAnimation={handleMatchAnimation} 
           currentAnimation={activeAnim}
+          initialPrompt={sharedTriggerPrompt}
+          resumeChatId={resumeChatId}
           onNavigate={(page) => {
             if (page === 'auth') setUnauthPage('auth');
           }}
