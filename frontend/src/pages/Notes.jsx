@@ -388,14 +388,22 @@ const Notes = () => {
       `;
       
       const oncloneCallback = (clonedDocument) => {
-        try {
-          const style = clonedDocument.createElement('style');
-          style.textContent = oklchToHexOverrides;
-          clonedDocument.head.appendChild(style);
-        } catch (e) {
-          console.warn('Failed to inject oklch color overrides:', e);
-        }
-      };
+  try {
+    const style = clonedDocument.createElement('style');
+    style.textContent = oklchToHexOverrides;
+
+    const target =
+      clonedDocument.head ||
+      clonedDocument.documentElement ||
+      clonedDocument.body;
+
+    if (target) {
+      target.appendChild(style);
+    }
+  } catch (e) {
+    console.warn('Failed to inject oklch color overrides:', e);
+  }
+};
       
       const opt = {
         margin: [10, 10, 10, 10],
@@ -460,7 +468,11 @@ const Notes = () => {
           background: #ffffff !important;
         }
       `;
-      clonedDocument.head.appendChild(style);
+      (
+  clonedDocument.head ||
+  clonedDocument.documentElement ||
+  clonedDocument.body
+)?.appendChild(style);
     } catch (e) {
       console.warn('clone sanitization failed', e);
     }
