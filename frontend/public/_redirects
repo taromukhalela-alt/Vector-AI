@@ -1,6 +1,5 @@
 /api/* https://vector-ai.up.railway.app/api/:splat 200
 /auth/* https://vector-ai.up.railway.app/auth/:splat 200
-/chat https://vector-ai.up.railway.app/chat 200
 /match-animation https://vector-ai.up.railway.app/match-animation 200
 /voice-tutor https://vector-ai.up.railway.app/voice-tutor 200
 /check_auth https://vector-ai.up.railway.app/api/:splat 200

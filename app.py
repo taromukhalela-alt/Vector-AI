@@ -1849,21 +1849,18 @@ def dashboard_data():
 
 
 @app.route("/dashboard")
-@login_required
 def dashboard():
-    return redirect(url_for("chat_page", tab="topics"))
+    return send_from_directory("frontend/dist", "index.html")
 
 
 @app.route("/history")
-@login_required
 def history_notes():
-    return redirect(url_for("chat_page"))
+    return send_from_directory("frontend/dist", "index.html")
 
 
 @app.route("/history/<chat_id>")
-@login_required
 def history_detail(chat_id):
-    return redirect(url_for("chat_page"))
+    return send_from_directory("frontend/dist", "index.html")
 
 
 @app.route("/api/simulate", methods=["POST"])
@@ -1963,7 +1960,11 @@ def simulate_physics():
 # -------------------------------
 @app.route("/")
 @app.route("/chat", methods=["GET"])
+@app.route("/voice", methods=["GET"])
+@app.route("/lab", methods=["GET"])
 @app.route("/notes", methods=["GET"])
+@app.route("/topics", methods=["GET"])
+@app.route("/auth", methods=["GET"])
 @app.route("/animations", methods=["GET"])
 @app.route("/assistant", methods=["GET"])
 def serve_spa():
@@ -2116,6 +2117,7 @@ def match_animation():
         return jsonify({"animation_id": None})
 
 
+@app.route("/api/chat", methods=["POST"])
 @app.route("/chat", methods=["POST"])
 @login_required
 def chat():

@@ -9,10 +9,6 @@
       "destination": "https://vector-ai.up.railway.app/auth/:path*"
     },
     {
-      "source": "/chat",
-      "destination": "https://vector-ai.up.railway.app/chat"
-    },
-    {
       "source": "/match-animation",
       "destination": "https://vector-ai.up.railway.app/match-animation"
     },

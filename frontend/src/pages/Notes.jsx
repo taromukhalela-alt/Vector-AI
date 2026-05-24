@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { trackEvent } from '../useAnalytics';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
   Sparkles, CheckCircle, Save
@@ -330,6 +331,10 @@ const Notes = () => {
       };
 
       await html2pdfLib().set(opt).from(pdfContainer).save();
+      trackEvent('note_pdf_exported', {
+        route: '/notes',
+        note_topic: selectedNote.topic || 'General',
+      });
       showStatus('PDF guide downloaded successfully!');
     } catch (err) {
       console.error('PDF export failed', err);
@@ -390,6 +395,11 @@ const Notes = () => {
 
       const data = await res.json();
       if (data.success) {
+        trackEvent('note_saved', {
+          route: '/notes',
+          note_topic: editTopic || 'General',
+          is_new: isNew,
+        });
         showStatus('Note saved successfully!');
         
         // Refresh note listing
@@ -457,6 +467,10 @@ const Notes = () => {
       const data = await res.json();
 
       if (data.success) {
+        trackEvent('ai_note_generated', {
+          route: '/notes',
+          topic_length: aiTopic.length,
+        });
         showStatus('Study guide generated successfully!');
         setAiTopic('');
         fetchNotes();

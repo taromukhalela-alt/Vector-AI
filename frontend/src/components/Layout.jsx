@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import {
@@ -6,8 +7,10 @@ import {
   Mic, FileText, LogOut, Menu, X, User, Wifi, Zap, ChevronDown
 } from 'lucide-react';
 
-const Layout = ({ currentTab, onTabChange, children }) => {
+const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [userMenu, setUserMenu] = useState(false);
@@ -18,17 +21,21 @@ const Layout = ({ currentTab, onTabChange, children }) => {
   }, []);
 
   const tabs = [
-    { id: 'chat',    label: 'AI Tutor',      icon: MessageSquare },
-    { id: 'lab',     label: 'Visual Lab',     icon: FlaskConical },
-    { id: 'notes',   label: 'Study Notes',    icon: FileText },
-    { id: 'voice',   label: 'Voice Tutor',    icon: Mic },
-    { id: 'history', label: 'History',        icon: HistoryIcon },
-    { id: 'topics',  label: 'CAPS Syllabus',  icon: BookOpen },
+    { path: '/chat',    label: 'AI Tutor',      icon: MessageSquare },
+    { path: '/lab',     label: 'Visual Lab',     icon: FlaskConical },
+    { path: '/notes',   label: 'Study Notes',    icon: FileText },
+    { path: '/voice',   label: 'Voice Tutor',    icon: Mic },
+    { path: '/history', label: 'History',        icon: HistoryIcon },
+    { path: '/topics',  label: 'CAPS Syllabus',  icon: BookOpen },
   ];
 
   const clock = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const date = now.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
-  const activeLabel = tabs.find(t => t.id === currentTab)?.label || '';
+  const activeLabel = tabs.find(t => t.path === location.pathname)?.label || '';
+  const goToPath = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans relative">
@@ -52,11 +59,11 @@ const Layout = ({ currentTab, onTabChange, children }) => {
           <div className="hidden md:flex items-center gap-0.5 bg-zinc-200/50 dark:bg-zinc-800/40 rounded-xl p-1">
             {tabs.map((item) => {
               const Icon = item.icon;
-              const active = currentTab === item.id;
+              const active = location.pathname === item.path;
               return (
                 <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id)}
+                  key={item.path}
+                  onClick={() => goToPath(item.path)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-300 cursor-pointer whitespace-nowrap ${
                     active
                       ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
@@ -131,11 +138,11 @@ const Layout = ({ currentTab, onTabChange, children }) => {
           >
             {tabs.map((item) => {
               const Icon = item.icon;
-              const active = currentTab === item.id;
+              const active = location.pathname === item.path;
               return (
                 <button
-                  key={item.id}
-                  onClick={() => { onTabChange(item.id); setMobileMenuOpen(false); }}
+                  key={item.path}
+                  onClick={() => goToPath(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                     active
                       ? 'bg-emerald-500 text-white shadow-md'
@@ -166,14 +173,11 @@ const Layout = ({ currentTab, onTabChange, children }) => {
         <div className="grid grid-cols-6 gap-0.5 p-1.5">
           {tabs.map((item) => {
             const Icon = item.icon;
-            const active = currentTab === item.id;
+            const active = location.pathname === item.path;
             return (
               <button
-                key={item.id}
-                onClick={() => {
-                  onTabChange(item.id);
-                  setMobileMenuOpen(false);
-                }}
+                key={item.path}
+                onClick={() => goToPath(item.path)}
                 className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[9px] font-bold uppercase tracking-wide transition-all ${
                   active
                     ? 'bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20'

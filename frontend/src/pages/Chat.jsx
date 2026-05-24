@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { trackEvent } from '../useAnalytics';
 import { 
   Send, Plus, MessageSquare, History,
   ChevronLeft, ChevronRight, Bookmark, CheckCircle
@@ -192,7 +193,12 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     setMessages(updatedMessages);
 
     try {
-      const response = await fetch('/chat', {
+      trackEvent('chat_message_sent', {
+        route: '/chat',
+        message_length: question.length,
+      });
+
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,6 +209,9 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const data = await response.json();
       
       if (data.reply) {
+        trackEvent('chat_response_received', {
+          route: '/chat',
+        });
         setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
         
         // Trigger simulation matching
@@ -266,6 +275,9 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       });
       const data = await res.json();
       if (data.success) {
+        trackEvent('note_saved_from_chat', {
+          route: '/chat',
+        });
         setSaveSuccess('Saved successfully to your Notes vault!');
         setTimeout(() => setSaveSuccess(''), 3000);
       }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import AvatarCanvas from '../components/AvatarCanvas';
+import { trackEvent } from '../useAnalytics';
 import { Mic, MicOff, AlertCircle, Info } from 'lucide-react';
 
 const Voice = ({ onMatchAnimation, csrfToken }) => {
@@ -176,7 +177,13 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     setAiTranscript('');
 
     try {
-      const response = await fetch('/chat', {
+      trackEvent('voice_prompt_sent', {
+        route: '/voice',
+        transcript_length: transcriptText.length,
+        tts_provider: ttsProvider,
+      });
+
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,6 +205,10 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
 
       const reply = data.reply || '';
       setAiTranscript(reply);
+      trackEvent('voice_response_received', {
+        route: '/voice',
+        tts_provider: ttsProvider,
+      });
 
       // Trigger simulation matching
       if (onMatchAnimation) {

@@ -15,12 +15,6 @@
   force = true
 
 [[redirects]]
-  from = "/chat"
-  to = "https://vector-ai.up.railway.app/chat"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/match-animation"
   to = "https://vector-ai.up.railway.app/match-animation"
   status = 200

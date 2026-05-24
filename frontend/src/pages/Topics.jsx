@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, HelpCircle, ArrowUpRight } from 'lucide-react';
+import { trackEvent } from '../useAnalytics';
 
 const Topics = ({ onSelectTopic }) => {
   const topics = [
@@ -31,7 +32,13 @@ const Topics = ({ onSelectTopic }) => {
         {topics.map((topic, idx) => (
           <div
             key={idx}
-            onClick={() => onSelectTopic(topic.prompt)}
+            onClick={() => {
+              trackEvent('topic_revision_started', {
+                route: '/topics',
+                topic: topic.title,
+              });
+              onSelectTopic(topic.prompt);
+            }}
             className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-100/40 dark:bg-zinc-900/35 hover:border-emerald-500/25 hover:bg-zinc-200/20 dark:hover:bg-zinc-900/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all group cursor-pointer flex flex-col justify-between"
           >
             <div>

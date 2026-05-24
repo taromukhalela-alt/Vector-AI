@@ -1,5 +1,7 @@
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import useAnalytics from './useAnalytics';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
@@ -10,17 +12,20 @@ import Notes from './pages/Notes';
 import History from './pages/History';
 import Topics from './pages/Topics';
 
+const ScreenReaderTitle = ({ children }) => (
+  <h1 className="sr-only">{children}</h1>
+);
+
 function App() {
   const { isAuthenticated, loading, csrfToken } = useAuth();
-  const [currentTab, setCurrentTab] = useState('chat');
-  const [unauthPage, setUnauthPage] = useState('landing'); // 'landing' or 'auth'
-  
-  // Cross-page shared states
+  const navigate = useNavigate();
+
+  useAnalytics();
+
   const [activeAnim, setActiveAnim] = useState('idle');
   const [sharedTriggerPrompt, setSharedTriggerPrompt] = useState('');
   const [resumeChatId, setResumeChatId] = useState('');
 
-  // Handle page loading spinner
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-100">
@@ -32,71 +37,100 @@ function App() {
     );
   }
 
-  // Handle unauthenticated views
-  if (!isAuthenticated) {
-    if (unauthPage === 'landing') {
-      return <Landing onNavigate={setUnauthPage} />;
+  const handleAuthNavigation = (page) => {
+    if (page === 'auth') {
+      navigate('/auth');
+      return;
     }
-    return <Auth onNavigate={(page) => {
-      if (page === 'chat') {
-        setUnauthPage('landing');
-      } else {
-        setUnauthPage(page);
-      }
-    }} />;
+
+    navigate('/chat');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/auth" element={<Auth onNavigate={handleAuthNavigation} />} />
+        <Route path="*" element={<Landing onNavigate={handleAuthNavigation} />} />
+      </Routes>
+    );
   }
 
-  // Sync animation matches from Chat/Voice tabs
-  const handleMatchAnimation = (animId) => {
-    setActiveAnim(animId);
-  };
-
-  // Sync topic selections from Syllabus Tab to Chat
   const handleSelectTopic = (promptText) => {
     setSharedTriggerPrompt(promptText);
-    setCurrentTab('chat');
+    navigate('/chat');
   };
 
-  // Resume archived sessions
   const handleResumeSession = (chatId) => {
     setResumeChatId(chatId);
-    setCurrentTab('chat');
+    navigate('/chat');
   };
 
   return (
-    <Layout currentTab={currentTab} onTabChange={setCurrentTab}>
-      {currentTab === 'chat' && (
-        <Chat 
-          onMatchAnimation={handleMatchAnimation} 
-          currentAnimation={activeAnim}
-          initialPrompt={sharedTriggerPrompt}
-          resumeChatId={resumeChatId}
-          onNavigate={(page) => {
-            if (page === 'auth') setUnauthPage('auth');
-          }}
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/chat" replace />} />
+        <Route
+          path="/chat"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI Tutor</ScreenReaderTitle>
+              <Chat
+                onMatchAnimation={setActiveAnim}
+                currentAnimation={activeAnim}
+                initialPrompt={sharedTriggerPrompt}
+                resumeChatId={resumeChatId}
+              />
+            </>
+          )}
         />
-      )}
-      {currentTab === 'voice' && (
-        <Voice 
-          onMatchAnimation={handleMatchAnimation}
-          csrfToken={csrfToken}
+        <Route
+          path="/voice"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI Voice Tutor</ScreenReaderTitle>
+              <Voice onMatchAnimation={setActiveAnim} csrfToken={csrfToken} />
+            </>
+          )}
         />
-      )}
-      {currentTab === 'lab' && (
-        <Lab 
-          activeAnim={activeAnim} 
-          onAnimChange={setActiveAnim} 
+        <Route
+          path="/lab"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI Visual Physics Lab</ScreenReaderTitle>
+              <Lab activeAnim={activeAnim} onAnimChange={setActiveAnim} />
+            </>
+          )}
         />
-      )}
-      {currentTab === 'notes' && (
-        <Notes />
-      )}
-      {currentTab === 'history' && (
-        <History onResumeSession={handleResumeSession} />
-      )}
-      {currentTab === 'topics' && (
-        <Topics onSelectTopic={handleSelectTopic} />
-      )}
+        <Route
+          path="/notes"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI Study Notes</ScreenReaderTitle>
+              <Notes />
+            </>
+          )}
+        />
+        <Route
+          path="/history"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI Chat History</ScreenReaderTitle>
+              <History onResumeSession={handleResumeSession} />
+            </>
+          )}
+        />
+        <Route
+          path="/topics"
+          element={(
+            <>
+              <ScreenReaderTitle>Vector AI CAPS Syllabus Topics</ScreenReaderTitle>
+              <Topics onSelectTopic={handleSelectTopic} />
+            </>
+          )}
+        />
+        <Route path="/auth" element={<Navigate to="/chat" replace />} />
+        <Route path="*" element={<Navigate to="/chat" replace />} />
+      </Routes>
     </Layout>
   );
 }

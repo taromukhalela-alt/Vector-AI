@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vector-ai.co.za/sitemap.xml
