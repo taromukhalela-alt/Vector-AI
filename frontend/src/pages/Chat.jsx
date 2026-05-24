@@ -4,7 +4,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { 
   Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, CheckCircle
+  ChevronLeft, ChevronRight, Bookmark, CheckCircle, X
 } from 'lucide-react';
 
 const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
@@ -14,10 +14,18 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  const [sidebarPinned, setSidebarPinned] = useState(() => (
+    typeof window !== 'undefined' ? localStorage.getItem('vector_chat_sidebar_pinned') === 'true' : false
+  ));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   useEffect(() => {
-    const handleResize = () => setSidebarOpen(window.innerWidth >= 768);
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 768;
+      setIsDesktop(desktop);
+      if (desktop) setSidebarOpen(false);
+    };
     if (typeof window !== 'undefined') {
       handleResize();
       window.addEventListener('resize', handleResize);
@@ -40,6 +48,21 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const messagesEndRef = useRef(null);
   const consumedPromptRef = useRef('');
   const consumedResumeRef = useRef('');
+  const sidebarVisible = isDesktop ? (sidebarPinned || sidebarOpen) : sidebarOpen;
+
+  const toggleSidebar = () => {
+    if (isDesktop) {
+      setSidebarPinned((current) => {
+        const next = !current;
+        localStorage.setItem('vector_chat_sidebar_pinned', String(next));
+        return next;
+      });
+      setSidebarOpen(false);
+      return;
+    }
+
+    setSidebarOpen(true);
+  };
 
   const voiceProviders = [
     { id: 'camb', name: 'CAMB AI' },
@@ -287,29 +310,42 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden relative">
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       {/* Session History Sidebar (left inside tab) */}
-      {sidebarOpen && (
+      {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[130] bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <div className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
+      <div className={`shrink-0 border-r border-zinc-200 bg-white/95 backdrop-blur-md transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/95 ${
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] flex w-72 flex-col shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
       }`}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
             <History className="w-3.5 h-3.5 text-emerald-500" />
             Sessions
           </h2>
-          <button 
-            onClick={handleNewSession}
-            className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-emerald-500 transition-colors cursor-pointer"
-            title="New Chat Session"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5px]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleNewSession}
+              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-emerald-500 transition-colors cursor-pointer"
+              title="New Chat Session"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5px]" />
+            </button>
+            <button
+              onClick={() => {
+                setSidebarPinned(false);
+                localStorage.setItem('vector_chat_sidebar_pinned', 'false');
+                setSidebarOpen(false);
+              }}
+              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors cursor-pointer"
+              title="Close Sessions"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Sessions list */}
@@ -371,13 +407,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       </div>
 
       {/* Toggle Sidebar Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute left-0 bottom-4 z-40 hidden p-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-r-lg border border-l-0 border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer md:block"
-      >
-        {sidebarOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-      </button>
-
       {/* Main Chat Workspace */}
       <div className="flex-1 flex flex-col min-w-0 bg-zinc-50 dark:bg-zinc-950">
         {/* Banner Alert for Note Save */}
@@ -388,11 +417,29 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           </div>
         )}
 
+        <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-200 bg-zinc-50/90 px-3 dark:border-zinc-800 dark:bg-zinc-950/90">
+          <button
+            onClick={toggleSidebar}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            title={sidebarVisible ? 'Hide sessions' : 'Show sessions'}
+          >
+            {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            Sessions
+          </button>
+          <button
+            onClick={handleNewSession}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-950 transition hover:bg-emerald-400"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New
+          </button>
+        </div>
+
         {/* Message Thread */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-6">
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6">
+            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6">
                 <MessageSquare className="w-6 h-6" />
               </div>
               <h3 className="font-extrabold text-lg uppercase tracking-wider">Vector AI Cognitive Agent</h3>
@@ -401,12 +448,12 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               </p>
               
               {/* Prompt chips */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
+              <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {promptChips.map((chip, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(chip)}
-                    className="p-3 bg-zinc-200/50 hover:bg-emerald-500/5 dark:bg-zinc-900/40 dark:hover:bg-emerald-500/5 border border-zinc-300/40 dark:border-zinc-800 rounded-xl text-left text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer transition-all hover:border-emerald-500/20"
+                    className="rounded-xl border border-zinc-300/40 bg-zinc-200/50 p-3 text-left text-xs font-semibold text-zinc-700 transition-all hover:border-emerald-500/20 hover:bg-emerald-500/5 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300 dark:hover:bg-emerald-500/5"
                   >
                     {chip}
                   </button>
@@ -414,11 +461,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               </div>
             </div>
           ) : (
-            <div className="flex max-w-4xl mx-auto flex-col gap-3 sm:gap-4">
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:gap-4">
               {messages.map((msg, index) => (
                 <div 
                   key={index}
-                  className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-2xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
+                  className={`flex max-w-[92%] flex-col rounded-xl border p-3 text-sm leading-relaxed break-words sm:max-w-[85%] sm:p-4 ${
                     msg.role === 'user'
                       ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
                       : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
@@ -446,7 +493,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               
               {/* Typing skeleton */}
               {isSending && (
-                <div className="flex flex-col bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/40 rounded-2xl rounded-tl-none p-4 max-w-[150px] self-start">
+                <div className="flex flex-col bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/40 rounded-xl rounded-tl-none p-4 max-w-[150px] self-start">
                   <div className="font-extrabold text-[9px] uppercase tracking-wider text-emerald-500 mb-2">AI Tutor</div>
                   <div className="flex gap-1.5 items-center py-1">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -461,8 +508,8 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* Input Bar */}
-        <div className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/80 dark:bg-zinc-900/80 p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] glass-backdrop">
-          <div className="max-w-4xl mx-auto flex items-center gap-2">
+        <div className="shrink-0 border-t border-zinc-200 bg-zinc-50/95 p-3 dark:border-zinc-800 dark:bg-zinc-950/95 sm:p-4">
+          <div className="mx-auto flex max-w-3xl items-center gap-2">
             <textarea
               rows={1}
               value={inputValue}

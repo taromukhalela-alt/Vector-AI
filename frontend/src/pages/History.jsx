@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
-import { History as HistoryIcon, MessageSquare, Clock, ArrowRight } from 'lucide-react';
+import { History as HistoryIcon, MessageSquare, Clock, ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const History = ({ onResumeSession }) => {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  const [sidebarPinned, setSidebarPinned] = useState(() => (
+    typeof window !== 'undefined' ? localStorage.getItem('vector_history_sidebar_pinned') === 'true' : false
+  ));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarVisible = isDesktop ? (sidebarPinned || sidebarOpen) : sidebarOpen;
 
   useEffect(() => {
-    const handleResize = () => setSidebarOpen(window.innerWidth >= 768);
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 768;
+      setIsDesktop(desktop);
+      if (desktop) setSidebarOpen(false);
+    };
     if (typeof window !== 'undefined') {
       handleResize();
       window.addEventListener('resize', handleResize);
@@ -20,6 +29,20 @@ const History = ({ onResumeSession }) => {
       }
     };
   }, []);
+
+  const toggleSidebar = () => {
+    if (isDesktop) {
+      setSidebarPinned((current) => {
+        const next = !current;
+        localStorage.setItem('vector_history_sidebar_pinned', String(next));
+        return next;
+      });
+      setSidebarOpen(false);
+      return;
+    }
+
+    setSidebarOpen(true);
+  };
 
   const fetchSessions = async () => {
     try {
@@ -59,22 +82,33 @@ const History = ({ onResumeSession }) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden relative">
-      {sidebarOpen && (
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+      {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[130] bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       {/* Session list sidebar */}
       <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
       }`}>
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
             <HistoryIcon className="w-3.5 h-3.5 text-emerald-500" />
             Session Archives
           </h2>
+          <button
+            onClick={() => {
+              setSidebarPinned(false);
+              localStorage.setItem('vector_history_sidebar_pinned', 'false');
+              setSidebarOpen(false);
+            }}
+            className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-200 dark:hover:bg-zinc-800"
+            title="Close history panel"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -109,13 +143,22 @@ const History = ({ onResumeSession }) => {
       </aside>
 
       {/* Main detail workspace */}
-      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+      <div className="flex-1 flex min-w-0 flex-col bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
         {selectedSession ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3 bg-zinc-100/20 dark:bg-zinc-900/10">
-              <div>
-                <h3 className="font-extrabold text-sm sm:text-base uppercase tracking-wider text-zinc-800 dark:text-zinc-100 leading-tight">{selectedSession.title}</h3>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-100/20 p-3 dark:border-zinc-800 dark:bg-zinc-900/10 sm:p-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  onClick={toggleSidebar}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  title={sidebarVisible ? 'Hide sessions' : 'Show sessions'}
+                >
+                  {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  Sessions
+                </button>
+                <div className="min-w-0">
+                <h3 className="truncate font-extrabold text-sm sm:text-base uppercase tracking-wider text-zinc-800 dark:text-zinc-100 leading-tight">{selectedSession.title}</h3>
                 <div className="flex items-center gap-3 text-[10px] text-zinc-400 font-bold uppercase mt-1">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3 text-emerald-500" />
@@ -124,19 +167,15 @@ const History = ({ onResumeSession }) => {
                   <span>&middot;</span>
                   <span>{selectedSession.count} Messages</span>
                 </div>
+                </div>
               </div>
 
               <button
-                onClick={() => setSidebarOpen(true)}
-                className="md:hidden px-3 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] font-semibold uppercase tracking-wider rounded-xl transition hover:bg-zinc-300 dark:hover:bg-zinc-700"
-              >
-                Sessions
-              </button>
-              <button
                 onClick={() => onResumeSession(selectedSession.chat_id)}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-950 transition-all hover:bg-emerald-400"
               >
-                Resume Active Chat
+                <span className="hidden sm:inline">Resume Active Chat</span>
+                <span className="sm:hidden">Resume</span>
                 <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
               </button>
             </div>
@@ -145,9 +184,9 @@ const History = ({ onResumeSession }) => {
             <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6">
               <div className="max-w-4xl mx-auto flex flex-col gap-3 sm:gap-4">
                 {selectedSession.messages.map((msg, index) => (
-                  <div 
+                  <div
                     key={index}
-                    className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-2xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
+                    className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
                       msg.role === 'user'
                         ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
                         : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
@@ -167,7 +206,14 @@ const History = ({ onResumeSession }) => {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto">
+          <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center px-4 text-center">
+            <button
+              onClick={toggleSidebar}
+              className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              Sessions
+            </button>
             <HistoryIcon className="w-10 h-10 text-zinc-400 mb-4" />
             <h3 className="font-extrabold text-sm uppercase tracking-wider">Archive Viewer</h3>
             <p className="text-xs text-zinc-400 mt-1">Select a past discussion thread from the sidebar to review science calculations, code, or tutor conversations.</p>

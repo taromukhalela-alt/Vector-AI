@@ -4,7 +4,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
-  Sparkles, CheckCircle, Save
+  Sparkles, CheckCircle, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -14,13 +14,18 @@ let html2pdfPromise = null;
 
 const loadHtml2pdf = async () => {
   if (!html2pdfPromise) {
-    html2pdfPromise = import('html2pdf.js').then((module) => {
-      const html2pdf = module.default || module;
-      if (typeof html2pdf !== 'function') {
-        throw new Error('html2pdf library failed to initialize');
-      }
-      return html2pdf;
-    });
+    html2pdfPromise = import('html2pdf.js')
+      .then((module) => {
+        const html2pdf = module.default || module;
+        if (typeof html2pdf !== 'function') {
+          throw new Error('html2pdf library failed to initialize');
+        }
+        return html2pdf;
+      })
+      .catch((error) => {
+        html2pdfPromise = null;
+        throw error;
+      });
   }
 
   return html2pdfPromise;
@@ -47,11 +52,47 @@ const Notes = () => {
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
+  const [sidebarPinned, setSidebarPinned] = useState(() => (
+    typeof window !== 'undefined' ? localStorage.getItem('vector_notes_sidebar_pinned') === 'true' : false
+  ));
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Alerts
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState('success');
+  const sidebarVisible = isDesktop ? (sidebarPinned || sidebarOpen) : sidebarOpen;
+
+  useEffect(() => {
+    const handleResize = () => {
+      const desktop = window.innerWidth >= 768;
+      setIsDesktop(desktop);
+      if (desktop) setSidebarOpen(false);
+    };
+    if (typeof window !== 'undefined') {
+      handleResize();
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
+  const toggleSidebar = () => {
+    if (isDesktop) {
+      setSidebarPinned((current) => {
+        const next = !current;
+        localStorage.setItem('vector_notes_sidebar_pinned', String(next));
+        return next;
+      });
+      setSidebarOpen(false);
+      return;
+    }
+
+    setSidebarOpen(true);
+  };
 
   const handleSelectNote = (note) => {
     setSelectedNote(note);
@@ -115,6 +156,8 @@ const Notes = () => {
           font-size: 12px;
           color: #27272a;
           line-height: 1.65;
+          overflow-wrap: anywhere;
+          word-break: normal;
         }
         .vector-pdf-body h1,
         .vector-pdf-body h2,
@@ -157,15 +200,18 @@ const Notes = () => {
           border: 1px solid #e4e4e7;
           border-radius: 6px;
           white-space: pre-wrap;
+          overflow-wrap: anywhere;
           page-break-inside: avoid;
         }
         .vector-pdf-body pre code {
           padding: 0;
           background: transparent;
           border-radius: 0;
+          white-space: pre-wrap;
         }
         .vector-pdf-body table {
           width: 100%;
+          table-layout: fixed;
           border-collapse: collapse;
           margin: 12px 0;
           page-break-inside: avoid;
@@ -176,6 +222,7 @@ const Notes = () => {
           padding: 6px 8px;
           text-align: left;
           vertical-align: top;
+          overflow-wrap: anywhere;
         }
         .vector-pdf-body th {
           background: #f4f4f5;
@@ -184,8 +231,14 @@ const Notes = () => {
         }
         .vector-pdf-body .katex-display {
           margin: 12px 0;
-          overflow: visible;
+          max-width: 100%;
+          overflow: hidden;
           page-break-inside: avoid;
+        }
+        .vector-pdf-body .katex-display > .katex {
+          max-width: 100%;
+          white-space: normal;
+          font-size: 0.92em;
         }
       `;
       pdfContainer.appendChild(pdfStyle);
@@ -249,6 +302,9 @@ const Notes = () => {
       pdfContainer.appendChild(footer);
 
       document.body.appendChild(pdfContainer);
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
 
       try {
         renderMathInElement(pdfContainer, {
@@ -496,7 +552,7 @@ const Notes = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden relative">
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       
       {/* Alert banner */}
       {statusMessage && (
@@ -508,19 +564,33 @@ const Notes = () => {
         </div>
       )}
 
-      {sidebarOpen && (
+      {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[130] bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       {/* Left Sidebar: Notes & AI generator */}
       <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
-        sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-72 shadow-2xl md:static md:w-64 md:shadow-none' : 'hidden md:flex md:w-64'
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
       }`}>
         
         {/* Search */}
-        <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="space-y-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Study Notes</span>
+            <button
+              onClick={() => {
+                setSidebarPinned(false);
+                localStorage.setItem('vector_notes_sidebar_pinned', 'false');
+                setSidebarOpen(false);
+              }}
+              className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-200 dark:hover:bg-zinc-800"
+              title="Close notes panel"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <form onSubmit={handleSearchSubmit} className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
             <input
@@ -595,16 +665,18 @@ const Notes = () => {
       </aside>
 
       {/* Center workspace */}
-      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950">
+      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 min-w-0">
         {selectedNote ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header toolbar */}
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 p-3 dark:border-zinc-800 sm:p-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="md:hidden py-2 px-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-[10px] uppercase tracking-wider font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+                  onClick={toggleSidebar}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  title={sidebarVisible ? 'Hide notes' : 'Show notes'}
                 >
+                  {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                   Notes
                 </button>
                 {isEditing ? (
@@ -626,14 +698,14 @@ const Notes = () => {
                   </div>
                 ) : (
                   <div>
-                    <h2 className="font-extrabold text-sm sm:text-base uppercase tracking-wider text-zinc-800 dark:text-zinc-100">{selectedNote.title}</h2>
+                    <h2 className="truncate font-extrabold text-sm uppercase tracking-wider text-zinc-800 dark:text-zinc-100 sm:text-base">{selectedNote.title}</h2>
                     <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{selectedNote.topic || 'General'}</span>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 overflow-x-auto">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -684,7 +756,7 @@ const Notes = () => {
             </div>
 
             {/* Note Editor / Preview container */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {isEditing ? (
                 <textarea
                   value={editContent}
@@ -693,14 +765,21 @@ const Notes = () => {
                   placeholder="Write your study notes content in markdown..."
                 />
               ) : (
-                <div className="max-w-4xl mx-auto">
+                <div className="mx-auto max-w-3xl">
                   <MarkdownRenderer content={selectedNote.content} />
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto">
+          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto px-4">
+            <button
+              onClick={toggleSidebar}
+              className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              Notes
+            </button>
             <FileText className="w-10 h-10 text-zinc-400 mb-4" />
             <h3 className="font-extrabold text-sm uppercase tracking-wider">Select a Study Note</h3>
             <p className="text-xs text-zinc-400 mt-1">Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study notes.</p>

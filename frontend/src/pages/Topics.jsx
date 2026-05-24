@@ -1,4 +1,3 @@
-import React from 'react';
 import { BookOpen, HelpCircle, ArrowUpRight } from 'lucide-react';
 import { trackEvent } from '../useAnalytics';
 
@@ -16,10 +15,11 @@ const Topics = ({ onSelectTopic }) => {
   ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8 select-none">
+    <div className="h-full min-h-0 overflow-y-auto px-4 py-5 select-none sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-5">
       
       {/* Top Header */}
-      <div>
+      <div className="flex flex-col gap-1 border-b border-zinc-200 pb-4 dark:border-zinc-800">
         <h2 className="font-extrabold text-lg sm:text-xl uppercase tracking-wider text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-emerald-500" />
           Syllabus study planner
@@ -28,7 +28,7 @@ const Topics = ({ onSelectTopic }) => {
       </div>
 
       {/* Grid of topics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {topics.map((topic, idx) => (
           <div
             key={idx}
@@ -39,7 +39,7 @@ const Topics = ({ onSelectTopic }) => {
               });
               onSelectTopic(topic.prompt);
             }}
-            className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-100/40 dark:bg-zinc-900/35 hover:border-emerald-500/25 hover:bg-zinc-200/20 dark:hover:bg-zinc-900/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all group cursor-pointer flex flex-col justify-between"
+            className="group flex cursor-pointer flex-col justify-between rounded-xl border border-zinc-200 bg-white/40 p-4 transition-all hover:border-emerald-500/25 hover:bg-zinc-200/30 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/55"
           >
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -48,18 +48,19 @@ const Topics = ({ onSelectTopic }) => {
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <h3 className="font-extrabold text-base text-zinc-800 dark:text-zinc-100 uppercase tracking-wide mt-2">{topic.title}</h3>
+              <h3 className="mt-2 text-sm font-extrabold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{topic.title}</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
                 {topic.desc}
               </p>
             </div>
             
-            <div className="pt-4 border-t border-zinc-200/50 dark:border-zinc-800/50 mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-500 group-hover:underline">
+            <div className="mt-3 flex items-center gap-1.5 border-t border-zinc-200/50 pt-3 text-[10px] font-bold uppercase text-emerald-500 group-hover:underline dark:border-zinc-800/50">
               <HelpCircle className="w-3.5 h-3.5" />
               Start Revision
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

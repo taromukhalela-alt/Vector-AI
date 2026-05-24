@@ -406,7 +406,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-zinc-950 p-3 sm:p-6 items-center justify-center relative overflow-hidden select-none">
+    <div className="relative flex h-full min-h-0 flex-col items-center overflow-hidden bg-zinc-950 px-3 py-4 text-zinc-100 select-none sm:px-6">
       {/* Mic Permission Alert */}
       {micError && (
         <div className="absolute top-4 inset-x-6 max-w-md mx-auto z-50 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-start gap-3 shadow-lg">
@@ -419,7 +419,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       )}
 
       {/* Avatar Container */}
-      <div className="min-h-0 flex-1 w-full flex items-center justify-center relative max-w-lg">
+      <div className="relative flex min-h-0 w-full max-w-lg flex-1 items-center justify-center">
         <AvatarCanvas 
           avatarState={avatarState} 
           speakingAmplitude={speakingAmplitude} 
@@ -437,10 +437,10 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       </div>
 
       {/* Transcripts Display */}
-      <div className="w-full max-w-xl bg-zinc-900/40 border border-zinc-900 rounded-2xl p-3 sm:p-5 mb-4 sm:mb-6 backdrop-blur-md space-y-3 sm:space-y-4">
+      <div className="mb-3 max-h-[32%] w-full max-w-xl shrink-0 space-y-3 overflow-hidden rounded-xl border border-zinc-900 bg-zinc-900/35 p-3 backdrop-blur-md sm:mb-4 sm:p-4">
         <div>
           <div className="text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider mb-1">You said:</div>
-          <p className="text-sm font-semibold text-zinc-300 min-h-[20px] leading-relaxed italic">
+          <p className="max-h-12 overflow-y-auto text-sm font-semibold text-zinc-300 min-h-[20px] leading-relaxed italic">
             {youTranscript || 'Speak to start conversation...'}
           </p>
         </div>
@@ -448,7 +448,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         {aiTranscript && (
           <div className="pt-3 border-t border-zinc-900">
             <div className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-wider mb-1">AI Tutor reply:</div>
-            <p className="text-sm font-medium text-zinc-200 leading-relaxed max-h-24 sm:max-h-[140px] overflow-y-auto">
+            <p className="text-sm font-medium text-zinc-200 leading-relaxed max-h-20 sm:max-h-[120px] overflow-y-auto">
               {aiTranscript}
             </p>
           </div>
@@ -456,7 +456,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       </div>
 
       {/* Control Mic Bar */}
-      <div className="mb-4 sm:mb-6 flex flex-col items-center gap-2 sm:gap-3">
+      <div className="mb-3 flex shrink-0 flex-col items-center gap-2 sm:mb-4 sm:gap-3">
         <button
           onClick={toggleMic}
           className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer ${
@@ -481,7 +481,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       </div>
 
       {/* Banner Limit Info */}
-      <div className="flex items-center gap-2 p-3 rounded-xl border border-zinc-900 bg-zinc-900/10 text-zinc-500 text-[10px] font-bold uppercase tracking-wide max-w-sm text-center">
+      <div className="flex max-w-sm shrink-0 items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900/10 p-2.5 text-center text-[10px] font-bold uppercase tracking-wide text-zinc-500">
         <Info className="w-4 h-4 shrink-0 text-emerald-500/70" />
         <span>Vocal synthesizers are optimized for 500 words per reply.</span>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight, Mic, FlaskConical, BookOpen, FileText,
@@ -152,7 +152,7 @@ const Landing = ({ onNavigate }) => {
         <h1 className="anim-fade-up d-200 font-black text-4xl sm:text-6xl md:text-7xl tracking-tight leading-[1.08] uppercase mb-8">
           Master Physical Science,<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 anim-gradient drop-shadow-[0_0_40px_rgba(16,185,129,0.25)]">
-            Conviniently
+            Conveniently
           </span>
         </h1>
 

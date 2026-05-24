@@ -693,7 +693,7 @@ const PhysicsCanvas = ({
   }, []);
 
   return (
-    <div className="w-full h-full relative overflow-hidden flex-1 rounded-xl">
+    <div className="relative h-full w-full flex-1 overflow-hidden">
       <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   );
