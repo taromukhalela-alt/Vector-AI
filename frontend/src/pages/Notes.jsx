@@ -91,7 +91,7 @@ const Notes = () => {
       return;
     }
 
-    setSidebarOpen(true);
+    setSidebarOpen((prev) => !prev);
   };
 
   const handleSelectNote = (note) => {
@@ -152,6 +152,19 @@ const Notes = () => {
 
       const pdfStyle = document.createElement('style');
       pdfStyle.textContent = `
+        .vector-pdf-body h1,
+        .vector-pdf-body h2,
+        .vector-pdf-body h3,
+        .vector-pdf-body h4 {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+
+      .vector-pdf-body p,
+      .vector-pdf-body li {
+      orphans: 3;
+      widows: 3;
+      }
         .vector-pdf-body {
           font-size: 12px;
           color: #27272a;
@@ -240,7 +253,7 @@ const Notes = () => {
           white-space: normal;
           font-size: 0.92em;
         }
-      `;
+      `.
       pdfContainer.appendChild(pdfStyle);
 
       const header = document.createElement('div');
@@ -320,7 +333,13 @@ const Notes = () => {
         console.error('KaTeX print render error', e);
       }
 
-      const filename = `${selectedNote.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'study_note'}.pdf`;
+      const filename = `${
+  (selectedNote.title || 'study_note')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_-]/g, '')
+      }.pdf`;
       
       // Tailwind v4 oklch to hex color mappings for html2canvas compatibility
       const oklchToHexOverrides = `
@@ -382,10 +401,74 @@ const Notes = () => {
         margin: [10, 10, 10, 10],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2.2, useCORS: true, letterRendering: true, onclone: oncloneCallback },
+        html2canvas: {
+  scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+  useCORS: true,
+  backgroundColor: '#ffffff',
+  logging: false,
+  foreignObjectRendering: false,
+  removeContainer: true,
+  allowTaint: true,
+  letterRendering: true,
+  imageTimeout: 15000,
+  onclone: (clonedDocument) => {
+    oncloneCallback(clonedDocument);
+
+    try {
+      // Force-remove Tailwind dark mode
+      clonedDocument.documentElement.classList.remove('dark');
+
+      // Kill all oklch() values that break html2canvas
+      const style = clonedDocument.createElement('style');
+      style.innerHTML = `
+        * {
+          color-scheme: light !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+
+        body,
+        div,
+        section,
+        article,
+        aside,
+        span,
+        p,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+          color: #18181b !important;
+          background: transparent !important;
+          border-color: #d4d4d8 !important;
+        }
+
+        .dark {
+          color-scheme: light !important;
+        }
+
+        [class*="bg-zinc"],
+        [class*="bg-slate"],
+        [class*="bg-gray"] {
+          background: #ffffff !important;
+        }
+
+        [style*="oklch"] {
+          color: #18181b !important;
+          background: #ffffff !important;
+        }
+      `;
+      clonedDocument.head.appendChild(style);
+    } catch (e) {
+      console.warn('clone sanitization failed', e);
+    }
+  },
+},
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
-
+      await new Promise((resolve) => setTimeout(resolve, 400));
       await html2pdfLib().set(opt).from(pdfContainer).save();
       trackEvent('note_pdf_exported', {
         route: '/notes',
@@ -394,6 +477,10 @@ const Notes = () => {
       showStatus('PDF guide downloaded successfully!');
     } catch (err) {
       console.error('PDF export failed', err);
+      trackEvent('note_pdf_export_failed', {
+  route: '/notes',
+  error_message: err?.message || 'unknown',
+});
       showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
     } finally {
       if (pdfContainer && pdfContainer.parentNode) {
