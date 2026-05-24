@@ -314,7 +314,7 @@ const Notes = () => {
       footer.appendChild(footerDate);
       pdfContainer.appendChild(footer);
 
-      document.body.appendChild(pdfContainer);
+      (document.body || document.documentElement)?.appendChild(pdfContainer);
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
@@ -420,11 +420,10 @@ const Notes = () => {
   letterRendering: true,
   imageTimeout: 15000,
   onclone: (clonedDocument) => {
-    oncloneCallback(clonedDocument);
-
     try {
+      oncloneCallback(clonedDocument);
       // Force-remove Tailwind dark mode
-      clonedDocument.documentElement.classList.remove('dark');
+      clonedDocument.documentElement?.classList?.remove('dark');
 
       // Kill all oklch() values that break html2canvas
       const style = clonedDocument.createElement('style');
@@ -459,12 +458,35 @@ const Notes = () => {
 
         [class*="bg-zinc"],
         [class*="bg-slate"],
-        [class*="bg-gray"] {
+        [class*="bg-gray"],
+        [class*="text-zinc"],
+        [class*="text-slate"],
+        [class*="text-gray"],
+        [class*="border-zinc"],
+        [class*="border-slate"],
+        [class*="border-gray"] {
           background: #ffffff !important;
+          color: #18181b !important;
+          border-color: #d4d4d8 !important;
         }
 
         [style*="oklch"] {
           color: #18181b !important;
+          background: #ffffff !important;
+          border-color: #d4d4d8 !important;
+        }
+
+        *:not([class*="katex"]) {
+          color: #18181b !important;
+          background: transparent !important;
+        }
+
+        .katex {
+          color: #000000 !important;
+        }
+
+        .katex-display {
+          color: #000000 !important;
           background: #ffffff !important;
         }
       `;
@@ -488,16 +510,15 @@ const Notes = () => {
       });
       showStatus('PDF guide downloaded successfully!');
     } catch (err) {
-      console.error('PDF export failed', err);
+      console.error('PDF export failed FULL:', err);
+      console.error(err?.stack);
       trackEvent('note_pdf_export_failed', {
   route: '/notes',
   error_message: err?.message || 'unknown',
 });
       showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
     } finally {
-      if (pdfContainer && pdfContainer.parentNode) {
-        document.body.removeChild(pdfContainer);
-      }
+      pdfContainer?.remove?.();
       setIsExportingPdf(false);
     }
   };
