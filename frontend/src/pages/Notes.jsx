@@ -389,6 +389,11 @@ const Notes = () => {
       
       const oncloneCallback = (clonedDocument) => {
   try {
+    if (!clonedDocument) {
+      console.warn('No cloned document');
+      return;
+    }
+
     const style = clonedDocument.createElement('style');
     style.textContent = oklchToHexOverrides;
 
@@ -399,6 +404,8 @@ const Notes = () => {
 
     if (target) {
       target.appendChild(style);
+    } else {
+      console.warn('No valid append target found');
     }
   } catch (e) {
     console.warn('Failed to inject oklch color overrides:', e);
