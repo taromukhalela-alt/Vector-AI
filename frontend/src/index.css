@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -5,7 +6,6 @@
 /* ============================================
    VECTOR AI – FLOATING STEM OS DESIGN SYSTEM
    ============================================ */
-
 :root {
   --navbar-h: 52px;
   --status-h: 34px;
