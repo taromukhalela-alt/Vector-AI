@@ -98,10 +98,10 @@ const Landing = ({ onNavigate }) => {
   ];
 
   const stats = [
-    { value: 14,  suffix: ' ms', label: "Inference Latency",      icon: Cpu },
+    { value: 90,  suffix: ' ms', label: "Inference Latency",      icon: Cpu },
     { value: 98,  suffix: '%',   label: "Lab Trajectory Fidelity", icon: Award },
     { value: 100, suffix: '%',   label: "CAPS Curriculum Match",   icon: ShieldCheck },
-    { value: 12,  suffix: '+',   label: "Interactive Simulations", icon: FlaskConical },
+    { value: 5,  suffix: '+',   label: "Interactive Simulations", icon: FlaskConical },
   ];
 
   const faqs = [
@@ -112,21 +112,21 @@ const Landing = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="relative min-h-[100vh] h-auto overflow-x-hidden overflow-y-auto bg-zinc-950 text-zinc-100 font-sans select-none">
+    <div className="relative min-h-screen[100vh] h-auto overflow-x-hidden overflow-y-auto bg-zinc-950 text-zinc-100 font-sans select-none">
 
       {/* ─── Ambient Background ─── */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_100%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-size:60px_60px [mask-[radial-gradient(ellipse_at_center,black_60%,transparent_100%)] pointer-events-none z-0" />
       <Particles />
 
       {/* Orbs */}
-      <div className="absolute top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-emerald-500/[.07] blur-[120px] pointer-events-none anim-float-slow" />
-      <div className="absolute bottom-[20%] left-[5%] w-[400px] h-[400px] rounded-full bg-teal-500/[.05] blur-[140px] pointer-events-none anim-float" />
-      <div className="absolute top-[60%] right-[30%] w-[250px] h-[250px] rounded-full bg-cyan-500/[.04] blur-[100px] pointer-events-none anim-float-slow" style={{ animationDelay: '3s' }} />
+      <div className="absolute top-[15%] right-[5%] w-500px h-500px rounded-full bg-emerald-500/.07 blur-[120px] pointer-events-none anim-float-slow" />
+      <div className="absolute bottom-[20%] left-[5%] w-400px h-400px rounded-full bg-teal-500/.05 blur-[140px] pointer-events-none anim-float" />
+      <div className="absolute top-[60%] right-[30%] w-250px h-250px rounded-full bg-cyan-500/.04 blur-[100px] pointer-events-none anim-float-slow" style={{ animationDelay: '3s' }} />
 
       {/* ─── Navbar ─── */}
       <header className="sticky top-0 z-50 mx-3 mt-3 rounded-2xl backdrop-blur-xl bg-zinc-950/60 border border-zinc-800/40 px-6 py-3 flex items-center justify-between anim-fade-down shadow-xl shadow-black/20">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-500/30 anim-glow">V</div>
+          <div className="w-9 h-9 rounded-xl bg-linear-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-500/30 anim-glow">V</div>
           <div>
             <span className="font-extrabold text-sm tracking-tight block leading-none">Vector AI</span>
             <span className="text-[9px] tracking-[.2em] text-emerald-500 font-bold uppercase block mt-0.5">STEM OS</span>
@@ -151,8 +151,8 @@ const Landing = ({ onNavigate }) => {
         {/* Title */}
         <h1 className="anim-fade-up d-200 font-black text-4xl sm:text-6xl md:text-7xl tracking-tight leading-[1.08] uppercase mb-8">
           Master Physical Science,<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 anim-gradient drop-shadow-[0_0_40px_rgba(16,185,129,0.25)]">
-            Conveniently
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-300 to-emerald-500 anim-gradient drop-shadow-[0_0_40px_rgba(16,185,129,0.25)]">
+            Conviniently
           </span>
         </h1>
 
