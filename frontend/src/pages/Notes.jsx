@@ -126,21 +126,26 @@ const Notes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleDownloadPDF = async () => {
+const handleDownloadPDF = async () => {
     if (!selectedNote) return;
 
     setIsExportingPdf(true);
     showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
 
+    let pdfWrapper = null;
     let pdfContainer = null;
 
     try {
       const html2pdfLib = await loadHtml2pdf();
 
+      // 1. The wrapper hides the rendering process without breaking html2canvas coordinates
+      pdfWrapper = document.createElement('div');
+      pdfWrapper.style.position = 'absolute';
+      pdfWrapper.style.top = '-9999px';
+      pdfWrapper.style.left = '-9999px';
+
+      // 2. The actual container that gets turned into a PDF
       pdfContainer = document.createElement('div');
-      pdfContainer.style.position = 'fixed';
-      pdfContainer.style.top = '-9999px';
-      pdfContainer.style.left = '-9999px';
       pdfContainer.style.width = '794px';
       pdfContainer.style.padding = '35px 30px';
       pdfContainer.style.fontFamily = 'Inter, sans-serif';
@@ -148,23 +153,22 @@ const Notes = () => {
       pdfContainer.style.color = '#18181b';
       pdfContainer.style.boxSizing = 'border-box';
       pdfContainer.style.lineHeight = '1.6';
-      pdfContainer.style.zIndex = '-9999';
 
       const pdfStyle = document.createElement('style');
+      pdfStyle.id = 'vector-pdf-style'; // Identified so we don't accidentally delete it during clone
       pdfStyle.textContent = `
         .vector-pdf-body h1,
         .vector-pdf-body h2,
         .vector-pdf-body h3,
         .vector-pdf-body h4 {
-        break-after: avoid;
-        page-break-after: avoid;
-      }
-
-      .vector-pdf-body p,
-      .vector-pdf-body li {
-      orphans: 3;
-      widows: 3;
-      }
+          break-after: avoid;
+          page-break-after: avoid;
+        }
+        .vector-pdf-body p,
+        .vector-pdf-body li {
+          orphans: 3;
+          widows: 3;
+        }
         .vector-pdf-body {
           font-size: 12px;
           color: #27272a;
@@ -253,7 +257,8 @@ const Notes = () => {
           white-space: normal;
           font-size: 0.92em;
         }
-      `;
+      `; // SEMICOLON FIXED HERE
+      
       pdfContainer.appendChild(pdfStyle);
 
       const header = document.createElement('div');
@@ -314,7 +319,10 @@ const Notes = () => {
       footer.appendChild(footerDate);
       pdfContainer.appendChild(footer);
 
-      (document.body || document.documentElement)?.appendChild(pdfContainer);
+      // 3. THIS APPLIES THE WRAPPER (Fixes "assigned but never used")
+      pdfWrapper.appendChild(pdfContainer);
+      document.body.appendChild(pdfWrapper);
+      
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
@@ -334,201 +342,63 @@ const Notes = () => {
       }
 
       const filename = `${
-  (selectedNote.title || 'study_note')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_')
-    .replace(/[^a-z0-9_-]/g, '')
+        (selectedNote.title || 'study_note')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_-]/g, '')
       }.pdf`;
-      
-      // Tailwind v4 oklch to hex color mappings for html2canvas compatibility
-      const oklchToHexOverrides = `
-        :root {
-          --color-slate-50: #f8fafc;
-          --color-slate-100: #f1f5f9;
-          --color-slate-200: #e2e8f0;
-          --color-slate-300: #cbd5e1;
-          --color-slate-400: #94a3b8;
-          --color-slate-500: #64748b;
-          --color-slate-600: #475569;
-          --color-slate-700: #334155;
-          --color-slate-800: #1e293b;
-          --color-slate-900: #0f172a;
-          --color-zinc-50: #fafafa;
-          --color-zinc-100: #f4f4f5;
-          --color-zinc-200: #e4e4e7;
-          --color-zinc-300: #d4d4d8;
-          --color-zinc-400: #a1a1a3;
-          --color-zinc-500: #71717a;
-          --color-zinc-600: #52525b;
-          --color-zinc-700: #3f3f46;
-          --color-zinc-800: #27272a;
-          --color-zinc-900: #18181b;
-          --color-gray-50: #f9fafb;
-          --color-gray-100: #f3f4f6;
-          --color-gray-200: #e5e7eb;
-          --color-gray-300: #d1d5db;
-          --color-gray-400: #9ca3af;
-          --color-gray-500: #6b7280;
-          --color-gray-600: #4b5563;
-          --color-gray-700: #374151;
-          --color-gray-800: #1f2937;
-          --color-gray-900: #111827;
-          --color-red-50: #fef2f2;
-          --color-red-100: #fee2e2;
-          --color-red-500: #ef4444;
-          --color-green-50: #f0fdf4;
-          --color-green-100: #dcfce7;
-          --color-green-500: #22c55e;
-          --color-green-600: #16a34a;
-          --color-blue-50: #eff6ff;
-          --color-blue-100: #dbeafe;
-          --color-blue-500: #3b82f6;
-        }
-      `;
-      
-      const oncloneCallback = (clonedDocument) => {
-  try {
-    if (!clonedDocument) {
-      console.warn('No cloned document');
-      return;
-    }
 
-    const style = clonedDocument.createElement('style');
-    style.textContent = oklchToHexOverrides;
-
-    const target =
-      clonedDocument.head ||
-      clonedDocument.documentElement ||
-      clonedDocument.body;
-
-    if (target) {
-      target.appendChild(style);
-    } else {
-      console.warn('No valid append target found');
-    }
-  } catch (e) {
-    console.warn('Failed to inject oklch color overrides:', e);
-  }
-};
-      
+      // 4. Clean configuration with our silver-bullet Tailwind remover
       const opt = {
         margin: [10, 10, 10, 10],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
-  scale: window.devicePixelRatio > 1 ? 2 : 1.5,
-  useCORS: true,
-  backgroundColor: '#ffffff',
-  logging: false,
-  foreignObjectRendering: false,
-  removeContainer: true,
-  allowTaint: true,
-  letterRendering: true,
-  imageTimeout: 15000,
-  onclone: (clonedDocument) => {
-    try {
-      oncloneCallback(clonedDocument);
-      // Force-remove Tailwind dark mode
-      clonedDocument.documentElement?.classList?.remove('dark');
+          scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDocument) => {
+            // Force-remove Tailwind dark mode
+            clonedDocument.documentElement.classList.remove('dark');
 
-      // Kill all oklch() values that break html2canvas
-      const style = clonedDocument.createElement('style');
-      style.innerHTML = `
-        * {
-          color-scheme: light !important;
-          box-shadow: none !important;
-          text-shadow: none !important;
-        }
-
-        body,
-        div,
-        section,
-        article,
-        aside,
-        span,
-        p,
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-          color: #18181b !important;
-          background: transparent !important;
-          border-color: #d4d4d8 !important;
-        }
-
-        .dark {
-          color-scheme: light !important;
-        }
-
-        [class*="bg-zinc"],
-        [class*="bg-slate"],
-        [class*="bg-gray"],
-        [class*="text-zinc"],
-        [class*="text-slate"],
-        [class*="text-gray"],
-        [class*="border-zinc"],
-        [class*="border-slate"],
-        [class*="border-gray"] {
-          background: #ffffff !important;
-          color: #18181b !important;
-          border-color: #d4d4d8 !important;
-        }
-
-        [style*="oklch"] {
-          color: #18181b !important;
-          background: #ffffff !important;
-          border-color: #d4d4d8 !important;
-        }
-
-        *:not([class*="katex"]) {
-          color: #18181b !important;
-          background: transparent !important;
-        }
-
-        .katex {
-          color: #000000 !important;
-        }
-
-        .katex-display {
-          color: #000000 !important;
-          background: #ffffff !important;
-        }
-      `;
-      (
-  clonedDocument.head ||
-  clonedDocument.documentElement ||
-  clonedDocument.body
-)?.appendChild(style);
-    } catch (e) {
-      console.warn('clone sanitization failed', e);
-    }
-  },
-},
+            // Strip ALL application stylesheets so html2canvas doesn't crash on Tailwind's oklch
+            const sheets = clonedDocument.querySelectorAll('style, link[rel="stylesheet"]');
+            sheets.forEach((sheet) => {
+              if (sheet.id === 'vector-pdf-style') return; // Keep our PDF styles
+              if (sheet.href?.includes('katex')) return; // Keep external KaTeX styles
+              if (sheet.innerHTML?.includes('katex')) return; // Keep inline KaTeX styles
+              
+              sheet.remove(); // Destroy everything else
+            });
+          },
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
+
       await new Promise((resolve) => setTimeout(resolve, 400));
+      
+      // Target the container directly for the screenshot
       await html2pdfLib().set(opt).from(pdfContainer).save();
+      
       trackEvent('note_pdf_exported', {
         route: '/notes',
         note_topic: selectedNote.topic || 'General',
       });
       showStatus('PDF guide downloaded successfully!');
+      
     } catch (err) {
-      console.error('PDF export failed FULL:', err);
-      console.error(err?.stack);
+      console.error('PDF export failed', err);
       trackEvent('note_pdf_export_failed', {
-  route: '/notes',
-  error_message: err?.message || 'unknown',
-});
+        route: '/notes',
+        error_message: err?.message || 'unknown',
+      });
       showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
     } finally {
-      pdfContainer?.remove?.();
-      setIsExportingPdf(false);
-    }
-  };
+       // 5. Clean up the wrapper from the DOM
+       if (pdfWrapper && pdfWrapper.parentNode) {
+         document.body.removeChild(pdfWrapper);
 
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
@@ -693,13 +563,13 @@ const Notes = () => {
 
       {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-[130] bg-black/40 md:hidden"
+          className="fixed inset-0 z-130 bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       {/* Left Sidebar: Notes & AI generator */}
       <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
-        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
       }`}>
         
         {/* Search */}
