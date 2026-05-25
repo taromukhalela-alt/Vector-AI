@@ -132,198 +132,130 @@ const handleDownloadPDF = async () => {
     setIsExportingPdf(true);
     showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
 
-    let pdfContainer = null;
+    let iframe = null;
 
     try {
       const html2pdfLib = await loadHtml2pdf();
 
-      // 1. Create the container directly. No wrappers!
-      pdfContainer = document.createElement('div');
-      // We position it absolute at the top left, but hide it BEHIND your app's background
-      // This bypasses html2canvas's "invisible element" skipping completely.
-      pdfContainer.style.position = 'absolute';
-      pdfContainer.style.top = '0';
-      pdfContainer.style.left = '0';
-      pdfContainer.style.width = '794px'; 
-      pdfContainer.style.padding = '35px 30px';
-      pdfContainer.style.fontFamily = 'Inter, sans-serif';
-      pdfContainer.style.background = '#ffffff';
-      pdfContainer.style.color = '#18181b';
-      pdfContainer.style.boxSizing = 'border-box';
-      pdfContainer.style.lineHeight = '1.6';
-      pdfContainer.style.zIndex = '-9999';
+      // 1. Create an isolated iframe to bypass ALL Tailwind and Scroll bugs
+      iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '794px';
+      iframe.style.height = '1122px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
 
-      const pdfStyle = document.createElement('style');
-      pdfStyle.id = 'vector-pdf-style';
-      pdfStyle.textContent = `
-        .vector-pdf-body h1,
-        .vector-pdf-body h2,
-        .vector-pdf-body h3,
-        .vector-pdf-body h4 {
-          break-after: avoid;
-          page-break-after: avoid;
-        }
-        .vector-pdf-body p,
-        .vector-pdf-body li {
-          orphans: 3;
-          widows: 3;
-        }
-        .vector-pdf-body {
-          font-size: 12px;
-          color: #27272a;
-          line-height: 1.65;
-          overflow-wrap: anywhere;
-          word-break: normal;
-        }
-        .vector-pdf-body h1,
-        .vector-pdf-body h2,
-        .vector-pdf-body h3,
-        .vector-pdf-body h4 {
-          color: #18181b;
-          font-weight: 800;
-          line-height: 1.2;
-          margin: 18px 0 8px;
-          page-break-after: avoid;
-        }
-        .vector-pdf-body h1 { font-size: 21px; }
-        .vector-pdf-body h2 { font-size: 17px; border-bottom: 1px solid #d4d4d8; padding-bottom: 4px; }
-        .vector-pdf-body h3 { font-size: 14px; color: #047857; }
-        .vector-pdf-body p { margin: 0 0 10px; }
-        .vector-pdf-body ul,
-        .vector-pdf-body ol { margin: 0 0 12px 20px; padding: 0; }
-        .vector-pdf-body li { margin: 3px 0; padding-left: 2px; }
-        .vector-pdf-body strong { font-weight: 800; color: #18181b; }
-        .vector-pdf-body a { color: #047857; text-decoration: underline; }
-        .vector-pdf-body blockquote {
-          margin: 12px 0;
-          padding: 8px 12px;
-          border-left: 3px solid #10b981;
-          background: #f0fdf4;
-          color: #3f3f46;
-        }
-        .vector-pdf-body code {
-          font-family: "Courier New", monospace;
-          font-size: 11px;
-          background: #f4f4f5;
-          color: #18181b;
-          border-radius: 3px;
-          padding: 1px 4px;
-        }
-        .vector-pdf-body pre {
-          margin: 12px 0;
-          padding: 10px 12px;
-          background: #f4f4f5;
-          border: 1px solid #e4e4e7;
-          border-radius: 6px;
-          white-space: pre-wrap;
-          overflow-wrap: anywhere;
-          page-break-inside: avoid;
-        }
-        .vector-pdf-body pre code {
-          padding: 0;
-          background: transparent;
-          border-radius: 0;
-          white-space: pre-wrap;
-        }
-        .vector-pdf-body table {
-          width: 100%;
-          table-layout: fixed;
-          border-collapse: collapse;
-          margin: 12px 0;
-          page-break-inside: avoid;
-        }
-        .vector-pdf-body th,
-        .vector-pdf-body td {
-          border: 1px solid #d4d4d8;
-          padding: 6px 8px;
-          text-align: left;
-          vertical-align: top;
-          overflow-wrap: anywhere;
-        }
-        .vector-pdf-body th {
-          background: #f4f4f5;
-          color: #18181b;
-          font-weight: 800;
-        }
-        .vector-pdf-body .katex-display {
-          margin: 12px 0;
-          max-width: 100%;
-          overflow: hidden;
-          page-break-inside: avoid;
-        }
-        .vector-pdf-body .katex-display > .katex {
-          max-width: 100%;
-          white-space: normal;
-          font-size: 0.92em;
-        }
-      `;
+      const doc = iframe.contentWindow.document;
+      doc.open();
       
-      pdfContainer.appendChild(pdfStyle);
+      // 2. Write a pristine HTML document with ONLY the styles we need
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
+            <style>
+              body { margin: 0; padding: 0; background: #ffffff; }
+              .vector-pdf-body h1,
+              .vector-pdf-body h2,
+              .vector-pdf-body h3,
+              .vector-pdf-body h4 { break-after: avoid; page-break-after: avoid; }
+              .vector-pdf-body p,
+              .vector-pdf-body li { orphans: 3; widows: 3; }
+              .vector-pdf-body {
+                font-size: 12px; color: #27272a; line-height: 1.65;
+                overflow-wrap: anywhere; word-break: normal;
+              }
+              .vector-pdf-body h1,
+              .vector-pdf-body h2,
+              .vector-pdf-body h3,
+              .vector-pdf-body h4 {
+                color: #18181b; font-weight: 800; line-height: 1.2;
+                margin: 18px 0 8px; page-break-after: avoid;
+              }
+              .vector-pdf-body h1 { font-size: 21px; }
+              .vector-pdf-body h2 { font-size: 17px; border-bottom: 1px solid #d4d4d8; padding-bottom: 4px; }
+              .vector-pdf-body h3 { font-size: 14px; color: #047857; }
+              .vector-pdf-body p { margin: 0 0 10px; }
+              .vector-pdf-body ul,
+              .vector-pdf-body ol { margin: 0 0 12px 20px; padding: 0; }
+              .vector-pdf-body li { margin: 3px 0; padding-left: 2px; }
+              .vector-pdf-body strong { font-weight: 800; color: #18181b; }
+              .vector-pdf-body a { color: #047857; text-decoration: underline; }
+              .vector-pdf-body blockquote {
+                margin: 12px 0; padding: 8px 12px; border-left: 3px solid #10b981;
+                background: #f0fdf4; color: #3f3f46;
+              }
+              .vector-pdf-body code {
+                font-family: "Courier New", monospace; font-size: 11px;
+                background: #f4f4f5; color: #18181b; border-radius: 3px; padding: 1px 4px;
+              }
+              .vector-pdf-body pre {
+                margin: 12px 0; padding: 10px 12px; background: #f4f4f5;
+                border: 1px solid #e4e4e7; border-radius: 6px;
+                white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid;
+              }
+              .vector-pdf-body pre code { padding: 0; background: transparent; border-radius: 0; }
+              .vector-pdf-body table {
+                width: 100%; table-layout: fixed; border-collapse: collapse;
+                margin: 12px 0; page-break-inside: avoid;
+              }
+              .vector-pdf-body th,
+              .vector-pdf-body td {
+                border: 1px solid #d4d4d8; padding: 6px 8px; text-align: left;
+                vertical-align: top; overflow-wrap: anywhere;
+              }
+              .vector-pdf-body th { background: #f4f4f5; color: #18181b; font-weight: 800; }
+              .vector-pdf-body .katex-display {
+                margin: 12px 0; max-width: 100%; overflow: hidden; page-break-inside: avoid;
+              }
+              .vector-pdf-body .katex-display > .katex {
+                max-width: 100%; white-space: normal; font-size: 0.92em;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="pdf-container" style="width: 794px; padding: 35px 30px; font-family: Inter, sans-serif; background: #ffffff; color: #18181b; box-sizing: border-box; line-height: 1.6;">
+              
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #10b981; padding-bottom: 14px; margin-bottom: 28px;">
+                <div>
+                  <h1 style="margin: 0; font-size: 22px; color: #18181b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;" id="hdr-title"></h1>
+                  <p style="margin: 4px 0 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase;" id="hdr-topic"></p>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 12px; font-weight: 900; color: #10b981; letter-spacing: 1px;">VECTOR AI</div>
+                  <div style="font-size: 9px; color: #71717a; font-weight: 700; margin-top: 2px; text-transform: uppercase;">CAPS STEM OS</div>
+                </div>
+              </div>
+              
+              <div class="vector-pdf-body" id="pdf-body"></div>
+              
+              <div style="border-top: 1px solid #e4e4e7; padding-top: 14px; margin-top: 45px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #71717a; font-weight: 600; text-transform: uppercase;">
+                <span>Built by Taro Mukhalela - Vector AI STEM OS</span>
+                <span id="hdr-date"></span>
+              </div>
+              
+            </div>
+          </body>
+        </html>
+      `);
+      doc.close();
 
-      const header = document.createElement('div');
-      header.style.display = 'flex';
-      header.style.justifyContent = 'space-between';
-      header.style.alignItems = 'flex-start';
-      header.style.borderBottom = '2.5px solid #10b981';
-      header.style.paddingBottom = '14px';
-      header.style.marginBottom = '28px';
+      // 3. Inject content safely using DOM APIs inside the iframe
+      doc.getElementById('hdr-title').textContent = selectedNote.title || 'Study Note';
+      doc.getElementById('hdr-topic').textContent = `Topic: ${selectedNote.topic || 'General'}`;
+      doc.getElementById('hdr-date').textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      doc.getElementById('pdf-body').innerHTML = renderSafeMarkdown(selectedNote.content);
 
-      const headerLeft = document.createElement('div');
-      const headerTitle = document.createElement('h1');
-      headerTitle.style.cssText = 'margin:0;font-size:22px;color:#18181b;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
-      headerTitle.textContent = selectedNote.title;
-      const headerTopic = document.createElement('p');
-      headerTopic.style.cssText = 'margin:4px 0 0 0;font-size:11px;color:#71717a;font-weight:600;text-transform:uppercase;';
-      headerTopic.textContent = `Topic: ${selectedNote.topic || 'General'}`;
-      headerLeft.appendChild(headerTitle);
-      headerLeft.appendChild(headerTopic);
+      // Wait 800ms to guarantee the iframe and KaTeX CSS are fully loaded
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      const headerRight = document.createElement('div');
-      headerRight.style.textAlign = 'right';
-      const brandName = document.createElement('div');
-      brandName.style.cssText = 'font-size:12px;font-weight:900;color:#10b981;letter-spacing:1px;';
-      brandName.textContent = 'VECTOR AI';
-      const brandSub = document.createElement('div');
-      brandSub.style.cssText = 'font-size:9px;color:#71717a;font-weight:700;margin-top:2px;text-transform:uppercase;';
-      brandSub.textContent = 'CAPS STEM OS';
-      headerRight.appendChild(brandName);
-      headerRight.appendChild(brandSub);
+      const pdfContainer = doc.getElementById('pdf-container');
 
-      header.appendChild(headerLeft);
-      header.appendChild(headerRight);
-      pdfContainer.appendChild(header);
-
-      const bodyWrap = document.createElement('div');
-      bodyWrap.className = 'vector-pdf-body';
-      bodyWrap.innerHTML = renderSafeMarkdown(selectedNote.content);
-      pdfContainer.appendChild(bodyWrap);
-
-      const footer = document.createElement('div');
-      footer.style.borderTop = '1px solid #e4e4e7';
-      footer.style.paddingTop = '14px';
-      footer.style.marginTop = '45px';
-      footer.style.display = 'flex';
-      footer.style.justifyContent = 'space-between';
-      footer.style.alignItems = 'center';
-      footer.style.fontSize = '9px';
-      footer.style.color = '#71717a';
-      footer.style.fontWeight = '600';
-      footer.style.textTransform = 'uppercase';
-
-      const footerBrand = document.createElement('span');
-      footerBrand.textContent = 'Built by Taro Mukhalela - Vector AI STEM OS';
-      const footerDate = document.createElement('span');
-      footerDate.textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-      footer.appendChild(footerBrand);
-      footer.appendChild(footerDate);
-      
-      // 2. Append directly to body
-      document.body.appendChild(pdfContainer);
-      
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
-
+      // 4. Render math inside the isolated iframe
       try {
         renderMathInElement(pdfContainer, {
           delimiters: [
@@ -338,13 +270,8 @@ const handleDownloadPDF = async () => {
         console.error('KaTeX print render error', e);
       }
 
-      const filename = `${
-        (selectedNote.title || 'study_note')
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, '_')
-          .replace(/[^a-z0-9_-]/g, '')
-      }.pdf`;
+      // 5. Generate filename and trigger clean html2pdf
+      const filename = `${(selectedNote.title || 'study_note').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')}.pdf`;
 
       const opt = {
         margin: [10, 10, 10, 10],
@@ -354,31 +281,13 @@ const handleDownloadPDF = async () => {
           scale: window.devicePixelRatio > 1 ? 2 : 1.5,
           useCORS: true,
           backgroundColor: '#ffffff',
-          logging: false,
-          // 3. CRITICAL FIX: Forces html2canvas to capture from the absolute top!
-          // This prevents blank pages if the user is scrolled down.
-          scrollY: 0, 
-          scrollX: 0,
-          onclone: (clonedDocument) => {
-            clonedDocument.documentElement.classList.remove('dark');
-            
-            // 4. Safely strips all Tailwind stylesheets so it doesn't crash on oklch()
-            const sheets = clonedDocument.querySelectorAll('style, link[rel="stylesheet"]');
-            sheets.forEach((sheet) => {
-              if (sheet.id === 'vector-pdf-style') return; 
-              if (sheet.href?.includes('katex')) return; 
-              if (sheet.innerHTML?.includes('katex')) return; 
-              
-              sheet.remove(); 
-            });
-          },
+          logging: false
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
 
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      
-      await html2pdfLib().set(opt).from(pdfContainer).save();
+      const pdfWorker = html2pdfLib().set(opt).from(pdfContainer);
+      await pdfWorker.save();
       
       trackEvent('note_pdf_exported', {
         route: '/notes',
@@ -388,15 +297,20 @@ const handleDownloadPDF = async () => {
       
     } catch (err) {
       console.error('PDF export failed', err);
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : (typeof err === 'string' ? err : 'unknown error');
+
       trackEvent('note_pdf_export_failed', {
         route: '/notes',
-        error_message: err?.message || 'unknown',
+        error_message: errorMessage,
       });
-      showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
+      
+      showStatus(`Failed to generate PDF document: ${errorMessage}`, 'error');
     } finally {
-      // 5. Clean up the container from the DOM
-      if (pdfContainer && pdfContainer.parentNode) {
-        document.body.removeChild(pdfContainer);
+      // 6. Clean up the iframe from the DOM
+      if (iframe && iframe.parentNode) {
+        document.body.removeChild(iframe);
       }
       setIsExportingPdf(false);
     }
