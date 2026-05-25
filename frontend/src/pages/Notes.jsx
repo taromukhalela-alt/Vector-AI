@@ -253,7 +253,7 @@ const Notes = () => {
           white-space: normal;
           font-size: 0.92em;
         }
-      `
+      `;
       pdfContainer.appendChild(pdfStyle);
 
       const header = document.createElement('div');
