@@ -401,32 +401,7 @@ const handleDownloadPDF = async () => {
       setIsExportingPdf(false);
     }
   };
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      };
-
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      
-      // Target the container directly for the screenshot
-      await html2pdfLib().set(opt).from(pdfContainer).save();
-      
-      trackEvent('note_pdf_exported', {
-        route: '/notes',
-        note_topic: selectedNote.topic || 'General',
-      });
-      showStatus('PDF guide downloaded successfully!');
-      
-    } catch (err) {
-      console.error('PDF export failed', err);
-      trackEvent('note_pdf_export_failed', {
-        route: '/notes',
-        error_message: err?.message || 'unknown',
-      });
-      showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
-    } finally {
-       // 5. Clean up the wrapper from the DOM
-       if (pdfWrapper && pdfWrapper.parentNode) {
-         document.body.removeChild(pdfWrapper);
-
+ 
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
     setStatusType(type);
