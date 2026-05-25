@@ -132,30 +132,29 @@ const handleDownloadPDF = async () => {
     setIsExportingPdf(true);
     showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
 
-    let pdfWrapper = null;
     let pdfContainer = null;
 
     try {
       const html2pdfLib = await loadHtml2pdf();
 
-      // 1. The wrapper hides the rendering process without breaking html2canvas coordinates
-      pdfWrapper = document.createElement('div');
-      pdfWrapper.style.position = 'absolute';
-      pdfWrapper.style.top = '-9999px';
-      pdfWrapper.style.left = '-9999px';
-
-      // 2. The actual container that gets turned into a PDF
+      // 1. Create the container directly. No wrappers!
       pdfContainer = document.createElement('div');
-      pdfContainer.style.width = '794px';
+      // We position it absolute at the top left, but hide it BEHIND your app's background
+      // This bypasses html2canvas's "invisible element" skipping completely.
+      pdfContainer.style.position = 'absolute';
+      pdfContainer.style.top = '0';
+      pdfContainer.style.left = '0';
+      pdfContainer.style.width = '794px'; 
       pdfContainer.style.padding = '35px 30px';
       pdfContainer.style.fontFamily = 'Inter, sans-serif';
       pdfContainer.style.background = '#ffffff';
       pdfContainer.style.color = '#18181b';
       pdfContainer.style.boxSizing = 'border-box';
       pdfContainer.style.lineHeight = '1.6';
+      pdfContainer.style.zIndex = '-9999';
 
       const pdfStyle = document.createElement('style');
-      pdfStyle.id = 'vector-pdf-style'; // Identified so we don't accidentally delete it during clone
+      pdfStyle.id = 'vector-pdf-style';
       pdfStyle.textContent = `
         .vector-pdf-body h1,
         .vector-pdf-body h2,
@@ -257,7 +256,7 @@ const handleDownloadPDF = async () => {
           white-space: normal;
           font-size: 0.92em;
         }
-      `; // SEMICOLON FIXED HERE
+      `;
       
       pdfContainer.appendChild(pdfStyle);
 
@@ -317,11 +316,9 @@ const handleDownloadPDF = async () => {
       footerDate.textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
       footer.appendChild(footerBrand);
       footer.appendChild(footerDate);
-      pdfContainer.appendChild(footer);
-
-      // 3. THIS APPLIES THE WRAPPER (Fixes "assigned but never used")
-      pdfWrapper.appendChild(pdfContainer);
-      document.body.appendChild(pdfWrapper);
+      
+      // 2. Append directly to body
+      document.body.appendChild(pdfContainer);
       
       if (document.fonts?.ready) {
         await document.fonts.ready;
@@ -349,7 +346,6 @@ const handleDownloadPDF = async () => {
           .replace(/[^a-z0-9_-]/g, '')
       }.pdf`;
 
-      // 4. Clean configuration with our silver-bullet Tailwind remover
       const opt = {
         margin: [10, 10, 10, 10],
         filename,
@@ -359,21 +355,52 @@ const handleDownloadPDF = async () => {
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
+          // 3. CRITICAL FIX: Forces html2canvas to capture from the absolute top!
+          // This prevents blank pages if the user is scrolled down.
+          scrollY: 0, 
+          scrollX: 0,
           onclone: (clonedDocument) => {
-            // Force-remove Tailwind dark mode
             clonedDocument.documentElement.classList.remove('dark');
-
-            // Strip ALL application stylesheets so html2canvas doesn't crash on Tailwind's oklch
+            
+            // 4. Safely strips all Tailwind stylesheets so it doesn't crash on oklch()
             const sheets = clonedDocument.querySelectorAll('style, link[rel="stylesheet"]');
             sheets.forEach((sheet) => {
-              if (sheet.id === 'vector-pdf-style') return; // Keep our PDF styles
-              if (sheet.href?.includes('katex')) return; // Keep external KaTeX styles
-              if (sheet.innerHTML?.includes('katex')) return; // Keep inline KaTeX styles
+              if (sheet.id === 'vector-pdf-style') return; 
+              if (sheet.href?.includes('katex')) return; 
+              if (sheet.innerHTML?.includes('katex')) return; 
               
-              sheet.remove(); // Destroy everything else
+              sheet.remove(); 
             });
           },
         },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      
+      await html2pdfLib().set(opt).from(pdfContainer).save();
+      
+      trackEvent('note_pdf_exported', {
+        route: '/notes',
+        note_topic: selectedNote.topic || 'General',
+      });
+      showStatus('PDF guide downloaded successfully!');
+      
+    } catch (err) {
+      console.error('PDF export failed', err);
+      trackEvent('note_pdf_export_failed', {
+        route: '/notes',
+        error_message: err?.message || 'unknown',
+      });
+      showStatus(`Failed to generate PDF document: ${err?.message || 'unknown error'}`, 'error');
+    } finally {
+      // 5. Clean up the container from the DOM
+      if (pdfContainer && pdfContainer.parentNode) {
+        document.body.removeChild(pdfContainer);
+      }
+      setIsExportingPdf(false);
+    }
+  };
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       };
 
