@@ -130,14 +130,14 @@ const handleDownloadPDF = async () => {
   if (!selectedNote) return;
 
   setIsExportingPdf(true);
-  showStatus('Compiling high-fidelity PDF with KaTeX math rendering...', 'success');
+  showStatus('Compiling high‑fidelity PDF…', 'success');
 
   let iframe = null;
 
   try {
     const html2pdfLib = await loadHtml2pdf();
 
-    // 1. Create an isolated iframe (exactly as you originally had)
+    // 1. Create the isolated iframe (exactly as before)
     iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.top = '-9999px';
@@ -149,8 +149,6 @@ const handleDownloadPDF = async () => {
 
     const doc = iframe.contentWindow.document;
     doc.open();
-
-    // 2. Write the pristine HTML document (your exact original template)
     doc.write(`
       <!DOCTYPE html>
       <html>
@@ -240,13 +238,13 @@ const handleDownloadPDF = async () => {
     `);
     doc.close();
 
-    // 3. Inject content and render math inside the iframe
+    // 2. Inject content and maths
     doc.getElementById('hdr-title').textContent = selectedNote.title || 'Study Note';
     doc.getElementById('hdr-topic').textContent = `Topic: ${selectedNote.topic || 'General'}`;
     doc.getElementById('hdr-date').textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     doc.getElementById('pdf-body').innerHTML = renderSafeMarkdown(selectedNote.content);
 
-    // Wait for KaTeX to load and render
+    // Wait for styles + KaTeX to load
     await new Promise(resolve => setTimeout(resolve, 800));
 
     try {
@@ -263,26 +261,39 @@ const handleDownloadPDF = async () => {
       console.error('KaTeX print render error', e);
     }
 
-    // 4. Generate the PDF – note: we pass the iframe element itself!
+    // 3. Capture the iframe's body using html2canvas directly (no Tailwind interference)
+    const html2canvas = html2pdfLib.html2canvas;  // comes bundled
+    const canvas = await html2canvas(doc.body, {
+      scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    });
+
+    // 4. Build the PDF with jsPDF
+    const { jsPDF } = html2pdfLib;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pdfWidth - 20; // 10 mm margins on each side
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+
+    // If content is taller than one page, add more pages (simple approach)
+    let heightLeft = imgHeight;
+    let position = 10;
+    while (heightLeft > pdfHeight - 20) {
+      position = heightLeft - pdfHeight + 20;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 10, -position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 20);
+    }
+
+    // 5. Save
     const filename = `${(selectedNote.title || 'study_note').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')}.pdf`;
-
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: window.devicePixelRatio > 1 ? 2 : 1.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        allowTaint: false,   // safe for same-origin iframe
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    };
-
-    // THIS IS THE FIX: from(iframe), not from(doc.getElementById(...))
-    const pdfWorker = html2pdfLib().set(opt).from(iframe);
-    await pdfWorker.save();
+    pdf.save(filename);
 
     trackEvent('note_pdf_exported', {
       route: '/notes',
@@ -291,18 +302,13 @@ const handleDownloadPDF = async () => {
     showStatus('PDF guide downloaded successfully!');
   } catch (err) {
     console.error('PDF export failed', err);
-    const errorMessage = err instanceof Error 
-      ? err.message 
-      : (typeof err === 'string' ? err : 'unknown error');
-
     trackEvent('note_pdf_export_failed', {
       route: '/notes',
-      error_message: errorMessage,
+      error_message: err instanceof Error ? err.message : String(err),
     });
-    
-    showStatus(`Failed to generate PDF document: ${errorMessage}`, 'error');
+    showStatus(`Failed to generate PDF: ${err.message}`, 'error');
   } finally {
-    if (iframe && iframe.parentNode) {
+    if (iframe?.parentNode) {
       document.body.removeChild(iframe);
     }
     setIsExportingPdf(false);
