@@ -9,23 +9,8 @@ import {
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
-
-let html2pdfPromise = null;
-
-const loadHtml2pdf = async () => {
-  if (!html2pdfPromise) {
-    html2pdfPromise = import('html2pdf.js')
-      .then((module) => {
-        // Return the whole module so we can access html2canvas and jsPDF
-        return module;
-      })
-      .catch((error) => {
-        html2pdfPromise = null;
-        throw error;
-      });
-  }
-  return html2pdfPromise;
-};
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const renderSafeMarkdown = (content) => {
   marked.setOptions({ breaks: true, gfm: true });
@@ -131,16 +116,7 @@ const Notes = () => {
     let iframe = null;
 
     try {
-      // 1. Load the library and extract html2canvas + jsPDF
-      const html2pdfModule = await loadHtml2pdf();
-      const html2canvas = html2pdfModule.html2canvas;
-      const jsPDF = html2pdfModule.jsPDF;
-
-      if (!html2canvas || !jsPDF) {
-        throw new Error('Failed to load html2pdf components (html2canvas or jsPDF missing)');
-      }
-
-      // 2. Create an isolated iframe – completely free of Tailwind / oklch()
+      // 1. Create an isolated iframe – completely free of Tailwind / oklch()
       iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.top = '-9999px';
@@ -241,7 +217,7 @@ const Notes = () => {
       `);
       doc.close();
 
-      // 3. Inject content and render KaTeX
+      // 2. Inject content and render KaTeX
       doc.getElementById('hdr-title').textContent = selectedNote.title || 'Study Note';
       doc.getElementById('hdr-topic').textContent = `Topic: ${selectedNote.topic || 'General'}`;
       doc.getElementById('hdr-date').textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
@@ -264,7 +240,7 @@ const Notes = () => {
         console.error('KaTeX render error', e);
       }
 
-      // 4. Capture the iframe’s body (no global Tailwind, no oklch)
+      // 3. Capture the iframe's body (no global Tailwind, no oklch!)
       const canvas = await html2canvas(doc.body, {
         scale: window.devicePixelRatio > 1 ? 2 : 1.5,
         useCORS: true,
@@ -272,7 +248,7 @@ const Notes = () => {
         logging: false,
       });
 
-      // 5. Build the PDF with jsPDF
+      // 4. Build the PDF with jsPDF
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -292,7 +268,7 @@ const Notes = () => {
         heightLeft -= (pdfHeight - 20);
       }
 
-      // 6. Save the PDF
+      // 5. Save the PDF
       const filename = `${(selectedNote.title || 'study_note').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')}.pdf`;
       pdf.save(filename);
 
