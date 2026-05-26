@@ -4,7 +4,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
-  Sparkles, CheckCircle, Save, ChevronLeft, ChevronRight, X
+  Sparkles, CheckCircle, Zap, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -115,7 +115,10 @@ const Notes = () => {
 
     let iframe = null;
 
-    try {
+    try { 
+        
+    // Zap icon as inline SVG string (matches Lucide's Zap icon exactly)
+      const zapSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
       // 1. Create an isolated iframe – completely free of Tailwind / oklch()
       iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
