@@ -41,7 +41,7 @@ const History = ({ onResumeSession }) => {
       return;
     }
 
-    setSidebarOpen(true);
+    setSidebarOpen(prev => !prev);
   };
 
   const fetchSessions = async () => {
@@ -188,8 +188,8 @@ const History = ({ onResumeSession }) => {
                     key={index}
                     className={`flex flex-col max-w-[92%] sm:max-w-[85%] rounded-xl p-3 sm:p-4 text-sm leading-relaxed break-words border ${
                       msg.role === 'user'
-                        ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
-                        : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
+                        ? 'bg-zinc-200/80 border-zinc-300/60 text-zinc-900 dark:bg-emerald-950/40 dark:border-emerald-900/30 dark:text-zinc-100 self-end rounded-tr-none'
+                        : 'bg-white dark:bg-zinc-900/60 border-zinc-200/70 dark:border-zinc-800/50 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none shadow-sm'
                     }`}
                   >
                     <div className="font-extrabold text-[9px] uppercase tracking-wider text-emerald-500 mb-1">

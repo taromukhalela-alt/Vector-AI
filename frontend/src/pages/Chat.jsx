@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
-import { 
+import {
   Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, CheckCircle, X
+  ChevronLeft, ChevronRight, Bookmark, CheckCircle, X, Atom, Sparkles
 } from 'lucide-react';
 
 const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
@@ -14,12 +14,16 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
-  const [sidebarPinned, setSidebarPinned] = useState(() => (
-    typeof window !== 'undefined' ? localStorage.getItem('vector_chat_sidebar_pinned') === 'true' : false
-  ));
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
+  const [sidebarPinned, setSidebarPinned] = useState(() =>
+    typeof window !== 'undefined'
+      ? localStorage.getItem('vector_chat_sidebar_pinned') === 'true'
+      : false
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth >= 768;
@@ -30,29 +34,23 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       handleResize();
       window.addEventListener('resize', handleResize);
     }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('resize', handleResize);
-      }
-    };
+    return () => { if (typeof window !== 'undefined') window.removeEventListener('resize', handleResize); };
   }, []);
-  
-  // Voice preferences
+
   const [ttsProvider, setTtsProvider] = useState(() => localStorage.getItem('preferred_tts_provider') || 'camb');
   const [voiceId, setVoiceId] = useState('');
   const [browserVoices, setBrowserVoices] = useState([]);
-  
-  // Alerts
   const [saveSuccess, setSaveSuccess] = useState('');
-  
+
   const messagesEndRef = useRef(null);
   const consumedPromptRef = useRef('');
   const consumedResumeRef = useRef('');
+  const textareaRef = useRef(null);
   const sidebarVisible = isDesktop ? (sidebarPinned || sidebarOpen) : sidebarOpen;
 
   const toggleSidebar = () => {
     if (isDesktop) {
-      setSidebarPinned((current) => {
+      setSidebarPinned(current => {
         const next = !current;
         localStorage.setItem('vector_chat_sidebar_pinned', String(next));
         return next;
@@ -60,7 +58,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       setSidebarOpen(false);
       return;
     }
-
     setSidebarOpen(true);
   };
 
@@ -75,34 +72,26 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     { id: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum (Transatlantic)' },
     { id: 'JBFqnCBrubYjTQNpc2kc', name: 'George (UK Tutor)' },
     { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (AU Tutor)' },
-    { id: 'D38z5RcWu1voky8WS1ja', name: 'Fin (Irish Tutor)' }
+    { id: 'D38z5RcWu1voky8WS1ja', name: 'Fin (Irish Tutor)' },
   ];
 
-  const cambVoices = [
-    { id: '147320', name: 'Silas Blackwood' },
-  ];
+  const cambVoices = [{ id: '147320', name: 'Silas Blackwood' }];
 
   const promptChips = [
-    "Explain projectile motion for Grade 11 CAPS Physical Sciences.",
-    "Explain Newton's second law with a simple example.",
+    "Explain projectile motion for Grade 11 CAPS.",
+    "Explain Newton's second law with a worked example.",
     "Explain collision theory and reaction rates.",
-    "How do electric fields work?"
+    "How do electric fields and Coulomb's Law work?",
   ];
 
-  // Fetch session history
   const loadSessions = async () => {
     try {
       const res = await fetch('/api/history');
       const data = await res.json();
-      if (data.success && Array.isArray(data.sessions)) {
-        setSessions(data.sessions);
-      }
-    } catch (e) {
-      console.error('Failed to load history', e);
-    }
+      if (data.success && Array.isArray(data.sessions)) setSessions(data.sessions);
+    } catch (e) { console.error('Failed to load history', e); }
   };
 
-  // Fetch browser SpeechSynthesis voices
   const updateBrowserVoices = () => {
     if ('speechSynthesis' in window) {
       const voices = window.speechSynthesis.getVoices();
@@ -114,9 +103,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           return (bZa ? 1 : 0) - (aZa ? 1 : 0);
         });
       setBrowserVoices(englishVoices);
-      if (englishVoices.length > 0 && !voiceId) {
-        setVoiceId(englishVoices[0].voiceURI);
-      }
+      if (englishVoices.length > 0 && !voiceId) setVoiceId(englishVoices[0].voiceURI);
     }
   };
 
@@ -124,146 +111,92 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions();
     updateBrowserVoices();
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
-    }
+    if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update default voice id when provider changes
   useEffect(() => {
     localStorage.setItem('preferred_tts_provider', ttsProvider);
     /* eslint-disable react-hooks/set-state-in-effect */
     if (ttsProvider === 'camb') {
-      const saved = localStorage.getItem('preferred_camb_voice') || '147320';
-      setVoiceId(saved);
+      setVoiceId(localStorage.getItem('preferred_camb_voice') || '147320');
     } else if (ttsProvider === 'elevenlabs') {
-      const saved = localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB';
-      setVoiceId(saved);
+      setVoiceId(localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB');
     } else {
       const saved = localStorage.getItem('preferred_browser_voice') || '';
-      if (saved) {
-        setVoiceId(saved);
-      } else if (browserVoices.length > 0) {
-        setVoiceId(browserVoices[0].voiceURI);
-      }
+      if (saved) setVoiceId(saved);
+      else if (browserVoices.length > 0) setVoiceId(browserVoices[0].voiceURI);
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [ttsProvider, browserVoices]);
 
-  // Save selected voice ID
   useEffect(() => {
     if (voiceId) {
-      if (ttsProvider === 'camb') {
-        localStorage.setItem('preferred_camb_voice', voiceId);
-      } else if (ttsProvider === 'elevenlabs') {
-        localStorage.setItem('preferred_elevenlabs_voice', voiceId);
-      } else {
-        localStorage.setItem('preferred_browser_voice', voiceId);
-      }
+      if (ttsProvider === 'camb') localStorage.setItem('preferred_camb_voice', voiceId);
+      else if (ttsProvider === 'elevenlabs') localStorage.setItem('preferred_elevenlabs_voice', voiceId);
+      else localStorage.setItem('preferred_browser_voice', voiceId);
     }
   }, [voiceId, ttsProvider]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending]);
 
-  // Start new session
   const handleNewSession = async () => {
     try {
       const res = await fetch('/api/new_session', {
         method: 'POST',
-        headers: {
-          'X-CSRF-Token': csrfToken,
-        }
+        headers: { 'X-CSRF-Token': csrfToken },
       });
       const data = await res.json();
-      if (data.success) {
-        setCurrentSessionId(data.chat_id);
-        setMessages([]);
-        loadSessions();
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (data.success) { setCurrentSessionId(data.chat_id); setMessages([]); loadSessions(); }
+    } catch (e) { console.error(e); }
   };
 
-  // Resume session
   const handleResumeSession = async (chatId) => {
     try {
       const res = await fetch(`/api/session/${chatId}`);
       const data = await res.json();
-      if (data.success) {
-        setCurrentSessionId(chatId);
-        setMessages(data.history || []);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (data.success) { setCurrentSessionId(chatId); setMessages(data.history || []); }
+    } catch (e) { console.error(e); }
   };
 
-  // Send message
   const handleSendMessage = async (text) => {
     const question = (text || inputValue).trim();
     if (!question || isSending) return;
-
     setInputValue('');
     setIsSending(true);
-    
-    // Add user message
     const updatedMessages = [...messages, { role: 'user', content: question }];
     setMessages(updatedMessages);
-
     try {
-      trackEvent('chat_message_sent', {
-        route: '/chat',
-        message_length: question.length,
-      });
-
+      trackEvent('chat_message_sent', { route: '/chat', message_length: question.length });
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ message: question, history: messages }),
       });
       const data = await response.json();
-      
       if (data.reply) {
-        trackEvent('chat_response_received', {
-          route: '/chat',
-        });
+        trackEvent('chat_response_received', { route: '/chat' });
         setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
-        
-        // Trigger simulation matching
         try {
           const matchRes = await fetch('/match-animation', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-Token': csrfToken,
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ question }),
           });
           const matchData = await matchRes.json();
-          if (matchData && matchData.animation_id && onMatchAnimation) {
+          if (matchData?.animation_id && onMatchAnimation) {
             onMatchAnimation(matchData.animation_id, matchData.animation_label);
           }
-        } catch (matchError) {
-          console.warn('Simulation match failed', matchError);
-        }
+        } catch (matchError) { console.warn('Simulation match failed', matchError); }
       } else {
         setMessages([...updatedMessages, { role: 'assistant', content: "I'm having a bit of trouble responding right now. Please try again." }]);
       }
-      
       loadSessions();
     } catch {
       setMessages([...updatedMessages, { role: 'assistant', content: 'Connection issue. Could not reach AI Tutor.' }]);
-    } finally {
-      setIsSending(false);
-    }
+    } finally { setIsSending(false); }
   };
 
   useEffect(() => {
@@ -279,89 +212,113 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     handleResumeSession(resumeChatId);
   }, [resumeChatId]);
 
-  // Save response as a Note
   const handleSaveAsNote = async (text) => {
     const topic = text.split(' ').slice(0, 3).join(' ') || 'General';
     try {
       const res = await fetch('/api/notes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-        },
-        body: JSON.stringify({
-          title: `Note: ${topic}`,
-          content: text,
-          topic: topic,
-          ai_generated: true
-        })
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ title: `Note: ${topic}`, content: text, topic, ai_generated: true }),
       });
       const data = await res.json();
       if (data.success) {
-        trackEvent('note_saved_from_chat', {
-          route: '/chat',
-        });
-        setSaveSuccess('Saved successfully to your Notes vault!');
+        trackEvent('note_saved_from_chat', { route: '/chat' });
+        setSaveSuccess('Saved to Notes Vault!');
         setTimeout(() => setSaveSuccess(''), 3000);
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
+  };
+
+  /* ── Shared select style ── */
+  const selectStyle = {
+    width: '100%',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    borderRadius: '8px',
+    padding: '7px 10px',
+    fontSize: '11px',
+    color: '#d4d4d8',
+    outline: 'none',
+    cursor: 'pointer',
   };
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-      {/* Session History Sidebar (left inside tab) */}
-      {sidebarVisible && !isDesktop && (
-        <div
-          className="fixed inset-0 z-[130] bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+    <div className="relative flex h-full min-h-0 overflow-hidden" style={{ background: '#09090b' }}>
+
+      {/* Toast */}
+      {saveSuccess && (
+        <div className="absolute top-4 right-4 z-50 toast toast-success anim-toast-in">
+          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+          {saveSuccess}
+        </div>
       )}
-      <div className={`shrink-0 border-r border-zinc-200 bg-white/95 backdrop-blur-md transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/95 ${
-        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] flex w-72 flex-col shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
-      }`}>
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <History className="w-3.5 h-3.5 text-emerald-500" />
+
+      {/* Sidebar mobile overlay */}
+      {sidebarVisible && !isDesktop && (
+        <div className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── Session Sidebar ── */}
+      <aside className={`shrink-0 flex flex-col transition-all duration-300 ${
+        sidebarVisible
+          ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
+          : 'hidden'
+      }`}
+        style={{
+          background: 'rgba(11,11,13,0.97)',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          backdropFilter: 'blur(20px)',
+        }}
+      >
+        {/* Sidebar Header */}
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <h2 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 text-zinc-400">
+            <History className="w-3.5 h-3.5 text-emerald-400" />
             Sessions
           </h2>
           <div className="flex items-center gap-1">
             <button
+              id="new-session-sidebar-btn"
               onClick={handleNewSession}
-              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-emerald-500 transition-colors cursor-pointer"
-              title="New Chat Session"
+              className="p-1.5 rounded-lg text-emerald-400 transition-all cursor-pointer hover:bg-emerald-500/10"
+              title="New Session"
             >
-              <Plus className="w-4 h-4 stroke-[2.5px]" />
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
             </button>
             <button
-              onClick={() => {
-                setSidebarPinned(false);
-                localStorage.setItem('vector_chat_sidebar_pinned', 'false');
-                setSidebarOpen(false);
-              }}
-              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors cursor-pointer"
-              title="Close Sessions"
+              onClick={() => { setSidebarPinned(false); localStorage.setItem('vector_chat_sidebar_pinned', 'false'); setSidebarOpen(false); }}
+              className="p-1.5 rounded-lg text-zinc-600 transition-all cursor-pointer hover:bg-zinc-800/60 hover:text-zinc-400"
+              title="Close"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Sessions list */}
+        {/* Sessions List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           {sessions.length === 0 ? (
-            <p className="text-[10px] text-zinc-400 text-center py-8 font-medium">No previous sessions</p>
+            <div className="text-center py-10">
+              <MessageSquare className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
+              <p className="text-[10px] text-zinc-600 font-medium">No previous sessions</p>
+            </div>
           ) : (
             sessions.map((sess) => (
               <button
                 key={sess.chat_id}
                 onClick={() => handleResumeSession(sess.chat_id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold truncate flex items-center gap-2.5 cursor-pointer transition-colors ${
-                  currentSessionId === sess.chat_id
-                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800/50'
-                }`}
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold truncate flex items-center gap-2.5 cursor-pointer transition-all"
+                style={currentSessionId === sess.chat_id ? {
+                  background: 'rgba(16,185,129,0.10)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.18)',
+                } : {
+                  color: '#71717a',
+                  background: 'transparent',
+                  border: '1px solid transparent',
+                }}
+                onMouseEnter={e => { if (currentSessionId !== sess.chat_id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (currentSessionId !== sess.chat_id) e.currentTarget.style.background = 'transparent'; }}
               >
                 <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{sess.title || 'Untitled Session'}</span>
@@ -370,135 +327,164 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           )}
         </div>
 
-        {/* Settings Area */}
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
+        {/* Voice Settings */}
+        <div className="p-3 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}>
           <div>
-            <label className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1.5">Voice Synth</label>
-            <select
-              value={ttsProvider}
-              onChange={(e) => setTtsProvider(e.target.value)}
-              className="w-full bg-zinc-200 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
-            >
-              {voiceProviders.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+            <label className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mb-1.5">Voice Synth</label>
+            <select value={ttsProvider} onChange={e => setTtsProvider(e.target.value)} style={selectStyle}>
+              {voiceProviders.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
-
           <div>
-            <label className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest block mb-1.5">Speaker Profile</label>
-            <select
-              value={voiceId}
-              onChange={(e) => setVoiceId(e.target.value)}
-              className="w-full bg-zinc-200 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
-            >
-              {ttsProvider === 'camb' && cambVoices.map(v => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-              {ttsProvider === 'elevenlabs' && elevenLabsVoices.map(v => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-              {ttsProvider === 'browser' && browserVoices.map(v => (
-                <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
-              ))}
+            <label className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mb-1.5">Speaker Profile</label>
+            <select value={voiceId} onChange={e => setVoiceId(e.target.value)} style={selectStyle}>
+              {ttsProvider === 'camb' && cambVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              {ttsProvider === 'elevenlabs' && elevenLabsVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              {ttsProvider === 'browser' && browserVoices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}
             </select>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Toggle Sidebar Button */}
-      {/* Main Chat Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 bg-zinc-50 dark:bg-zinc-950">
-        {/* Banner Alert for Note Save */}
-        {saveSuccess && (
-          <div className="absolute top-4 right-4 z-50 p-3 bg-emerald-500 text-zinc-950 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-lg animate-bounce">
-            <CheckCircle className="w-4 h-4" />
-            {saveSuccess}
-          </div>
-        )}
+      {/* ── Main Chat Workspace ── */}
+      <div className="flex-1 flex flex-col min-w-0">
 
-        <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-200 bg-zinc-50/90 px-3 dark:border-zinc-800 dark:bg-zinc-950/90">
+        {/* Toolbar */}
+        <div className="flex h-11 shrink-0 items-center justify-between px-4"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.90)' }}
+        >
           <button
+            id="toggle-sidebar-btn"
             onClick={toggleSidebar}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition-all hover:text-zinc-200 hover:bg-zinc-800/60 cursor-pointer"
             title={sidebarVisible ? 'Hide sessions' : 'Show sessions'}
           >
             {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             Sessions
           </button>
+
           <button
+            id="new-session-btn"
             onClick={handleNewSession}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-950 transition hover:bg-emerald-400"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all"
+            style={{
+              background: 'rgba(16,185,129,0.12)',
+              color: '#10b981',
+              border: '1px solid rgba(16,185,129,0.20)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.20)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.12)'}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
             New
           </button>
         </div>
 
-        {/* Message Thread */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-6">
+        {/* Messages Area */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
           {messages.length === 0 ? (
-            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-8 text-center">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6">
-                <MessageSquare className="w-6 h-6" />
+            /* Empty State */
+            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-10 text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
+                style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))', border: '1px solid rgba(16,185,129,0.18)' }}
+              >
+                <Atom className="w-7 h-7 text-emerald-400" strokeWidth={1.8} />
               </div>
-              <h3 className="font-extrabold text-lg uppercase tracking-wider">Vector AI Cognitive Agent</h3>
-              <p className="text-zinc-400 text-xs mt-2 mb-8 leading-relaxed">
-                South Africa's educational chat workspace. Ask any Physical Sciences or Chemistry questions, equations, or CAPS problems, and observe simulations in the Visual Lab.
+              <h3 className="font-extrabold text-lg tracking-tight text-zinc-100 mb-2">Vector AI Tutor</h3>
+              <p className="text-zinc-500 text-sm leading-relaxed mb-8 max-w-md">
+                Ask any Physical Sciences or Chemistry question. Simulations auto-match in the Visual Lab.
               </p>
-              
+
               {/* Prompt chips */}
               <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {promptChips.map((chip, idx) => (
                   <button
                     key={idx}
+                    id={`chip-${idx}`}
                     onClick={() => handleSendMessage(chip)}
-                    className="rounded-xl border border-zinc-300/40 bg-zinc-200/50 p-3 text-left text-xs font-semibold text-zinc-700 transition-all hover:border-emerald-500/20 hover:bg-emerald-500/5 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300 dark:hover:bg-emerald-500/5"
+                    className="rounded-xl p-4 text-left text-xs font-medium text-zinc-400 transition-all cursor-pointer hover-lift"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(16,185,129,0.22)'; e.currentTarget.style.color = '#d4d4d8'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#71717a'; }}
                   >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500 mb-2" />
                     {chip}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:gap-4">
+            /* Messages */
+            <div className="mx-auto flex max-w-3xl flex-col gap-4">
               {messages.map((msg, index) => (
-                <div 
+                <div
                   key={index}
-                  className={`flex max-w-[92%] flex-col rounded-xl border p-3 text-sm leading-relaxed break-words sm:max-w-[85%] sm:p-4 ${
-                    msg.role === 'user'
-                      ? 'bg-zinc-200 border-zinc-300/50 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100 self-end rounded-tr-none'
-                      : 'bg-zinc-100 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-zinc-800/40 text-zinc-800 dark:text-zinc-100 self-start rounded-tl-none'
-                  }`}
+                  className="flex flex-col max-w-[90%] sm:max-w-[84%]"
+                  style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start' }}
                 >
-                  <div className="font-extrabold text-[9px] uppercase tracking-wider text-emerald-500 mb-1">
-                    {msg.role === 'user' ? 'Student' : 'AI Tutor'}
-                  </div>
-                  {msg.role === 'user' ? (
-                    <p className="whitespace-pre-line font-medium text-xs sm:text-sm">{msg.content}</p>
-                  ) : (
-                    <div className="relative group">
-                      <MarkdownRenderer content={msg.content} />
-                      <button
-                        onClick={() => handleSaveAsNote(msg.content)}
-                        className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer border border-zinc-300/50 dark:border-zinc-800 rounded-lg px-2 py-1 bg-zinc-200/20 dark:bg-zinc-900/50"
-                      >
-                        <Bookmark className="w-3 h-3" />
-                        Save as Note
-                      </button>
+                  <div
+                    className="rounded-2xl p-4 text-sm leading-relaxed break-words"
+                    style={msg.role === 'user' ? {
+                      background: 'linear-gradient(135deg, rgba(16,185,129,0.16), rgba(45,212,191,0.09))',
+                      border: '1px solid rgba(16,185,129,0.22)',
+                      color: '#e4e4e7',
+                      borderTopRightRadius: '4px',
+                    } : {
+                      background: 'rgba(24,24,27,0.85)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      color: '#d4d4d8',
+                      borderTopLeftRadius: '4px',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-2">
+                      {msg.role === 'user' ? 'Student' : 'AI Tutor'}
                     </div>
-                  )}
+                    {msg.role === 'user' ? (
+                      <p className="whitespace-pre-line font-medium text-xs sm:text-sm">{msg.content}</p>
+                    ) : (
+                      <div>
+                        <MarkdownRenderer content={msg.content} />
+                        <button
+                          onClick={() => handleSaveAsNote(msg.content)}
+                          className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-lg px-2.5 py-1"
+                          style={{
+                            color: '#52525b',
+                            border: '1px solid rgba(255,255,255,0.07)',
+                            background: 'rgba(255,255,255,0.03)',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.22)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = '#52525b'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                        >
+                          <Bookmark className="w-3 h-3" />
+                          Save as Note
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
-              
-              {/* Typing skeleton */}
+
+              {/* Typing indicator */}
               {isSending && (
-                <div className="flex flex-col bg-zinc-100 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/40 rounded-xl rounded-tl-none p-4 max-w-[150px] self-start">
-                  <div className="font-extrabold text-[9px] uppercase tracking-wider text-emerald-500 mb-2">AI Tutor</div>
-                  <div className="flex gap-1.5 items-center py-1">
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="flex flex-col self-start max-w-[140px]">
+                  <div className="rounded-2xl rounded-tl-[4px] p-4"
+                    style={{
+                      background: 'rgba(24,24,27,0.85)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-2.5">AI Tutor</div>
+                    <div className="flex gap-1.5 items-center">
+                      {[0,1,2].map(i => (
+                        <span key={i} className="typing-dot w-2 h-2 rounded-full"
+                          style={{ background: '#10b981' }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -507,30 +493,48 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           )}
         </div>
 
-        {/* Input Bar */}
-        <div className="shrink-0 border-t border-zinc-200 bg-zinc-50/95 p-3 dark:border-zinc-800 dark:bg-zinc-950/95 sm:p-4">
-          <div className="mx-auto flex max-w-3xl items-center gap-2">
+        {/* ── Input Bar ── */}
+        <div className="shrink-0 p-4 sm:p-5"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.95)' }}
+        >
+          <div className="mx-auto flex max-w-3xl items-end gap-3">
             <textarea
+              ref={textareaRef}
+              id="chat-input"
               rows={1}
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
               }}
               placeholder="Ask a scientific inquiry..."
-              className="flex-1 bg-zinc-200/55 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800/80 focus:border-emerald-500/40 rounded-xl py-3 px-4 text-xs sm:text-sm focus:outline-none resize-none max-h-32 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-500"
+              className="flex-1 resize-none max-h-32 text-sm py-3 px-4 rounded-xl transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.09)',
+                color: '#e4e4e7',
+                outline: 'none',
+                fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+              }}
+              onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.35)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.06)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none'; }}
             />
             <button
+              id="send-btn"
               onClick={() => handleSendMessage()}
               disabled={isSending || !inputValue.trim()}
-              className="p-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-900 disabled:text-zinc-500 text-zinc-950 font-bold rounded-xl shadow-lg shadow-emerald-500/10 transition-all cursor-pointer flex items-center justify-center"
+              className="p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0"
+              style={{
+                background: (!isSending && inputValue.trim()) ? 'linear-gradient(135deg, #10b981, #2dd4bf)' : 'rgba(255,255,255,0.05)',
+                color: (!isSending && inputValue.trim()) ? '#09090b' : '#3f3f46',
+                boxShadow: (!isSending && inputValue.trim()) ? '0 4px 16px rgba(16,185,129,0.25)' : 'none',
+              }}
+              aria-label="Send message"
             >
               <Send className="w-4 h-4 fill-current" />
             </button>
           </div>
+          <p className="text-center text-[10px] text-zinc-700 mt-2 font-medium">Enter ↵ to send · Shift+Enter for newline</p>
         </div>
       </div>
     </div>

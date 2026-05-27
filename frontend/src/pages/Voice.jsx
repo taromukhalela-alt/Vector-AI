@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import AvatarCanvas from '../components/AvatarCanvas';
 import { trackEvent } from '../useAnalytics';
-import { Mic, MicOff, AlertCircle, Info } from 'lucide-react';
+import { Mic, MicOff, AlertCircle, Info, Volume2 } from 'lucide-react';
 
 const Voice = ({ onMatchAnimation, csrfToken }) => {
   const [status, setStatus] = useState('Tap the mic to start');
@@ -172,7 +172,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   };
 
   const handleSpeechInput = async (transcriptText) => {
-    setStatus('Thinking...');
+    setStatus('Processing...');
     setAvatarState('idle');
     setAiTranscript('');
 
@@ -406,20 +406,28 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col items-center overflow-hidden bg-zinc-950 px-3 py-4 text-zinc-100 select-none sm:px-6">
+    <div className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden bg-zinc-950 px-3 py-4 select-none sm:px-6 sci-grid">
       {/* Mic Permission Alert */}
       {micError && (
-        <div className="absolute top-4 inset-x-6 max-w-md mx-auto z-50 p-4 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-start gap-3 shadow-lg">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="absolute top-4 inset-x-6 max-w-md mx-auto z-50 p-4 rounded-xl flex items-start gap-3 shadow-lg anim-fade-down"
+          style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', backdropFilter: 'blur(12px)' }}
+        >
+          <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
           <div>
-            <p className="font-bold uppercase tracking-wider">Microphone Blocked</p>
-            <p className="mt-1 leading-relaxed">Please enable microphone access in your browser settings to speak to the AI Tutor.</p>
+            <p className="font-bold uppercase tracking-widest text-xs text-red-400">Microphone Blocked</p>
+            <p className="mt-1 leading-relaxed text-zinc-300 text-sm">Please enable microphone access in your browser settings to speak to the AI Tutor.</p>
           </div>
         </div>
       )}
 
       {/* Avatar Container */}
       <div className="relative flex min-h-0 w-full max-w-lg flex-1 items-center justify-center">
+        
+        {/* Glow behind avatar */}
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full blur-[80px] pointer-events-none transition-all duration-700 ${
+          isListening ? 'bg-blue-500/20' : isSpeaking ? 'bg-emerald-500/30' : 'bg-transparent'
+        }`} />
+
         <AvatarCanvas 
           avatarState={avatarState} 
           speakingAmplitude={speakingAmplitude} 
@@ -427,7 +435,12 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         />
         
         {/* Status indicator tag */}
-        <div className="absolute bottom-4 px-4 py-2 rounded-full border border-emerald-500/20 bg-zinc-900/60 backdrop-blur-md text-emerald-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+        <div className="absolute top-8 px-4 py-2 rounded-full border bg-zinc-900/80 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg transition-colors"
+          style={{
+            borderColor: isListening ? 'rgba(59,130,246,0.3)' : isSpeaking ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
+            color: isListening ? '#60a5fa' : isSpeaking ? '#34d399' : '#a1a1aa'
+          }}
+        >
           <span className={`w-2 h-2 rounded-full ${
             avatarState === 'listening' ? 'bg-blue-500 animate-ping' :
             avatarState === 'speaking' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'
@@ -436,54 +449,78 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         </div>
       </div>
 
-      {/* Transcripts Display */}
-      <div className="mb-3 max-h-[32%] w-full max-w-xl shrink-0 space-y-3 overflow-hidden rounded-xl border border-zinc-900 bg-zinc-900/35 p-3 backdrop-blur-md sm:mb-4 sm:p-4">
-        <div>
-          <div className="text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider mb-1">You said:</div>
-          <p className="max-h-12 overflow-y-auto text-sm font-semibold text-zinc-300 min-h-[20px] leading-relaxed italic">
-            {youTranscript || 'Speak to start conversation...'}
-          </p>
+      {/* ── Transcripts Display & Controls Container ── */}
+      <div className="w-full max-w-2xl shrink-0 flex flex-col gap-4 z-10">
+        
+        {/* Transcript Box */}
+        <div className="w-full rounded-2xl overflow-hidden anim-fade-up glass"
+          style={{
+            padding: '16px',
+            maxHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="flex-1 overflow-y-auto">
+            {youTranscript ? (
+              <div className="mb-4">
+                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Student</div>
+                <p className="text-sm font-semibold text-zinc-300 leading-relaxed italic">
+                  "{youTranscript}"
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-zinc-500 flex flex-col items-center gap-2">
+                <Volume2 className="w-6 h-6 opacity-50" />
+                <span className="text-xs font-bold uppercase tracking-wider">Awaiting voice input...</span>
+              </div>
+            )}
+
+            {aiTranscript && (
+              <div className="pt-3 border-t border-white/[0.08]">
+                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">AI Tutor</div>
+                <p className="text-sm font-medium text-zinc-100 leading-relaxed">
+                  {aiTranscript}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {aiTranscript && (
-          <div className="pt-3 border-t border-zinc-900">
-            <div className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-wider mb-1">AI Tutor reply:</div>
-            <p className="text-sm font-medium text-zinc-200 leading-relaxed max-h-20 sm:max-h-[120px] overflow-y-auto">
-              {aiTranscript}
-            </p>
+        {/* Control Mic Bar */}
+        <div className="flex shrink-0 items-center justify-between p-4 rounded-2xl glass anim-fade-up d-100">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+             <Info className="w-4 h-4 text-emerald-500" />
+             <span className="hidden sm:inline">Optimized for short vocal queries.</span>
+             <span className="sm:hidden">Short queries only.</span>
           </div>
-        )}
-      </div>
 
-      {/* Control Mic Bar */}
-      <div className="mb-3 flex shrink-0 flex-col items-center gap-2 sm:mb-4 sm:gap-3">
-        <button
-          onClick={toggleMic}
-          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all cursor-pointer ${
-            isListening 
-              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20 animate-pulse' 
-              : isSpeaking
-              ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
-              : 'bg-emerald-500 hover:bg-emerald-600 text-zinc-950 shadow-emerald-500/20 hover:scale-105'
-          }`}
-        >
-          {isListening ? (
-            <Mic className="w-6 h-6 stroke-[2.5px] animate-bounce" />
-          ) : isSpeaking ? (
-            <MicOff className="w-6 h-6 stroke-[2.5px]" />
-          ) : (
-            <Mic className="w-6 h-6 stroke-[2.5px]" />
-          )}
-        </button>
-        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-          {isListening ? 'Click to Cancel' : isSpeaking ? 'Click to Stop Speaking' : 'Click to Speak'}
-        </span>
-      </div>
+          <div className="flex flex-col items-center gap-1.5 absolute left-1/2 -translate-x-1/2 -top-6">
+            <button
+              onClick={toggleMic}
+              className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all cursor-pointer border-4 border-zinc-950 ${
+                isListening 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-[0_0_30px_rgba(59,130,246,0.4)]' 
+                  : isSpeaking
+                  ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_30px_rgba(239,68,68,0.4)]'
+                  : 'bg-gradient-to-br from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-zinc-950 shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:scale-105 hover:-translate-y-1'
+              }`}
+            >
+              {isListening ? (
+                <Mic className="w-7 h-7 stroke-[2.5px] animate-bounce" />
+              ) : isSpeaking ? (
+                <MicOff className="w-7 h-7 stroke-[2.5px]" />
+              ) : (
+                <Mic className="w-7 h-7 stroke-[2.5px] fill-current" />
+              )}
+            </button>
+            <span className="text-[9px] text-zinc-500 font-extrabold uppercase tracking-widest bg-zinc-950 px-2 py-0.5 rounded-full mt-1">
+              {isListening ? 'Stop' : isSpeaking ? 'Cancel' : 'Tap to speak'}
+            </span>
+          </div>
 
-      {/* Banner Limit Info */}
-      <div className="flex max-w-sm shrink-0 items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900/10 p-2.5 text-center text-[10px] font-bold uppercase tracking-wide text-zinc-500">
-        <Info className="w-4 h-4 shrink-0 text-emerald-500/70" />
-        <span>Vocal synthesizers are optimized for 500 words per reply.</span>
+          <div className="w-[100px]" /> {/* Spacer for symmetry */}
+        </div>
       </div>
     </div>
   );

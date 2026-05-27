@@ -67,12 +67,19 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
 
   return (
     <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950">
-      {/* Simulation Selector Sidebar */}
-      <aside className="hidden w-52 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 sm:flex">
-        <div className="border-b border-zinc-800 p-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Visual Labs</h2>
+      
+      {/* ── Simulation Selector Sidebar ── */}
+      <aside className="hidden w-56 shrink-0 flex-col sm:flex z-20"
+        style={{
+          background: 'rgba(11,11,13,0.97)',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          backdropFilter: 'blur(20px)',
+        }}
+      >
+        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Visual Labs</h2>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-2">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto p-3">
           {labs.map((lab) => {
             const Icon = lab.icon;
             const isActive = activeAnim === lab.id;
@@ -80,13 +87,20 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
               <button
                 key={lab.id}
                 onClick={() => onAnimChange(lab.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  isActive
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'border border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-                }`}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all hover-lift"
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))',
+                  color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.22)',
+                } : {
+                  background: 'transparent',
+                  color: '#a1a1aa',
+                  border: '1px solid transparent',
+                }}
+                onMouseEnter={e => { if(!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e4e4e7'; } }}
+                onMouseLeave={e => { if(!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; } }}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
                 {lab.label}
               </button>
             );
@@ -94,25 +108,47 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
         </nav>
       </aside>
 
-      {/* Main Viewport Container */}
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950">
+      {/* ── Main Viewport Container ── */}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950 sci-grid-sm">
         
+        {/* Ambient Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+
         {/* HUD Display (floating top-left) */}
-        <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-lg border border-zinc-900 bg-zinc-950/80 p-3 backdrop-blur-md sm:left-4 sm:top-4 sm:max-w-md sm:p-4">
-          <div className="text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest leading-none mb-1">Interactive HUD</div>
+        <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-xl sm:left-4 sm:top-4 sm:max-w-md anim-fade-in"
+          style={{
+            background: 'rgba(24,24,27,0.85)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+            padding: '12px 16px',
+          }}
+        >
+          <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Interactive HUD
+          </div>
           <h3 className="font-extrabold text-sm sm:text-base uppercase tracking-wider text-zinc-100 leading-tight">{hudTitle}</h3>
-          <p className="mt-1 max-w-full truncate font-mono text-[11px] leading-normal text-zinc-400 sm:whitespace-normal">{hudFormula}</p>
+          <p className="mt-1 max-w-full truncate font-mono text-[10px] sm:text-[11px] leading-relaxed text-zinc-400 sm:whitespace-normal font-semibold">{hudFormula}</p>
         </div>
 
         {/* Readout stats box (floating top-right) */}
         {Object.keys(readout).length > 0 && (
-          <div className="absolute top-4 right-4 z-20 pointer-events-none p-4 rounded-lg bg-zinc-950/80 border border-zinc-900 backdrop-blur-md min-w-[140px] hidden sm:block">
-            <div className="text-[9px] font-extrabold text-zinc-500 uppercase tracking-widest mb-2 leading-none">Telemetry</div>
-            <div className="space-y-1.5 font-mono text-[10px] font-bold">
+          <div className="absolute top-4 right-4 z-20 pointer-events-none p-4 rounded-xl hidden sm:block anim-fade-in"
+            style={{
+              background: 'rgba(24,24,27,0.85)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(16px)',
+              minWidth: '160px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 leading-none">Telemetry Readout</div>
+            <div className="space-y-2 font-mono text-[10px] font-bold tracking-wide">
               {Object.entries(readout).map(([key, val]) => (
-                <div key={key} className="flex justify-between gap-4">
-                  <span className="text-zinc-500 uppercase">{key}</span>
-                  <span className="text-emerald-400">{val}</span>
+                <div key={key} className="flex justify-between gap-6 items-center">
+                  <span className="text-zinc-400 uppercase">{key}</span>
+                  <span className="text-emerald-400 tabular-nums">{val}</span>
                 </div>
               ))}
             </div>
@@ -134,280 +170,139 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
           />
         </div>
 
-        {/* Controls Overlay Panel (bottom) */}
-        <div className="relative z-10 max-h-[42%] shrink-0 overflow-y-auto border-t border-zinc-900 bg-zinc-950/95 p-3 backdrop-blur-md sm:p-4">
-          <div className="mx-auto flex max-w-4xl flex-col gap-3">
+        {/* ── Controls Overlay Panel (bottom) ── */}
+        <div className="relative z-20 max-h-[45%] shrink-0 overflow-y-auto anim-fade-up"
+          style={{
+            background: 'rgba(14,14,16,0.95)',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(20px)',
+            padding: '16px',
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div className="mx-auto flex max-w-4xl flex-col gap-4">
             <select
               value={activeAnim}
               onChange={(e) => onAnimChange(e.target.value)}
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-200 focus:outline-none sm:hidden"
+              className="w-full rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider focus:outline-none sm:hidden"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#e4e4e7',
+              }}
             >
               {labs.map((lab) => (
                 <option key={lab.id} value={lab.id}>{lab.label}</option>
               ))}
             </select>
+            
             {/* Simulation specific controls */}
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
               {activeAnim === 'projectile' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Angle ({params.angle}°)</label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="80"
-                      step="1"
-                      value={params.angle}
-                      onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-24 sm:w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Angle ({params.angle}°)</label>
+                    <input type="range" min="10" max="80" step="1" value={params.angle} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 sm:w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Velocity ({params.velocity} m/s)</label>
-                    <input
-                      type="range"
-                      min="5"
-                      max="25"
-                      step="0.5"
-                      value={params.velocity}
-                      onChange={(e) => handleParamChange('velocity', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-24 sm:w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Vel ({params.velocity} m/s)</label>
+                    <input type="range" min="5" max="25" step="0.5" value={params.velocity} onChange={(e) => handleParamChange('velocity', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 sm:w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Bounciness ({params.bounciness})</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="0.9"
-                      step="0.05"
-                      value={params.bounciness}
-                      onChange={(e) => handleParamChange('bounciness', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-24"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Bounce ({params.bounciness})</label>
+                    <input type="range" min="0" max="0.9" step="0.05" value={params.bounciness} onChange={(e) => handleParamChange('bounciness', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Height ({params.height}m)</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="5"
-                      step="0.5"
-                      value={params.height}
-                      onChange={(e) => handleParamChange('height', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-24"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Height ({params.height}m)</label>
+                    <input type="range" min="0" max="5" step="0.5" value={params.height} onChange={(e) => handleParamChange('height', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 cursor-pointer" />
                   </div>
-                  <button
-                    onClick={() => handleParamChange('vectors', !params.vectors)}
-                    className={`px-3 py-1 border rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
-                      params.vectors ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'border-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    Vectors
-                  </button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'wave' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Frequency ({params.frequency} Hz)</label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="3.0"
-                      step="0.1"
-                      value={params.frequency}
-                      onChange={(e) => handleParamChange('frequency', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Freq ({params.frequency} Hz)</label>
+                    <input type="range" min="0.5" max="3.0" step="0.1" value={params.frequency} onChange={(e) => handleParamChange('frequency', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Amplitude ({params.amplitude}m)</label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2.5"
-                      step="0.1"
-                      value={params.amplitude}
-                      onChange={(e) => handleParamChange('amplitude', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Amp ({params.amplitude}m)</label>
+                    <input type="range" min="0.5" max="2.5" step="0.1" value={params.amplitude} onChange={(e) => handleParamChange('amplitude', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
-                  <button
-                    onClick={() => handleParamChange('superposition', !params.superposition)}
-                    className={`px-3 py-1 border rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
-                      params.superposition ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'border-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    Superposition
-                  </button>
+                  <button onClick={() => handleParamChange('superposition', !params.superposition)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.superposition ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Superposition</button>
                 </>
               )}
 
               {activeAnim === 'pendulum' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Length ({params.length}m)</label>
-                    <input
-                      type="range"
-                      min="2"
-                      max="8"
-                      step="0.2"
-                      value={params.length}
-                      onChange={(e) => handleParamChange('length', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Length ({params.length}m)</label>
+                    <input type="range" min="2" max="8" step="0.2" value={params.length} onChange={(e) => handleParamChange('length', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-sans">Initial Angle ({params.angle ?? 30}°)</label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="75"
-                      step="1"
-                      value={params.angle ?? 30}
-                      onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Angle ({params.angle ?? 30}°)</label>
+                    <input type="range" min="10" max="75" step="1" value={params.angle ?? 30} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
-                  <button
-                    onClick={() => handleParamChange('vectors', !params.vectors)}
-                    className={`px-3 py-1 border rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
-                      params.vectors ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'border-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    Vectors
-                  </button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'forces' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Applied Force ({params.applied} N)</label>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={params.applied}
-                      onChange={(e) => handleParamChange('applied', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-28 text-right">Force ({params.applied} N)</label>
+                    <input type="range" min="-50" max="50" step="1" value={params.applied} onChange={(e) => handleParamChange('applied', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Friction μ ({params.mu})</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="0.8"
-                      step="0.05"
-                      value={params.mu}
-                      onChange={(e) => handleParamChange('mu', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-28"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Fric μ ({params.mu})</label>
+                    <input type="range" min="0" max="0.8" step="0.05" value={params.mu} onChange={(e) => handleParamChange('mu', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Mass ({params.mass} kg)</label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="20"
-                      step="0.5"
-                      value={params.mass}
-                      onChange={(e) => handleParamChange('mass', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-28"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Mass ({params.mass} kg)</label>
+                    <input type="range" min="1" max="20" step="0.5" value={params.mass} onChange={(e) => handleParamChange('mass', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
                   </div>
-                  <button
-                    onClick={() => handleParamChange('vectors', !params.vectors)}
-                    className={`px-3 py-1 border rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
-                      params.vectors ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'border-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    Vectors
-                  </button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'collision' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Mass A ({params.mass1} kg)</label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={params.mass1}
-                      onChange={(e) => handleParamChange('mass1', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-28"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Mass A ({params.mass1} kg)</label>
+                    <input type="range" min="1" max="10" step="0.5" value={params.mass1} onChange={(e) => handleParamChange('mass1', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Mass B ({params.mass2} kg)</label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={params.mass2}
-                      onChange={(e) => handleParamChange('mass2', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-28"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Mass B ({params.mass2} kg)</label>
+                    <input type="range" min="1" max="10" step="0.5" value={params.mass2} onChange={(e) => handleParamChange('mass2', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
                   </div>
-                  <button
-                    onClick={() => handleParamChange('elastic', !params.elastic)}
-                    className={`px-3 py-1 border rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
-                      params.elastic ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'border-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {params.elastic ? 'Elastic' : 'Inelastic'}
-                  </button>
+                  <button onClick={() => handleParamChange('elastic', !params.elastic)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.elastic ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>{params.elastic ? 'Elastic' : 'Inelastic'}</button>
                 </>
               )}
 
               {activeAnim === 'orbit' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Eccentricity ({params.eccentricity})</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="0.85"
-                      step="0.05"
-                      value={params.eccentricity}
-                      onChange={(e) => handleParamChange('eccentricity', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-28 text-right">Eccentricity ({params.eccentricity})</label>
+                    <input type="range" min="0" max="0.85" step="0.05" value={params.eccentricity} onChange={(e) => handleParamChange('eccentricity', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
                 </>
               )}
 
               {activeAnim === 'electricity' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Separation ({params.separation} m)</label>
-                    <input
-                      type="range"
-                      min="2"
-                      max="10"
-                      step="0.5"
-                      value={params.separation}
-                      onChange={(e) => handleParamChange('separation', parseFloat(e.target.value))}
-                      className="accent-emerald-500 h-1 rounded bg-zinc-800 w-32"
-                    />
+                  <div className="flex items-center gap-2.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-28 text-right">Separation ({params.separation} m)</label>
+                    <input type="range" min="2" max="10" step="0.5" value={params.separation} onChange={(e) => handleParamChange('separation', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
                   </div>
                 </>
               )}
             </div>
 
             {/* Global player controls */}
-            <div className="flex items-center justify-between border-t border-zinc-900 pt-3 flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Global Speed ({speed}x)</label>
+            <div className="flex items-center justify-between border-t pt-4 flex-wrap gap-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center gap-3">
+                <label className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Global Speed ({speed}x)</label>
                 <input
                   type="range"
                   min="0.25"
@@ -415,32 +310,24 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
                   step="0.05"
                   value={speed}
                   onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                  className="accent-emerald-500 h-1 rounded bg-zinc-800 w-28"
+                  className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer"
                 />
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsPaused(!isPaused)}
-                  className="p-2 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded-lg text-xs font-bold tracking-wider uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-[10px] font-bold tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer btn-ghost"
+                  style={isPaused ? { background: 'rgba(255,255,255,0.1)', color: '#fff' } : {}}
                 >
-                  {isPaused ? (
-                    <>
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      Resume
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="w-3.5 h-3.5" />
-                      Pause
-                    </>
-                  )}
+                  {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+                  {isPaused ? 'Resume' : 'Pause'}
                 </button>
                 <button
                   onClick={handleReset}
-                  className="p-2 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded-lg text-xs font-bold tracking-wider uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-[10px] font-bold tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer btn-ghost hover:text-red-400 hover:bg-red-500/10"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-4 h-4" />
                   Reset
                 </button>
               </div>

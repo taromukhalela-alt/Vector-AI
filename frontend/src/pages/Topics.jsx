@@ -1,4 +1,4 @@
-import { BookOpen, HelpCircle, ArrowUpRight } from 'lucide-react';
+import { BookOpen, HelpCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { trackEvent } from '../useAnalytics';
 
 const Topics = ({ onSelectTopic }) => {
@@ -15,51 +15,55 @@ const Topics = ({ onSelectTopic }) => {
   ];
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto px-4 py-5 select-none sm:px-6">
-      <div className="mx-auto max-w-5xl space-y-5">
+    <div className="h-full min-h-0 overflow-y-auto px-4 py-6 select-none sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-8">
       
       {/* Top Header */}
-      <div className="flex flex-col gap-1 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-        <h2 className="font-extrabold text-lg sm:text-xl uppercase tracking-wider text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-emerald-500" />
-          Syllabus study planner
+      <div className="anim-fade-up d-100 flex flex-col gap-1 border-b border-white/[0.06] pb-6">
+        <h2 className="font-extrabold text-lg sm:text-xl uppercase tracking-wider text-zinc-100 flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-emerald-500" strokeWidth={2.5} />
+          Syllabus Planner
         </h2>
-        <p className="text-xs text-zinc-400 mt-1 font-semibold uppercase tracking-wider">Select a CAPS Physics or Chemistry topic to start a focused revision session.</p>
+        <p className="text-xs text-zinc-400 mt-1 font-bold uppercase tracking-wider">Select a CAPS Physics or Chemistry topic to start a focused revision session.</p>
       </div>
 
       {/* Grid of topics */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {topics.map((topic, idx) => (
-          <div
-            key={idx}
-            onClick={() => {
-              trackEvent('topic_revision_started', {
-                route: '/topics',
-                topic: topic.title,
-              });
-              onSelectTopic(topic.prompt);
-            }}
-            className="group flex cursor-pointer flex-col justify-between rounded-xl border border-zinc-200 bg-white/40 p-4 transition-all hover:border-emerald-500/25 hover:bg-zinc-200/30 dark:border-zinc-800/80 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/55"
-          >
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
-                  {topic.tag}
-                </span>
-                <ArrowUpRight className="w-4 h-4 text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {topics.map((topic, idx) => {
+          const delayClass = `d-${(idx % 9 + 2) * 50}`;
+          return (
+            <div
+              key={idx}
+              onClick={() => {
+                trackEvent('topic_revision_started', {
+                  route: '/topics',
+                  topic: topic.title,
+                });
+                onSelectTopic(topic.prompt);
+              }}
+              className={`anim-fade-up ${delayClass} card p-5 flex cursor-pointer flex-col justify-between transition-all group hover:-translate-y-1 hover:shadow-glow hover:border-emerald-500/30`}
+            >
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <span className="tag">
+                    {topic.tag === 'Chemistry' ? <Sparkles className="w-3 h-3 text-teal-400" /> : null}
+                    {topic.tag}
+                  </span>
+                </div>
+                <h3 className="mt-2 text-sm font-extrabold uppercase tracking-wide text-zinc-100 group-hover:text-emerald-400 transition-colors">{topic.title}</h3>
+                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                  {topic.desc}
+                </p>
               </div>
-              <h3 className="mt-2 text-sm font-extrabold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{topic.title}</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
-                {topic.desc}
-              </p>
+              
+              <div className="mt-5 flex items-center gap-1.5 border-t border-white/[0.06] pt-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-emerald-500 transition-colors">
+                <HelpCircle className="w-3.5 h-3.5" />
+                Start Revision
+                <ArrowRight className="w-3 h-3 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+              </div>
             </div>
-            
-            <div className="mt-3 flex items-center gap-1.5 border-t border-zinc-200/50 pt-3 text-[10px] font-bold uppercase text-emerald-500 group-hover:underline dark:border-zinc-800/50">
-              <HelpCircle className="w-3.5 h-3.5" />
-              Start Revision
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { 
   FileText, Search, Plus, Trash2, Edit, Eye, Download, 
-  Sparkles, CheckCircle, Zap, Save, ChevronLeft, ChevronRight, X
+  Sparkles, CheckCircle, Zap, Save, ChevronLeft, ChevronRight, X, Bookmark
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -116,10 +116,7 @@ const Notes = () => {
     let iframe = null;
 
     try { 
-        
-    // Zap icon as inline SVG string (matches Lucide's Zap icon exactly)
-      const zapSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-      // 1. Create an isolated iframe – completely free of Tailwind / oklch()
+      // 1. Create an isolated iframe – completely free of Tailwind
       iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.top = '-9999px';
@@ -243,7 +240,7 @@ const Notes = () => {
         console.error('KaTeX render error', e);
       }
 
-      // 3. Capture the iframe's body (no global Tailwind, no oklch!)
+      // 3. Capture the iframe's body
       const canvas = await html2canvas(doc.body, {
         scale: window.devicePixelRatio > 1 ? 2 : 1.5,
         useCORS: true,
@@ -444,12 +441,12 @@ const Notes = () => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950">
       
       {/* Alert banner */}
       {statusMessage && (
-        <div className={`absolute top-4 right-4 z-50 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg ${
-          statusType === 'success' ? 'bg-emerald-500 text-zinc-950' : 'bg-red-500 text-white'
+        <div className={`absolute top-4 right-4 z-50 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg anim-toast-in ${
+          statusType === 'success' ? 'bg-emerald-500 text-zinc-950 shadow-emerald-500/20' : 'bg-red-500 text-white shadow-red-500/20'
         }`}>
           <CheckCircle className="w-4 h-4" />
           {statusMessage}
@@ -458,39 +455,49 @@ const Notes = () => {
 
       {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-130 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      {/* Left Sidebar: Notes & AI generator */}
-      <aside className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
-        sidebarVisible ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
-      }`}>
+
+      {/* ── Left Sidebar: Notes & AI generator ── */}
+      <aside className={`shrink-0 flex flex-col transition-all duration-300 ${
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
+      }`}
+        style={{
+          background: 'rgba(11,11,13,0.97)',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          backdropFilter: 'blur(20px)',
+        }}
+      >
         
         {/* Search */}
-        <div className="space-y-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="space-y-3 p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Study Notes</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+              <Bookmark className="w-3.5 h-3.5 text-emerald-400" />
+              Notes Vault
+            </span>
             <button
               onClick={() => {
                 setSidebarPinned(false);
                 localStorage.setItem('vector_notes_sidebar_pinned', 'false');
                 setSidebarOpen(false);
               }}
-              className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-200 dark:hover:bg-zinc-800"
+              className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 cursor-pointer"
               title="Close notes panel"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
           <form onSubmit={handleSearchSubmit} className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
             <input
               type="text"
               placeholder="Search study guides..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-200/50 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 pl-8 pr-3 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 pl-8 pr-3 text-xs font-semibold text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
             />
           </form>
         </div>
@@ -498,28 +505,38 @@ const Notes = () => {
         {/* Notes list */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Vault Notes</span>
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Saved Guides</span>
             <button 
               onClick={handleCreateNote}
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-emerald-500 cursor-pointer"
+              className="p-1 hover:bg-emerald-500/10 rounded-lg text-emerald-500 cursor-pointer transition-colors"
               title="Create Study Note"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
           
           {notes.length === 0 ? (
-            <p className="text-[10px] text-zinc-400 text-center py-6">No study guides</p>
+            <div className="text-center py-6">
+              <FileText className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
+              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Vault Empty</p>
+            </div>
           ) : (
             notes.map((note) => (
               <button
                 key={note.id}
                 onClick={() => handleSelectNote(note)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-colors ${
-                  selectedNote?.id === note.id
-                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800/50'
-                }`}
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-all"
+                style={selectedNote?.id === note.id ? {
+                  background: 'rgba(16,185,129,0.12)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.22)',
+                } : {
+                  background: 'transparent',
+                  color: '#a1a1aa',
+                  border: '1px solid transparent',
+                }}
+                onMouseEnter={e => { if (selectedNote?.id !== note.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e4e4e7'; } }}
+                onMouseLeave={e => { if (selectedNote?.id !== note.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; } }}
               >
                 <div className="flex items-center gap-2 truncate">
                   <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -534,91 +551,90 @@ const Notes = () => {
         </div>
 
         {/* AI generator overlay controls */}
-        <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 space-y-2">
-          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">AI Guide Generator</div>
-          <div className="relative">
+        <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}>
+          <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block mb-2 flex items-center gap-1.5">
+            <Zap className="w-3 h-3 text-emerald-400" />
+            AI Guide Generator
+          </div>
+          <div className="space-y-2">
             <input
               type="text"
               placeholder="e.g. Newton's Laws"
               value={aiTopic}
               onChange={(e) => setAiTopic(e.target.value)}
-              className="w-full bg-zinc-200 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-xs font-semibold text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
             />
+            <button
+              onClick={handleGenerateAINote}
+              disabled={isGenerating}
+              className="btn-primary w-full shadow-none"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse" />
+              Generate Guide
+            </button>
           </div>
-          <button
-            onClick={handleGenerateAINote}
-            disabled={isGenerating}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-bold rounded-lg py-2 text-[10px] tracking-widest uppercase flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
-          >
-            <Sparkles className="w-3 h-3 fill-current animate-pulse" />
-            Generate
-          </button>
         </div>
       </aside>
 
-      {/* Center workspace */}
-      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 min-w-0">
+      {/* ── Center workspace ── */}
+      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0">
         {selectedNote ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header toolbar */}
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 p-3 dark:border-zinc-800 sm:p-4">
+            <div className="flex shrink-0 items-center justify-between gap-3 p-3 sm:p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.90)' }}>
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <button
                   onClick={toggleSidebar}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  className="btn-ghost text-zinc-400 hover:text-zinc-100 hidden sm:flex"
                   title={sidebarVisible ? 'Hide notes' : 'Show notes'}
                 >
                   {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                   Notes
                 </button>
+                <button
+                  onClick={toggleSidebar}
+                  className="btn-ghost text-zinc-400 sm:hidden"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
                 {isEditing ? (
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap flex-1">
                     <input
                       type="text"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="Note Title"
-                      className="bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg py-1.5 px-3 text-xs sm:text-sm font-bold focus:outline-none text-zinc-800 dark:text-zinc-100"
+                      className="bg-zinc-900 border border-zinc-800 rounded-lg py-1.5 px-3 text-xs sm:text-sm font-bold focus:outline-none focus:border-emerald-500/50 text-zinc-100 flex-1 min-w-[120px]"
                     />
                     <input
                       type="text"
                       value={editTopic}
                       onChange={(e) => setEditTopic(e.target.value)}
-                      placeholder="Topic (e.g. Physics)"
-                      className="bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg py-1.5 px-3 text-xs font-semibold focus:outline-none w-28 text-zinc-800 dark:text-zinc-100"
+                      placeholder="Topic"
+                      className="bg-zinc-900 border border-zinc-800 rounded-lg py-1.5 px-3 text-xs font-semibold focus:outline-none focus:border-emerald-500/50 w-24 text-zinc-100"
                     />
                   </div>
                 ) : (
                   <div>
-                    <h2 className="truncate font-extrabold text-sm uppercase tracking-wider text-zinc-800 dark:text-zinc-100 sm:text-base">{selectedNote.title}</h2>
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{selectedNote.topic || 'General'}</span>
+                    <h2 className="truncate font-extrabold text-sm uppercase tracking-wider text-zinc-100 sm:text-base leading-tight">{selectedNote.title}</h2>
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{selectedNote.topic || 'General'}</span>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex shrink-0 items-center gap-2 overflow-x-auto">
+              <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="btn-ghost"
                 >
-                  {isEditing ? (
-                    <>
-                      <Eye className="w-3.5 h-3.5" />
-                      Preview
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="w-3.5 h-3.5" />
-                      Edit
-                    </>
-                  )}
+                  {isEditing ? <><Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Preview</span></> : <><Edit className="w-3.5 h-3.5" /><span className="hidden sm:inline">Edit</span></>}
                 </button>
 
                 {isEditing && (
                   <button
                     onClick={handleSaveNote}
-                    className="p-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="btn-primary px-3 py-1.5 text-[10px]"
                   >
                     <Save className="w-3.5 h-3.5" />
                     Save
@@ -628,19 +644,19 @@ const Notes = () => {
                 <button
                   onClick={handleDownloadPDF}
                   disabled={isExportingPdf}
-                  className={`p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors ${isExportingPdf ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed' : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 cursor-pointer'}`}
+                  className={`btn-ghost ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isExportingPdf ? (
                     <span className="inline-flex h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  {isExportingPdf ? 'Exporting...' : 'PDF'}
+                  <span className="hidden sm:inline">{isExportingPdf ? 'Exporting...' : 'PDF'}</span>
                 </button>
 
                 <button
                   onClick={() => handleDeleteNote(selectedNote.id)}
-                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                  className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -648,33 +664,35 @@ const Notes = () => {
             </div>
 
             {/* Note Editor / Preview container */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
               {isEditing ? (
                 <textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 resize-none focus:outline-none text-sm leading-relaxed font-mono text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-600"
+                  className="w-full h-full bg-transparent border-0 resize-none focus:outline-none text-sm leading-relaxed font-mono text-zinc-300 placeholder:text-zinc-600 max-w-4xl mx-auto block"
                   placeholder="Write your study notes content in markdown..."
                 />
               ) : (
-                <div className="mx-auto max-w-3xl">
+                <div className="mx-auto max-w-3xl glass-surface p-6 sm:p-10 rounded-2xl">
                   <MarkdownRenderer content={selectedNote.content} />
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto px-4">
+          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto px-4 anim-fade-in">
             <button
               onClick={toggleSidebar}
-              className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              className="mb-6 btn-ghost"
             >
               {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              Notes
+              Show Vault
             </button>
-            <FileText className="w-10 h-10 text-zinc-400 mb-4" />
-            <h3 className="font-extrabold text-sm uppercase tracking-wider">Select a Study Note</h3>
-            <p className="text-xs text-zinc-400 mt-1">Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study notes.</p>
+            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6">
+               <FileText className="w-8 h-8 text-emerald-500/50" />
+            </div>
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-100">Select a Study Guide</h3>
+            <p className="text-xs text-zinc-500 mt-2 font-medium leading-relaxed">Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study notes.</p>
           </div>
         )}
       </div>
