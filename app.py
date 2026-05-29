@@ -359,12 +359,11 @@ def limit_text(text, max_chars):
     return value[: max(0, max_chars - len(suffix))].rstrip() + suffix
 
 
-def limit_words(text, max_words):
+def limit_chars_voice(text, max_chars):
     value = text or ""
-    words = value.split()
-    if len(words) <= max_words:
+    if len(value) <= max_chars:
         return value
-    return " ".join(words[:max_words]).rstrip() + " We can keep going after this."
+    return value[:max_chars].rstrip() + " We can keep going after this."
 
 
 def clean_limited_text(value, max_chars):
@@ -2131,7 +2130,7 @@ def chat():
 
     voice_mode = bool(payload.get("voice_mode", False))
     voice_provider = str(payload.get("voice_provider", "")).strip().lower()
-    voice_max_words = 500 if voice_mode and voice_provider == "camb" else None
+    voice_max_chars = 500 if voice_mode and voice_provider == "camb" else None
     document_mode = payload.get("response_format") == "document"
     generation_type = (payload.get("generation_type") or "").strip().lower()
     is_exam_generation = document_mode and generation_type == "exam"
@@ -2181,10 +2180,10 @@ def chat():
                 deterministic_hint = get_local_science_response(user_message, intent=intent)
 
         system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
-        if voice_max_words:
+        if voice_max_chars:
             system_prompt = (
                 f"{system_prompt}\n\n"
-                f"For CAMB AI voice mode, keep the spoken answer under {voice_max_words} words."
+                f"For CAMB AI voice mode, keep the spoken answer under {voice_max_chars} characters."
             )
         if document_mode:
             system_prompt = (
@@ -2234,8 +2233,8 @@ def chat():
         )
         if voice_mode:
             reply = make_voice_friendly(reply)
-            if voice_max_words:
-                reply = limit_words(reply, voice_max_words)
+            if voice_max_chars:
+                reply = limit_chars_voice(reply, voice_max_chars)
         elif not document_mode:
             reply = make_chat_friendly(reply)
         output_limit = (
@@ -2265,8 +2264,8 @@ def chat():
             )
             if voice_mode:
                 reply = make_voice_friendly(reply)
-                if voice_max_words:
-                    reply = limit_words(reply, voice_max_words)
+                if voice_max_chars:
+                    reply = limit_chars_voice(reply, voice_max_chars)
             elif not document_mode:
                 reply = make_chat_friendly(reply)
             reply = limit_text(reply, output_limit)

@@ -194,7 +194,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           history: conversationHistoryRef.current,
           voice_mode: true,
           voice_provider: ttsProvider,
-          max_words: ttsProvider === 'camb' ? 500 : undefined,
+          max_chars: ttsProvider === 'camb' ? 500 : undefined,
         }),
       });
 
