@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import {
   MessageSquare, FlaskConical, BookOpen, History as HistoryIcon,
-  Mic, FileText, LogOut, Menu, X, User, Atom, ChevronDown,
+  Mic, FileText, LogOut, Menu, X, User, Zap, ChevronDown,
 } from 'lucide-react';
 
 const tabs = [
@@ -48,7 +48,7 @@ const Layout = ({ children }) => {
           {/* Brand */}
           <div className="flex shrink-0 items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25 anim-glow">
-              <Atom className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
+              <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
             </div>
             <div className="hidden sm:block">
               <span className="block text-sm font-extrabold leading-none tracking-tight text-zinc-50">Vector AI</span>

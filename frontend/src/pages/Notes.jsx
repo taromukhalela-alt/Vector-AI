@@ -9,6 +9,7 @@ import {
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
+import katex from 'katex';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -133,7 +134,8 @@ const Notes = () => {
         <html>
           <head>
             <meta charset="utf-8">
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
+             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
+             <script src="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.js" crossorigin="anonymous"></script>
             <style>
               body { margin: 0; padding: 0; background: #ffffff; font-family: Inter, sans-serif; }
               .vector-pdf-body h1,
@@ -223,30 +225,35 @@ const Notes = () => {
       doc.getElementById('hdr-date').textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
       doc.getElementById('pdf-body').innerHTML = renderSafeMarkdown(selectedNote.content);
 
-      // Wait for KaTeX CSS to load and render
-      await new Promise(resolve => setTimeout(resolve, 800));
+       // Wait for KaTeX CSS to load and render
+       await new Promise(resolve => setTimeout(resolve, 800));
 
-      try {
-        renderMathInElement(doc.getElementById('pdf-body'), {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-            { left: '\\(', right: '\\)', display: false },
-            { left: '\\[', right: '\\]', display: true },
-          ],
-          throwOnError: false,
-        });
-      } catch (e) {
-        console.error('KaTeX render error', e);
-      }
+       try {
+         renderMathInElement(doc.getElementById('pdf-body'), {
+           delimiters: [
+             { left: '$$', right: '$$', display: true },
+             { left: '$', right: '$', display: false },
+             { left: '\\(', right: '\\)', display: false },
+             { left: '\\[', right: '\\]', display: true },
+           ],
+           throwOnError: false,
+         });
+         // Adjust iframe height to content height
+         const body = doc.body;
+         const height = Math.max(body.scrollHeight, body.offsetHeight, 
+                                doc.documentElement.scrollHeight, doc.documentElement.offsetHeight);
+         iframe.style.height = height + 'px';
+       } catch (e) {
+         console.error('KaTeX render error', e);
+       }
 
-      // 3. Capture the iframe's body
-      const canvas = await html2canvas(doc.body, {
-        scale: window.devicePixelRatio > 1 ? 2 : 1.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
+       // 3. Capture the iframe's body
+       const canvas = await html2canvas(doc.body, {
+         scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+         useCORS: true,
+         backgroundColor: '#ffffff',
+         logging: false,
+       });
 
       // 4. Build the PDF with jsPDF
       const pdf = new jsPDF('p', 'mm', 'a4');

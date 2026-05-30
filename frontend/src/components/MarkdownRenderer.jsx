@@ -2,7 +2,12 @@ import { useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
+import katex from 'katex';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
+
+if (typeof window !== 'undefined') {
+  window.katex = katex;
+}
 
 const MarkdownRenderer = ({ content }) => {
   const containerRef = useRef(null);

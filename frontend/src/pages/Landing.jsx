@@ -190,7 +190,7 @@ const Landing = ({ onNavigate }) => {
         <nav className="glass rounded-[18px] px-5 py-3 flex items-center justify-between shadow-lg shadow-black/30 anim-fade-down">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 anim-glow">
-              <Atom className="w-5 h-5 text-zinc-950" strokeWidth={2.5} />
+              <Zap className="w-5 h-5 text-zinc-950" strokeWidth={2.5} />
             </div>
             <div>
               <span className="font-extrabold text-sm tracking-tight block leading-none text-zinc-50">Vector AI</span>
@@ -378,7 +378,7 @@ const Landing = ({ onNavigate }) => {
         <Reveal>
           <div className="flex items-center justify-center gap-2.5 mb-4">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20">
-              <Atom className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
+              <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
             </div>
             <span className="font-extrabold text-sm tracking-tight text-zinc-100">Vector AI</span>
             <span className="text-[9px] font-bold tracking-[.18em] text-emerald-400 uppercase border border-emerald-500/20 rounded-full px-2 py-0.5">STEM OS</span>
