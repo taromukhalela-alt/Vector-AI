@@ -209,7 +209,7 @@ AI_TOOL_RATE_LIMIT_WINDOW = env_int("AI_TOOL_RATE_LIMIT_WINDOW", 300, min_value=
 RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
-CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-8.1-flash-beta")
+CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-flash")
 CAMB_TTS_LANGUAGE = (os.getenv("CAMB_TTS_LANGUAGE", "en-us").strip().lower() or "en-us")
 if CAMB_TTS_LANGUAGE.isdigit():
     logger.warning("Numeric CAMB_TTS_LANGUAGE values are deprecated; using en-us")
