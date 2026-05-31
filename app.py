@@ -37,7 +37,7 @@ from dotenv import load_dotenv
 try:
     from groq import Groq
     import tempfile
-import os
+    import os
 except ImportError:
     Groq = None
 
