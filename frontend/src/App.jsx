@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import useAnalytics from './useAnalytics';
 import Layout from './components/Layout';
+import ToastProvider from './components/ToastProvider';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import Chat from './pages/Chat';
@@ -48,10 +49,12 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <Routes>
-        <Route path="/auth" element={<Auth onNavigate={handleAuthNavigation} />} />
-        <Route path="*" element={<Landing onNavigate={handleAuthNavigation} />} />
-      </Routes>
+      <ToastProvider>
+        <Routes>
+          <Route path="/auth" element={<Auth onNavigate={handleAuthNavigation} />} />
+          <Route path="*" element={<Landing onNavigate={handleAuthNavigation} />} />
+        </Routes>
+      </ToastProvider>
     );
   }
 
@@ -66,72 +69,74 @@ function App() {
   };
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/chat" replace />} />
-        <Route
-          path="/chat"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI Tutor</ScreenReaderTitle>
-              <Chat
-                onMatchAnimation={setActiveAnim}
-                currentAnimation={activeAnim}
-                initialPrompt={sharedTriggerPrompt}
-                resumeChatId={resumeChatId}
-              />
-            </>
-          )}
-        />
-        <Route
-          path="/voice"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI Voice Tutor</ScreenReaderTitle>
-              <Voice onMatchAnimation={setActiveAnim} csrfToken={csrfToken} />
-            </>
-          )}
-        />
-        <Route
-          path="/lab"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI Visual Physics Lab</ScreenReaderTitle>
-              <Lab activeAnim={activeAnim} onAnimChange={setActiveAnim} />
-            </>
-          )}
-        />
-        <Route
-          path="/notes"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI Study Notes</ScreenReaderTitle>
-              <Notes />
-            </>
-          )}
-        />
-        <Route
-          path="/history"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI Chat History</ScreenReaderTitle>
-              <History onResumeSession={handleResumeSession} />
-            </>
-          )}
-        />
-        <Route
-          path="/topics"
-          element={(
-            <>
-              <ScreenReaderTitle>Vector AI CAPS Syllabus Topics</ScreenReaderTitle>
-              <Topics onSelectTopic={handleSelectTopic} />
-            </>
-          )}
-        />
-        <Route path="/auth" element={<Navigate to="/chat" replace />} />
-        <Route path="*" element={<Navigate to="/chat" replace />} />
-      </Routes>
-    </Layout>
+    <ToastProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/chat" replace />} />
+          <Route
+            path="/chat"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Tutor</ScreenReaderTitle>
+                <Chat
+                  onMatchAnimation={setActiveAnim}
+                  currentAnimation={activeAnim}
+                  initialPrompt={sharedTriggerPrompt}
+                  resumeChatId={resumeChatId}
+                />
+              </>
+            )}
+          />
+          <Route
+            path="/voice"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Voice Tutor</ScreenReaderTitle>
+                <Voice onMatchAnimation={setActiveAnim} csrfToken={csrfToken} />
+              </>
+            )}
+          />
+          <Route
+            path="/lab"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Visual Physics Lab</ScreenReaderTitle>
+                <Lab activeAnim={activeAnim} onAnimChange={setActiveAnim} />
+              </>
+            )}
+          />
+          <Route
+            path="/notes"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Study Notes</ScreenReaderTitle>
+                <Notes />
+              </>
+            )}
+          />
+          <Route
+            path="/history"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Chat History</ScreenReaderTitle>
+                <History onResumeSession={handleResumeSession} />
+              </>
+            )}
+          />
+          <Route
+            path="/topics"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI CAPS Syllabus Topics</ScreenReaderTitle>
+                <Topics onSelectTopic={handleSelectTopic} />
+              </>
+            )}
+          />
+          <Route path="/auth" element={<Navigate to="/chat" replace />} />
+          <Route path="*" element={<Navigate to="/chat" replace />} />
+        </Routes>
+      </Layout>
+    </ToastProvider>
   );
 }
 
