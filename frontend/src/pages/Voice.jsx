@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AvatarCanvas from '../components/AvatarCanvas';
 import { trackEvent } from '../useAnalytics';
-import { Mic, MicOff, AlertCircle, Info, Volume2 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { Mic, MicOff, Info, Volume2 } from 'lucide-react';
 
 const Voice = ({ onMatchAnimation, csrfToken }) => {
+  const { showToast } = useToast();
   const [status, setStatus] = useState('Tap the mic to start');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -12,7 +14,6 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const [avatarState, setAvatarState] = useState('idle');
   const [speakingAmplitude, setSpeakingAmplitude] = useState(0);
   const [frequencyData, setFrequencyData] = useState(null);
-  const [micError, setMicError] = useState(false);
 
   const isSpeakingRef = useRef(false);
   const recognitionRef = useRef(null);
@@ -37,12 +38,126 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const cambVoiceId = localStorage.getItem('preferred_camb_voice') || '147320';
   const browserVoiceURI = localStorage.getItem('preferred_browser_voice') || '';
 
+  const processWhisperSTT = async (audioBlob) => {
+    setStatus('Transcribing...');
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      
+      const res = await fetch('/api/stt', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
+        body: formData
+      });
+      
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.text) {
+        setYouTranscript(data.text);
+        handleSpeechInput(data.text);
+        return;
+      }
+      console.warn('Whisper STT did not return usable text:', {
+        status: res.status,
+        message: data.message,
+      });
+    } catch (e) {
+      console.error('Whisper STT error', e);
+    }
+    
+    // Fallback to browser
+    const fallbackText = interimTranscriptRef.current;
+    if (fallbackText) {
+      console.warn('Falling back to browser STT text');
+      showToast({
+        type: 'warning',
+        title: 'Using browser transcript',
+        message: 'Cloud transcription had trouble, so I used the live browser transcript instead.',
+      });
+      setYouTranscript(fallbackText);
+      handleSpeechInput(fallbackText);
+    } else {
+      setStatus('Could not hear anything');
+      setAvatarState('idle');
+      showToast({
+        type: 'warning',
+        title: 'No speech detected',
+        message: 'I could not hear that clearly. Please move closer to the mic and try again.',
+      });
+    }
+  };
+
+  const setupAudioAnalyser = async () => {
+    if (audioContextRef.current) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 128;
+      source.connect(analyser);
+
+      audioContextRef.current = { audioCtx, stream };
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const updateFrequencyData = () => {
+        analyser.getByteFrequencyData(dataArray);
+        setFrequencyData(new Uint8Array(dataArray));
+        animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
+      };
+      updateFrequencyData();
+    } catch (error) {
+      console.warn('Audio analyser not available:', error);
+      throw error;
+    }
+  };
+
+  const stopAmplitudeTracking = useCallback(() => {
+    if (ampIntervalRef.current) {
+      clearInterval(ampIntervalRef.current);
+      ampIntervalRef.current = null;
+    }
+    setSpeakingAmplitude(0);
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    activeSessionRef.current += 1;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    stopAmplitudeTracking();
+    setIsSpeaking(false);
+    setAvatarState('idle');
+  }, [stopAmplitudeTracking]);
+
+  const stopAllVoiceState = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* noop */ }
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
+    }
+    stopSpeaking();
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    if (audioContextRef.current) {
+      audioContextRef.current.stream.getTracks().forEach(t => t.stop());
+      try { audioContextRef.current.audioCtx.close(); } catch { /* noop */ }
+      audioContextRef.current = null;
+    }
+  }, [stopSpeaking]);
+
   // Setup Web Speech Recognition for interim fallback
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       console.warn('Speech recognition not supported in this browser.');
-      return;
+      return undefined;
     }
 
     const rec = new SR();
@@ -81,95 +196,20 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     rec.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
       if (event.error === 'not-allowed') {
-        setMicError(true);
+        showToast({
+          type: 'error',
+          title: 'Microphone blocked',
+          message: 'Please enable microphone access in your browser settings to speak to the AI Tutor.',
+        });
       }
     };
 
     recognitionRef.current = rec;
 
     return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       stopAllVoiceState();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const processWhisperSTT = async (audioBlob) => {
-    setStatus('Transcribing...');
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-      
-      const res = await fetch('/api/stt', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
-        body: formData
-      });
-      
-      const data = await res.json();
-      if (data.success && data.text) {
-        setYouTranscript(data.text);
-        handleSpeechInput(data.text);
-        return;
-      }
-    } catch (e) {
-      console.error('Whisper STT error', e);
-    }
-    
-    // Fallback to browser
-    const fallbackText = interimTranscriptRef.current;
-    if (fallbackText) {
-      console.warn('Falling back to browser STT text');
-      setYouTranscript(fallbackText);
-      handleSpeechInput(fallbackText);
-    } else {
-      setStatus('Could not hear anything');
-      setAvatarState('idle');
-    }
-  };
-
-  const setupAudioAnalyser = async () => {
-    if (audioContextRef.current) return;
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;
-      source.connect(analyser);
-
-      audioContextRef.current = { audioCtx, stream };
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const updateFrequencyData = () => {
-        analyser.getByteFrequencyData(dataArray);
-        setFrequencyData(new Uint8Array(dataArray));
-        animationFrameRef.current = requestAnimationFrame(updateFrequencyData);
-      };
-      updateFrequencyData();
-    } catch (error) {
-      console.warn('Audio analyser not available:', error);
-    }
-  };
-
-  const stopAllVoiceState = () => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch { /* noop */ }
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
-    }
-    stopSpeaking();
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (audioContextRef.current) {
-      audioContextRef.current.stream.getTracks().forEach(t => t.stop());
-      try { audioContextRef.current.audioCtx.close(); } catch { /* noop */ }
-      audioContextRef.current = null;
-    }
-  };
+  }, [showToast, stopAllVoiceState]);
 
   const startAmplitudeTracking = () => {
     stopAmplitudeTracking();
@@ -180,14 +220,6 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
         Math.max(0, 0.4 + Math.sin(t * 8) * 0.2 + Math.sin(t * 3.3) * 0.15 + Math.random() * 0.15)
       );
     }, 50);
-  };
-
-  const stopAmplitudeTracking = () => {
-    if (ampIntervalRef.current) {
-      clearInterval(ampIntervalRef.current);
-      ampIntervalRef.current = null;
-    }
-    setSpeakingAmplitude(0);
   };
 
   const normalizeText = (text) => {
@@ -266,21 +298,40 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       speakText(reply);
     } catch (error) {
       console.error('Voice chat failed:', error);
-      setStatus('Error. Try again.');
+      setStatus('Tap to speak');
       setAvatarState('idle');
+      showToast({
+        type: 'error',
+        title: 'Voice tutor paused',
+        message: 'I could not get a response right now. Please try again in a moment.',
+      });
+    }
+  };
+
+  const readResponsePreview = async (response) => {
+    const contentType = response.headers.get('Content-Type') || '';
+    try {
+      if (contentType.toLowerCase().includes('application/json')) {
+        const data = await response.json();
+        return { contentType, body: data };
+      }
+      const text = await response.text();
+      return { contentType, body: text.slice(0, 400) };
+    } catch (error) {
+      return { contentType, body: `Unable to read response body: ${error.message}` };
     }
   };
 
   const speakText = async (text) => {
+    stopSpeaking();
     activeSessionRef.current += 1;
     const sessionId = activeSessionRef.current;
-    
-    stopSpeaking();
+
     const cleanText = normalizeText(text);
     if (!cleanText) return;
 
     if (ttsProvider === 'browser') {
-      speakWithBrowser(cleanText, sessionId);
+      speakWithBrowser(cleanText, sessionId, { notifyOnFailure: true });
     } else {
       try {
         setStatus('Speaking...');
@@ -301,9 +352,31 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           })
         });
 
-        if (!response.ok) throw new Error('Cloud TTS Failed');
+        const contentType = response.headers.get('Content-Type') || '';
+        if (!response.ok) {
+          const details = await readResponsePreview(response);
+          console.error('Cloud TTS request failed:', {
+            provider: ttsProvider,
+            status: response.status,
+            details,
+          });
+          throw new Error('Cloud TTS request failed');
+        }
+
+        if (!contentType.toLowerCase().startsWith('audio/')) {
+          const details = await readResponsePreview(response);
+          console.error('Cloud TTS returned a non-audio response:', {
+            provider: ttsProvider,
+            status: response.status,
+            details,
+          });
+          throw new Error('Cloud TTS response was not audio');
+        }
 
         const blob = await response.blob();
+        if (blob.size === 0) {
+          throw new Error('Cloud TTS returned empty audio');
+        }
         if (sessionId !== activeSessionRef.current) return;
 
         const url = URL.createObjectURL(blob);
@@ -328,29 +401,49 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           setIsSpeaking(false);
           setAvatarState('idle');
           stopAmplitudeTracking();
-          setStatus('Tap to speak');
+          setStatus('Switching to browser voice...');
           URL.revokeObjectURL(url);
           console.error('Audio playback error (Cloud TTS format unsupported or corrupted)');
-          speakWithBrowser(cleanText, sessionId);
+          showToast({
+            type: 'warning',
+            title: 'Cloud voice unavailable',
+            message: 'Using your browser voice instead.',
+          });
+          speakWithBrowser(cleanText, sessionId, { notifyOnFailure: true });
         };
 
         await aud.play();
       } catch (e) {
         console.error('Cloud TTS error:', e);
-        // Fallback to browser
         if (sessionId === activeSessionRef.current) {
-          speakWithBrowser(cleanText, sessionId);
+          setIsSpeaking(false);
+          setAvatarState('idle');
+          stopAmplitudeTracking();
+          setStatus('Switching to browser voice...');
+          showToast({
+            type: 'warning',
+            title: 'Cloud voice unavailable',
+            message: 'Using your browser voice instead.',
+          });
+          speakWithBrowser(cleanText, sessionId, { notifyOnFailure: true });
         }
       }
     }
   };
 
-  const speakWithBrowser = (text, sessionId) => {
+  const speakWithBrowser = (text, sessionId, options = {}) => {
     if (!('speechSynthesis' in window)) {
       setIsSpeaking(false);
       setAvatarState('idle');
       setStatus('Tap to speak');
-      return;
+      if (options.notifyOnFailure) {
+        showToast({
+          type: 'error',
+          title: 'Audio unavailable',
+          message: "I couldn't play audio. You can still read the answer below.",
+        });
+      }
+      return false;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -384,31 +477,26 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       setStatus('Tap to speak');
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
       if (sessionId !== activeSessionRef.current) return;
+      console.error('Browser speech synthesis error:', event.error);
       setIsSpeaking(false);
       setAvatarState('idle');
       stopAmplitudeTracking();
       setStatus('Tap to speak');
+      if (options.notifyOnFailure) {
+        showToast({
+          type: 'error',
+          title: 'Audio unavailable',
+          message: "I couldn't play audio. You can still read the answer below.",
+        });
+      }
     };
 
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
     window.speechSynthesis.resume();
-  };
-
-  const stopSpeaking = () => {
-    activeSessionRef.current += 1;
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    stopAmplitudeTracking();
-    setIsSpeaking(false);
-    setAvatarState('idle');
+    return true;
   };
 
   const toggleMic = async () => {
@@ -428,7 +516,6 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       return;
     }
 
-    setMicError(false);
     try {
       await setupAudioAnalyser();
       
@@ -448,6 +535,11 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           } else {
             setStatus('No audio recorded');
             setAvatarState('idle');
+            showToast({
+              type: 'warning',
+              title: 'No audio recorded',
+              message: 'I did not receive any microphone audio. Please try again.',
+            });
           }
         };
         mediaRecorderRef.current = mr;
@@ -463,27 +555,19 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       setAvatarState('listening');
       setStatus('Listening...');
       setYouTranscript('...');
-    } catch {
-      setMicError(true);
+    } catch (error) {
+      console.error('Microphone unavailable:', error);
       setStatus('Microphone unavailable');
+      showToast({
+        type: 'error',
+        title: 'Microphone unavailable',
+        message: 'Please allow microphone access in your browser, then try speaking again.',
+      });
     }
   };
 
   return (
     <div className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden bg-zinc-950 px-3 py-4 select-none sm:px-6 sci-grid">
-      {/* Mic Permission Alert */}
-      {micError && (
-        <div className="absolute top-4 inset-x-6 max-w-md mx-auto z-50 p-4 rounded-xl flex items-start gap-3 shadow-lg anim-fade-down"
-          style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', backdropFilter: 'blur(12px)' }}
-        >
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
-          <div>
-            <p className="font-bold uppercase tracking-widest text-xs text-red-400">Microphone Blocked</p>
-            <p className="mt-1 leading-relaxed text-zinc-300 text-sm">Please enable microphone access in your browser settings to speak to the AI Tutor.</p>
-          </div>
-        </div>
-      )}
-
       {/* Avatar Container */}
       <div className="relative flex min-h-0 w-full max-w-lg flex-1 items-center justify-center">
         

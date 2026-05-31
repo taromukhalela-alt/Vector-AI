@@ -1,15 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
+import { useToast } from '../context/ToastContext';
 import {
   FileText, Search, Plus, Trash2, Edit, Eye, Download,
-  Sparkles, CheckCircle, Save, ChevronLeft, ChevronRight, X
+  Sparkles, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // No global side‑effects – pass options directly to marked.parse
 const renderSafeMarkdown = (content) => {
@@ -18,6 +20,7 @@ const renderSafeMarkdown = (content) => {
 
 const Notes = () => {
   const { csrfToken } = useAuth();
+  const { showToast } = useToast();
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
@@ -39,10 +42,6 @@ const Notes = () => {
       : false
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const [statusMessage, setStatusMessage] = useState('');
-  const [statusType, setStatusType] = useState('success');
-  const statusTimeoutRef = useRef(null);
 
   const sidebarVisible = isDesktop ? sidebarPinned || sidebarOpen : sidebarOpen;
 
@@ -106,11 +105,12 @@ const Notes = () => {
     fetchNotes();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showStatus = (msg, type = 'success') => {
-    setStatusMessage(msg);
-    setStatusType(type);
-    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
-    statusTimeoutRef.current = setTimeout(() => setStatusMessage(''), 3000);
+  const showStatus = (message, type = 'success', title) => {
+    showToast({
+      type,
+      title: title || (type === 'error' ? 'Notes issue' : 'Notes'),
+      message,
+    });
   };
 
   const handleCreateNote = () => {
@@ -172,7 +172,8 @@ const Notes = () => {
         }
         setIsEditing(false);
       } else {
-        showStatus(data.message || 'Failed to save note', 'error');
+        console.warn('Note save failed:', data.message);
+        showStatus('Your note could not be saved. Please try again.', 'error', 'Save failed');
       }
     } catch (e) {
       console.error(e);
@@ -233,7 +234,8 @@ const Notes = () => {
         fetchNotes();
         if (data.note) handleSelectNote(data.note);
       } else {
-        showStatus(data.message || 'Generation failed', 'error');
+        console.warn('AI note generation failed:', data.message);
+        showStatus('The study guide could not be generated. Please try again.', 'error', 'Generation failed');
       }
     } catch (e) {
       console.error(e);
@@ -255,76 +257,103 @@ const Notes = () => {
     setIsExportingPdf(true);
     showStatus('Compiling high‑fidelity PDF…', 'success');
 
+    let iframe = null;
+
     try {
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.style.width = '800px';
-      container.style.backgroundColor = '#ffffff';
-      document.body.appendChild(container);
+      iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '-9999px';
+      iframe.style.width = '800px';
+      iframe.style.height = '1122px';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
 
-      const style = document.createElement('style');
-      style.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-        @import url('https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css');
-        .pdf-export-container { font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.7; color: #27272a; background: #ffffff; }
-        .pdf-export-container h1, .pdf-export-container h2, .pdf-export-container h3, .pdf-export-container h4 { color: #18181b; font-weight: 700; break-after: avoid; page-break-after: avoid; margin-top: 24px; margin-bottom: 12px; letter-spacing: -0.01em; }
-        .pdf-export-container h1 { font-size: 26px; font-weight: 800; margin-top: 0; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #10b981; }
-        .pdf-export-container h2 { font-size: 18px; border-bottom: 1px solid #e4e4e7; padding-bottom: 8px; margin-top: 32px; }
-        .pdf-export-container h3 { font-size: 15px; color: #047857; margin-top: 24px; }
-        .pdf-export-container p { margin-bottom: 14px; orphans: 3; widows: 3; }
-        .pdf-export-container ul, .pdf-export-container ol { margin-bottom: 14px; padding-left: 24px; }
-        .pdf-export-container li { margin-bottom: 6px; }
-        .pdf-export-container li::marker { color: #10b981; font-weight: 600; }
-        .pdf-export-container strong { font-weight: 700; color: #18181b; }
-        .pdf-export-container a { color: #047857; text-decoration: none; border-bottom: 1px solid #10b981; }
-        .pdf-export-container blockquote { margin: 20px 0; padding: 14px 18px; border-left: 4px solid #10b981; background: #ecfdf5; color: #3f3f46; border-radius: 0 8px 8px 0; font-style: italic; }
-        .pdf-export-container pre { background: #18181b; color: #f4f4f5; padding: 16px; border-radius: 8px; overflow-x: hidden; white-space: pre-wrap; word-wrap: break-word; font-family: 'JetBrains Mono', monospace; font-size: 11px; margin: 20px 0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); page-break-inside: avoid; border: 1px solid #27272a; }
-        .pdf-export-container code { font-family: 'JetBrains Mono', monospace; background: #f4f4f5; color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-        .pdf-export-container pre code { background: transparent; color: inherit; padding: 0; font-size: 11px; }
-        .pdf-export-container table { width: 100%; border-collapse: collapse; margin: 24px 0; page-break-inside: avoid; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
-        .pdf-export-container th, .pdf-export-container td { border: 1px solid #e4e4e7; padding: 10px 14px; text-align: left; vertical-align: top; }
-        .pdf-export-container th { background: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: #0f172a; border-bottom: 2px solid #e4e4e7; }
-        .pdf-export-container tr:nth-child(even) { background: #fafafa; }
-        .pdf-export-container .katex-display { margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e4e4e7; overflow-x: auto; overflow-y: hidden; text-align: center; page-break-inside: avoid; }
-        .pdf-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 3px solid #10b981; }
-        .pdf-header-left h1 { margin: 0; font-size: 26px; font-weight: 800; border: none; padding: 0; letter-spacing: -0.02em; }
-        .pdf-header-left p { margin: 6px 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        .pdf-header-right { text-align: right; }
-        .pdf-header-brand { font-size: 14px; font-weight: 800; color: #10b981; letter-spacing: 0.1em; text-transform: uppercase; }
-        .pdf-header-sub { font-size: 9px; color: #71717a; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .pdf-footer { border-top: 1px solid #e4e4e7; padding-top: 16px; margin-top: 48px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; page-break-inside: avoid; }
-      `;
-      container.appendChild(style);
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error('Cannot access PDF export document');
 
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'pdf-export-container';
-      
-      const dateStr = new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
-      
-      contentDiv.innerHTML = `
-        <div class="pdf-header">
-          <div class="pdf-header-left">
-            <h1>${selectedNote.title || 'Study Note'}</h1>
-            <p>Topic: ${selectedNote.topic || 'General'}</p>
-          </div>
-          <div class="pdf-header-right">
-            <div class="pdf-header-brand">Vector AI</div>
-            <div class="pdf-header-sub">CAPS STEM OS</div>
-          </div>
-        </div>
-        <div id="pdf-body-content">
-          ${renderSafeMarkdown(selectedNote.content)}
-        </div>
-        <div class="pdf-footer">
-          <span>Built by Taro Mukhalela • Vector AI STEM OS</span>
-          <span>Date Exported: ${dateStr}</span>
-        </div>
-      `;
-      container.appendChild(contentDiv);
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+              @import url('https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css');
+              html, body { margin: 0; padding: 0; color: #18181b; background: #ffffff; }
+              .pdf-export-container { width: 800px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.7; color: #27272a; background: #ffffff; }
+              .pdf-export-container * { box-sizing: border-box; }
+              .pdf-export-container h1, .pdf-export-container h2, .pdf-export-container h3, .pdf-export-container h4 { color: #18181b; font-weight: 700; break-after: avoid; page-break-after: avoid; margin-top: 24px; margin-bottom: 12px; letter-spacing: 0; }
+              .pdf-export-container h1 { font-size: 26px; font-weight: 800; margin-top: 0; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #10b981; }
+              .pdf-export-container h2 { font-size: 18px; border-bottom: 1px solid #e4e4e7; padding-bottom: 8px; margin-top: 32px; }
+              .pdf-export-container h3 { font-size: 15px; color: #047857; margin-top: 24px; }
+              .pdf-export-container p { margin-bottom: 14px; orphans: 3; widows: 3; }
+              .pdf-export-container ul, .pdf-export-container ol { margin-bottom: 14px; padding-left: 24px; }
+              .pdf-export-container li { margin-bottom: 6px; }
+              .pdf-export-container li::marker { color: #10b981; font-weight: 600; }
+              .pdf-export-container strong { font-weight: 700; color: #18181b; }
+              .pdf-export-container a { color: #047857; text-decoration: none; border-bottom: 1px solid #10b981; }
+              .pdf-export-container blockquote { margin: 20px 0; padding: 14px 18px; border-left: 4px solid #10b981; background: #ecfdf5; color: #3f3f46; border-radius: 0 8px 8px 0; font-style: italic; }
+              .pdf-export-container pre { background: #18181b; color: #f4f4f5; padding: 16px; border-radius: 8px; overflow-x: hidden; white-space: pre-wrap; word-wrap: break-word; font-family: 'JetBrains Mono', monospace; font-size: 11px; margin: 20px 0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); page-break-inside: avoid; border: 1px solid #27272a; }
+              .pdf-export-container code { font-family: 'JetBrains Mono', monospace; background: #f4f4f5; color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+              .pdf-export-container pre code { background: transparent; color: inherit; padding: 0; font-size: 11px; }
+              .pdf-export-container table { width: 100%; border-collapse: collapse; margin: 24px 0; page-break-inside: avoid; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
+              .pdf-export-container th, .pdf-export-container td { border: 1px solid #e4e4e7; padding: 10px 14px; text-align: left; vertical-align: top; }
+              .pdf-export-container th { background: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: #0f172a; border-bottom: 2px solid #e4e4e7; }
+              .pdf-export-container tr:nth-child(even) { background: #fafafa; }
+              .pdf-export-container .katex-display { margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e4e4e7; overflow-x: auto; overflow-y: hidden; text-align: center; page-break-inside: avoid; }
+              .pdf-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 3px solid #10b981; }
+              .pdf-header-left h1 { margin: 0; font-size: 26px; font-weight: 800; border: none; padding: 0; letter-spacing: 0; }
+              .pdf-header-left p { margin: 6px 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+              .pdf-header-right { text-align: right; }
+              .pdf-header-brand { font-size: 14px; font-weight: 800; color: #10b981; letter-spacing: 0.1em; text-transform: uppercase; }
+              .pdf-header-sub { font-size: 9px; color: #71717a; font-weight: 700; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+              .pdf-footer { border-top: 1px solid #e4e4e7; padding-top: 16px; margin-top: 48px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; page-break-inside: avoid; }
+            </style>
+          </head>
+          <body>
+            <div id="pdf-export-root" class="pdf-export-container">
+              <div class="pdf-header">
+                <div class="pdf-header-left">
+                  <h1 id="pdf-title"></h1>
+                  <p id="pdf-topic"></p>
+                </div>
+                <div class="pdf-header-right">
+                  <div class="pdf-header-brand">Vector AI</div>
+                  <div class="pdf-header-sub">CAPS STEM OS</div>
+                </div>
+              </div>
+              <div id="pdf-body-content"></div>
+              <div class="pdf-footer">
+                <span>Built by Taro Mukhalela • Vector AI STEM OS</span>
+                <span id="pdf-date"></span>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
 
-      const pdfBody = container.querySelector('#pdf-body-content');
+      const title = iframeDoc.getElementById('pdf-title');
+      if (title) title.textContent = selectedNote.title || 'Study Note';
+
+      const topic = iframeDoc.getElementById('pdf-topic');
+      if (topic) topic.textContent = `Topic: ${selectedNote.topic || 'General'}`;
+
+      const date = iframeDoc.getElementById('pdf-date');
+      if (date) {
+        date.textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })}`;
+      }
+
+      const pdfBody = iframeDoc.getElementById('pdf-body-content');
+      if (pdfBody) pdfBody.innerHTML = renderSafeMarkdown(selectedNote.content);
+
       try {
         if (pdfBody) {
           renderMathInElement(pdfBody, {
@@ -347,21 +376,89 @@ const Notes = () => {
         .replace(/\\s+/g, '_')
         .replace(/[^a-z0-9_-]/g, '') + '.pdf';
 
-      const opt = {
-        margin:       [15, 15, 15, 15],
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 1 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
-      };
-
       // Wait for fonts and styles to be ready
+      if (iframeDoc.fonts?.ready) await iframeDoc.fonts.ready;
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      await html2pdf().set(opt).from(container).save();
+      const pdfRoot = iframeDoc.getElementById('pdf-export-root');
+      if (!pdfRoot) throw new Error('PDF export container was not created');
 
-      document.body.removeChild(container);
+      const canvas = await html2canvas(pdfRoot, {
+        scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 800,
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 15;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imageWidth = pageWidth - margin * 2;
+      const imageHeight = (canvas.height * imageWidth) / canvas.width;
+      const usablePageHeight = pageHeight - margin * 2;
+      const pageHeightPx = Math.floor((usablePageHeight / imageHeight) * canvas.height);
+      const rootRect = pdfRoot.getBoundingClientRect();
+      const canvasScale = canvas.width / rootRect.width;
+      const blockBounds = Array.from(
+        pdfRoot.querySelectorAll('h1, h2, h3, h4, p, li, blockquote, pre, table, .katex-display')
+      )
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            top: Math.max(0, Math.round((rect.top - rootRect.top) * canvasScale)),
+            bottom: Math.min(canvas.height, Math.round((rect.bottom - rootRect.top) * canvasScale)),
+          };
+        })
+        .filter((bound) => bound.bottom > bound.top)
+        .sort((a, b) => a.bottom - b.bottom);
+
+      const findPageEnd = (startY) => {
+        const targetY = Math.min(startY + pageHeightPx, canvas.height);
+        if (targetY >= canvas.height) return canvas.height;
+
+        const lowerLimit = startY + Math.floor(pageHeightPx * 0.45);
+        const upperLimit = targetY - Math.round(12 * canvasScale);
+        const candidate = blockBounds
+          .filter((bound) => bound.bottom >= lowerLimit && bound.bottom <= upperLimit)
+          .at(-1);
+
+        return candidate?.bottom || targetY;
+      };
+
+      let sourceY = 0;
+      let pageIndex = 0;
+      while (sourceY < canvas.height) {
+        const pageEndY = findPageEnd(sourceY);
+        const sliceHeight = Math.max(1, pageEndY - sourceY);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+        const pageContext = pageCanvas.getContext('2d');
+        pageContext.fillStyle = '#ffffff';
+        pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pageContext.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight
+        );
+
+        if (pageIndex > 0) pdf.addPage();
+        const sliceHeightMm = (sliceHeight * imageWidth) / canvas.width;
+        pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.98), 'JPEG', margin, margin, imageWidth, sliceHeightMm);
+
+        sourceY = pageEndY;
+        pageIndex += 1;
+      }
+
+      pdf.save(filename);
 
       trackEvent('note_pdf_exported', {
         route: '/notes',
@@ -374,8 +471,9 @@ const Notes = () => {
         route: '/notes',
         error_message: err instanceof Error ? err.message : String(err),
       });
-      showStatus(`Failed to generate PDF: ${err.message}`, 'error');
+      showStatus('The PDF export could not finish. Please try again.', 'error', 'Export failed');
     } finally {
+      if (iframe?.parentNode) iframe.parentNode.removeChild(iframe);
       setIsExportingPdf(false);
     }
   };
@@ -383,17 +481,6 @@ const Notes = () => {
   // ==================== JSX ====================
   return (
     <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-      {statusMessage && (
-        <div
-          className={`absolute top-4 right-4 z-50 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg ${
-            statusType === 'success' ? 'bg-emerald-500 text-zinc-950' : 'bg-red-500 text-white'
-          }`}
-        >
-          <CheckCircle className="w-4 h-4" />
-          {statusMessage}
-        </div>
-      )}
-
       {sidebarVisible && !isDesktop && (
         <div
           className="fixed inset-0 z-130 bg-black/40 md:hidden"

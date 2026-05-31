@@ -315,6 +315,7 @@ def test_tts_supports_camb_ai_provider(monkeypatch):
     class FakeCambResponse:
         status_code = 200
         text = ""
+        headers = {"Content-Type": "audio/wav"}
 
         def iter_content(self, chunk_size=1024):
             yield b"audio"
@@ -340,6 +341,49 @@ def test_tts_supports_camb_ai_provider(monkeypatch):
     assert captured["json"]["voice_id"] == 147320
     assert captured["json"]["language"] == "en-us"
     assert captured["json"]["speech_model"] == "mars-8.1-flash-beta"
+
+
+def test_tts_camb_missing_api_key_returns_sanitized_error(monkeypatch):
+    client = app_module.app.test_client()
+    register_demo_user(client, "tts-camb-missing-key@example.com")
+    monkeypatch.delenv("CAMB_API_KEY", raising=False)
+
+    response = client.post(
+        "/api/tts",
+        json={"text": "Hello learner", "provider": "camb", "voice_id": "147320"},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 503
+    assert response.get_json() == {"success": False, "message": "Voice synthesis is unavailable"}
+
+
+def test_tts_camb_provider_error_returns_sanitized_error(monkeypatch):
+    client = app_module.app.test_client()
+    register_demo_user(client, "tts-camb-provider-error@example.com")
+
+    class FakeCambErrorResponse:
+        status_code = 422
+        text = '{"detail":"invalid language en-us for voice"}'
+        headers = {"Content-Type": "application/json"}
+
+        def iter_content(self, chunk_size=1024):
+            yield b""
+
+    def fake_post(*_args, **_kwargs):
+        return FakeCambErrorResponse()
+
+    monkeypatch.setenv("CAMB_API_KEY", "test-key")
+    monkeypatch.setattr(app_module.requests, "post", fake_post)
+
+    response = client.post(
+        "/api/tts",
+        json={"text": "Hello learner", "provider": "camb", "voice_id": "147320"},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 502
+    assert response.get_json() == {"success": False, "message": "Voice synthesis is unavailable"}
 
 
 def test_ai_note_metadata_endpoint(monkeypatch):

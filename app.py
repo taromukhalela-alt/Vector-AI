@@ -36,6 +36,8 @@ from dotenv import load_dotenv
 # Import Groq
 try:
     from groq import Groq
+    import tempfile
+import os
 except ImportError:
     Groq = None
 
@@ -208,7 +210,10 @@ RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
 CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-8.1-flash-beta")
-CAMB_TTS_LANGUAGE = env_int("CAMB_TTS_LANGUAGE", 1)
+CAMB_TTS_LANGUAGE = (os.getenv("CAMB_TTS_LANGUAGE", "en-us").strip().lower() or "en-us")
+if CAMB_TTS_LANGUAGE.isdigit():
+    logger.warning("Numeric CAMB_TTS_LANGUAGE values are deprecated; using en-us")
+    CAMB_TTS_LANGUAGE = "en-us"
 CAMB_TTS_VOICE_ID = env_int("CAMB_TTS_VOICE_ID", 147320, min_value=1)
 
 rate_limit_events = defaultdict(deque)
@@ -2562,34 +2567,31 @@ def speech_to_text():
     if not api_key:
         return jsonify({"success": False, "message": "Groq API key not configured"}), 500
         
+    temp_path = None
     try:
-        from groq import Groq
-        import tempfile
-        import os
-        
         client = Groq(api_key=api_key)
-        
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
             audio_file.save(temp_audio.name)
             temp_path = temp_audio.name
-            
+
         with open(temp_path, "rb") as f:
             transcription = client.audio.transcriptions.create(
                 file=(audio_file.filename, f.read()),
                 model="whisper-large-v3-turbo",
                 response_format="verbose_json",
-                language="en"
+                language="en",
             )
-            
+
         os.remove(temp_path)
         return jsonify({"success": True, "text": transcription.text})
     except Exception as e:
-        logger.error(f"Groq Whisper STT error: {str(e)}")
-        try:
-            if 'temp_path' in locals() and os.path.exists(temp_path):
+        logger.error("Groq Whisper STT error: %s", e)
+        if temp_path:
+            try:
                 os.remove(temp_path)
-        except:
-            pass
+            except OSError:
+                pass
         return jsonify({"success": False, "message": "Failed to process audio"}), 500
 
 
@@ -2629,7 +2631,8 @@ def text_to_speech():
 
         api_key = os.environ.get("CAMB_API_KEY")
         if not api_key:
-            return jsonify({"success": False, "message": "CAMB AI API key not configured"}), 500
+            logger.error("CAMB AI API key not configured")
+            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 503
 
         url = "https://client.camb.ai/apis/tts-stream"
         headers = {
@@ -2646,13 +2649,25 @@ def text_to_speech():
 
         try:
             response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
-            if response.status_code == 200:
-                return Response(response.iter_content(chunk_size=1024), mimetype="audio/wav")
-            logger.error("CAMB AI error: %s", response.text)
-            return jsonify({"success": False, "message": "CAMB AI API error"}), 500
+            response_headers = getattr(response, "headers", {}) or {}
+            response_content_type = response_headers.get("Content-Type", "audio/wav")
+            audio_content_type = response_content_type.split(";", 1)[0].strip().lower()
+            if response.status_code == 200 and audio_content_type.startswith("audio/"):
+                return Response(response.iter_content(chunk_size=1024), mimetype=audio_content_type)
+
+            body_preview = response.text[:500]
+            logger.error(
+                "CAMB AI TTS error: status=%s content_type=%s provider=camb model=%s language=%s body=%s",
+                response.status_code,
+                response_content_type,
+                CAMB_TTS_MODEL,
+                CAMB_TTS_LANGUAGE,
+                body_preview,
+            )
+            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 502
         except Exception as e:
             logger.error("CAMB AI exception: %s", str(e))
-            return jsonify({"success": False, "message": "Internal server error"}), 500
+            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 502
 
     if provider != "elevenlabs":
         return jsonify({"success": False, "message": "Invalid TTS provider"}), 400
