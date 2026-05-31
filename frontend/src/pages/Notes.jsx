@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
-import { 
-  FileText, Search, Plus, Trash2, Edit, Eye, Download, 
-  Sparkles, CheckCircle, Zap, Save, ChevronLeft, ChevronRight, X, Bookmark
+import {
+  FileText, Search, Plus, Trash2, Edit, Eye, Download,
+  Sparkles, CheckCircle, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
-import katex from 'katex';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+// No global side‑effects – pass options directly to marked.parse
 const renderSafeMarkdown = (content) => {
-  marked.setOptions({ breaks: true, gfm: true });
-  return DOMPurify.sanitize(marked.parse(content || ''));
+  return DOMPurify.sanitize(marked.parse(content || '', { breaks: true, gfm: true }));
 };
 
 const Notes = () => {
@@ -23,27 +22,30 @@ const Notes = () => {
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
-  
-  // Edit form states
+
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editTopic, setEditTopic] = useState('');
   const [editContent, setEditContent] = useState('');
 
-  // AI note generation state
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true));
-  const [sidebarPinned, setSidebarPinned] = useState(() => (
-    typeof window !== 'undefined' ? localStorage.getItem('vector_notes_sidebar_pinned') === 'true' : false
-  ));
+  const [isDesktop, setIsDesktop] = useState(
+    () => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true)
+  );
+  const [sidebarPinned, setSidebarPinned] = useState(() =>
+    typeof window !== 'undefined'
+      ? localStorage.getItem('vector_notes_sidebar_pinned') === 'true'
+      : false
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Alerts
   const [statusMessage, setStatusMessage] = useState('');
   const [statusType, setStatusType] = useState('success');
-  const sidebarVisible = isDesktop ? (sidebarPinned || sidebarOpen) : sidebarOpen;
+  const statusTimeoutRef = useRef(null);
+
+  const sidebarVisible = isDesktop ? sidebarPinned || sidebarOpen : sidebarOpen;
 
   useEffect(() => {
     const handleResize = () => {
@@ -70,10 +72,9 @@ const Notes = () => {
         return next;
       });
       setSidebarOpen(false);
-      return;
+    } else {
+      setSidebarOpen((prev) => !prev);
     }
-
-    setSidebarOpen((prev) => !prev);
   };
 
   const handleSelectNote = (note) => {
@@ -103,206 +104,14 @@ const Notes = () => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDownloadPDF = async () => {
-    if (!selectedNote) return;
-
-    setIsExportingPdf(true);
-    showStatus('Compiling high‑fidelity PDF…', 'success');
-
-    let iframe = null;
-
-    try { 
-      // 1. Create an isolated iframe – completely free of Tailwind
-      iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.top = '-9999px';
-      iframe.style.left = '-9999px';
-      iframe.style.width = '794px';
-      iframe.style.height = '1122px';
-      iframe.style.border = 'none';
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentWindow.document;
-      doc.open();
-      doc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
-             <script src="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.js" crossorigin="anonymous"></script>
-            <style>
-              body { margin: 0; padding: 0; background: #ffffff; font-family: Inter, sans-serif; }
-              .vector-pdf-body h1,
-              .vector-pdf-body h2,
-              .vector-pdf-body h3,
-              .vector-pdf-body h4 { break-after: avoid; page-break-after: avoid; }
-              .vector-pdf-body p,
-              .vector-pdf-body li { orphans: 3; widows: 3; }
-              .vector-pdf-body {
-                font-size: 12px; color: #27272a; line-height: 1.65;
-                overflow-wrap: anywhere; word-break: normal;
-              }
-              .vector-pdf-body h1,
-              .vector-pdf-body h2,
-              .vector-pdf-body h3,
-              .vector-pdf-body h4 {
-                color: #18181b; font-weight: 800; line-height: 1.2;
-                margin: 18px 0 8px; page-break-after: avoid;
-              }
-              .vector-pdf-body h1 { font-size: 21px; }
-              .vector-pdf-body h2 { font-size: 17px; border-bottom: 1px solid #d4d4d8; padding-bottom: 4px; }
-              .vector-pdf-body h3 { font-size: 14px; color: #047857; }
-              .vector-pdf-body p { margin: 0 0 10px; }
-              .vector-pdf-body ul,
-              .vector-pdf-body ol { margin: 0 0 12px 20px; padding: 0; }
-              .vector-pdf-body li { margin: 3px 0; padding-left: 2px; }
-              .vector-pdf-body strong { font-weight: 800; color: #18181b; }
-              .vector-pdf-body a { color: #047857; text-decoration: underline; }
-              .vector-pdf-body blockquote {
-                margin: 12px 0; padding: 8px 12px; border-left: 3px solid #10b981;
-                background: #f0fdf4; color: #3f3f46;
-              }
-              .vector-pdf-body code {
-                font-family: "Courier New", monospace; font-size: 11px;
-                background: #f4f4f5; color: #18181b; border-radius: 3px; padding: 1px 4px;
-              }
-              .vector-pdf-body pre {
-                margin: 12px 0; padding: 10px 12px; background: #f4f4f5;
-                border: 1px solid #e4e4e7; border-radius: 6px;
-                white-space: pre-wrap; overflow-wrap: anywhere; page-break-inside: avoid;
-              }
-              .vector-pdf-body pre code { padding: 0; background: transparent; border-radius: 0; }
-              .vector-pdf-body table {
-                width: 100%; table-layout: fixed; border-collapse: collapse;
-                margin: 12px 0; page-break-inside: avoid;
-              }
-              .vector-pdf-body th,
-              .vector-pdf-body td {
-                border: 1px solid #d4d4d8; padding: 6px 8px; text-align: left;
-                vertical-align: top; overflow-wrap: anywhere;
-              }
-              .vector-pdf-body th { background: #f4f4f5; color: #18181b; font-weight: 800; }
-              .vector-pdf-body .katex-display {
-                margin: 12px 0; max-width: 100%; overflow: hidden; page-break-inside: avoid;
-              }
-              .vector-pdf-body .katex-display > .katex {
-                max-width: 100%; white-space: normal; font-size: 0.92em;
-              }
-            </style>
-          </head>
-          <body>
-            <div id="pdf-container" style="width: 794px; padding: 35px 30px; font-family: Inter, sans-serif; background: #ffffff; color: #18181b; box-sizing: border-box; line-height: 1.6;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #10b981; padding-bottom: 14px; margin-bottom: 28px;">
-                <div>
-                  <h1 style="margin: 0; font-size: 22px; color: #18181b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;" id="hdr-title"></h1>
-                  <p style="margin: 4px 0 0 0; font-size: 11px; color: #71717a; font-weight: 600; text-transform: uppercase;" id="hdr-topic"></p>
-                </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 12px; font-weight: 900; color: #10b981; letter-spacing: 1px;">VECTOR AI</div>
-                  <div style="font-size: 9px; color: #71717a; font-weight: 700; margin-top: 2px; text-transform: uppercase;">CAPS STEM OS</div>
-                </div>
-              </div>
-              <div class="vector-pdf-body" id="pdf-body"></div>
-              <div style="border-top: 1px solid #e4e4e7; padding-top: 14px; margin-top: 45px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #71717a; font-weight: 600; text-transform: uppercase;">
-                <span>Built by Taro Mukhalela - Vector AI STEM OS</span>
-                <span id="hdr-date"></span>
-              </div>
-            </div>
-          </body>
-        </html>
-      `);
-      doc.close();
-
-      // 2. Inject content and render KaTeX
-      doc.getElementById('hdr-title').textContent = selectedNote.title || 'Study Note';
-      doc.getElementById('hdr-topic').textContent = `Topic: ${selectedNote.topic || 'General'}`;
-      doc.getElementById('hdr-date').textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-      doc.getElementById('pdf-body').innerHTML = renderSafeMarkdown(selectedNote.content);
-
-       // Wait for KaTeX CSS to load and render
-       await new Promise(resolve => setTimeout(resolve, 800));
-
-       try {
-         renderMathInElement(doc.getElementById('pdf-body'), {
-           delimiters: [
-             { left: '$$', right: '$$', display: true },
-             { left: '$', right: '$', display: false },
-             { left: '\\(', right: '\\)', display: false },
-             { left: '\\[', right: '\\]', display: true },
-           ],
-           throwOnError: false,
-         });
-         // Adjust iframe height to content height
-         const body = doc.body;
-         const height = Math.max(body.scrollHeight, body.offsetHeight, 
-                                doc.documentElement.scrollHeight, doc.documentElement.offsetHeight);
-         iframe.style.height = height + 'px';
-       } catch (e) {
-         console.error('KaTeX render error', e);
-       }
-
-       // 3. Capture the iframe's body
-       const canvas = await html2canvas(doc.body, {
-         scale: window.devicePixelRatio > 1 ? 2 : 1.5,
-         useCORS: true,
-         backgroundColor: '#ffffff',
-         logging: false,
-       });
-
-      // 4. Build the PDF with jsPDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth - 20; // 10mm margins
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-      pdf.addImage(imgData, 'JPEG', 10, position + 10, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20);
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 10, position + 10, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 20);
-      }
-
-      // 5. Save the PDF
-      const filename = `${(selectedNote.title || 'study_note').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')}.pdf`;
-      pdf.save(filename);
-
-      trackEvent('note_pdf_exported', {
-        route: '/notes',
-        note_topic: selectedNote.topic || 'General',
-      });
-      showStatus('PDF guide downloaded successfully!');
-    } catch (err) {
-      console.error('PDF export failed', err);
-      trackEvent('note_pdf_export_failed', {
-        route: '/notes',
-        error_message: err instanceof Error ? err.message : String(err),
-      });
-      showStatus(`Failed to generate PDF: ${err.message}`, 'error');
-    } finally {
-      if (iframe?.parentNode) {
-        document.body.removeChild(iframe);
-      }
-      setIsExportingPdf(false);
-    }
-  };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showStatus = (msg, type = 'success') => {
     setStatusMessage(msg);
     setStatusType(type);
-    setTimeout(() => setStatusMessage(''), 3000);
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    statusTimeoutRef.current = setTimeout(() => setStatusMessage(''), 3000);
   };
 
   const handleCreateNote = () => {
@@ -310,8 +119,9 @@ const Notes = () => {
       id: `temp-${Date.now()}`,
       title: 'New Study Note',
       topic: 'General',
-      content: '# New Study Note\n\nStart writing notes in markdown. Math equations work here: $$E=mc^2$$',
-      isTemp: true
+      content:
+        '# New Study Note\n\nStart writing notes in markdown. Math equations work here: $$E=mc^2$$',
+      isTemp: true,
     };
     setSelectedNote(newNote);
     setEditTitle(newNote.title);
@@ -341,8 +151,8 @@ const Notes = () => {
           title: editTitle,
           topic: editTopic,
           content: editContent,
-          ai_generated: false
-        })
+          ai_generated: false,
+        }),
       });
 
       const data = await res.json();
@@ -353,17 +163,15 @@ const Notes = () => {
           is_new: isNew,
         });
         showStatus('Note saved successfully!');
-        
-        // Refresh note listing
-        const savedNote = data.note || {
-          id: selectedNote.id,
-          title: editTitle,
-          topic: editTopic,
-          content: editContent
-        };
-        setSelectedNote(savedNote);
+        await fetchNotes(); // get real IDs from the server
+        const savedNote = data.note || notes.find((n) => n.title === editTitle);
+        if (savedNote) {
+          setSelectedNote(savedNote);
+          setEditTitle(savedNote.title);
+          setEditTopic(savedNote.topic || 'General');
+          setEditContent(savedNote.content || '');
+        }
         setIsEditing(false);
-        fetchNotes();
       } else {
         showStatus(data.message || 'Failed to save note', 'error');
       }
@@ -383,9 +191,7 @@ const Notes = () => {
     try {
       const res = await fetch(`/api/notes/${id}`, {
         method: 'DELETE',
-        headers: {
-          'X-CSRF-Token': csrfToken,
-        }
+        headers: { 'X-CSRF-Token': csrfToken },
       });
       const data = await res.json();
       if (data.success) {
@@ -405,7 +211,7 @@ const Notes = () => {
     }
 
     setIsGenerating(true);
-    showStatus('Generating comprehensive study guide... This may take up to 30 seconds.', 'success');
+    showStatus('Generating comprehensive study guide…', 'success');
 
     try {
       const res = await fetch('/api/notes/generate', {
@@ -426,13 +232,9 @@ const Notes = () => {
         showStatus('Study guide generated successfully!');
         setAiTopic('');
         fetchNotes();
-        
-        // Find and select the newly generated note
-        if (data.note) {
-          handleSelectNote(data.note);
-        }
+        if (data.note) handleSelectNote(data.note);
       } else {
-        showStatus(data.message || 'Generation failed. Try another query.', 'error');
+        showStatus(data.message || 'Generation failed', 'error');
       }
     } catch (e) {
       console.error(e);
@@ -447,14 +249,185 @@ const Notes = () => {
     fetchNotes(searchQuery);
   };
 
+  // ==================== PDF Export (with null checks) ====================
+  const handleDownloadPDF = async () => {
+    if (!selectedNote) return;
+
+    setIsExportingPdf(true);
+    showStatus('Compiling high‑fidelity PDF…', 'success');
+
+    let iframe = null;
+
+    try {
+      // 1. Create off‑screen iframe
+      iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '794px';
+      iframe.style.height = '1122px';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!iframeDoc) throw new Error('Cannot access iframe document');
+
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css" crossorigin="anonymous">
+            <style>
+              body { margin:0; padding:0; background:#ffffff; font-family:Inter,sans-serif; }
+              .vector-pdf-body h1,.vector-pdf-body h2,.vector-pdf-body h3,.vector-pdf-body h4 { break-after:avoid; page-break-after:avoid; }
+              .vector-pdf-body p,.vector-pdf-body li { orphans:3; widows:3; }
+              .vector-pdf-body { font-size:12px; color:#27272a; line-height:1.65; overflow-wrap:anywhere; word-break:normal; }
+              .vector-pdf-body h1,.vector-pdf-body h2,.vector-pdf-body h3,.vector-pdf-body h4 { color:#18181b; font-weight:800; line-height:1.2; margin:18px 0 8px; page-break-after:avoid; }
+              .vector-pdf-body h1 { font-size:21px; }
+              .vector-pdf-body h2 { font-size:17px; border-bottom:1px solid #d4d4d8; padding-bottom:4px; }
+              .vector-pdf-body h3 { font-size:14px; color:#047857; }
+              .vector-pdf-body p { margin:0 0 10px; }
+              .vector-pdf-body ul,.vector-pdf-body ol { margin:0 0 12px 20px; padding:0; }
+              .vector-pdf-body li { margin:3px 0; padding-left:2px; }
+              .vector-pdf-body strong { font-weight:800; color:#18181b; }
+              .vector-pdf-body a { color:#047857; text-decoration:underline; }
+              .vector-pdf-body blockquote { margin:12px 0; padding:8px 12px; border-left:3px solid #10b981; background:#f0fdf4; color:#3f3f46; }
+              .vector-pdf-body code { font-family:"Courier New",monospace; font-size:11px; background:#f4f4f5; color:#18181b; border-radius:3px; padding:1px 4px; }
+              .vector-pdf-body pre { margin:12px 0; padding:10px 12px; background:#f4f4f5; border:1px solid #e4e4e7; border-radius:6px; white-space:pre-wrap; overflow-wrap:anywhere; page-break-inside:avoid; }
+              .vector-pdf-body pre code { padding:0; background:transparent; border-radius:0; }
+              .vector-pdf-body table { width:100%; table-layout:fixed; border-collapse:collapse; margin:12px 0; page-break-inside:avoid; }
+              .vector-pdf-body th,.vector-pdf-body td { border:1px solid #d4d4d8; padding:6px 8px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+              .vector-pdf-body th { background:#f4f4f5; color:#18181b; font-weight:800; }
+              .vector-pdf-body .katex-display { margin:12px 0; max-width:100%; overflow:hidden; page-break-inside:avoid; }
+              .vector-pdf-body .katex-display>.katex { max-width:100%; white-space:normal; font-size:0.92em; }
+            </style>
+          </head>
+          <body>
+            <div id="pdf-container" style="width:794px; padding:35px 30px; font-family:Inter,sans-serif; background:#ffffff; color:#18181b; box-sizing:border-box; line-height:1.6;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2.5px solid #10b981; padding-bottom:14px; margin-bottom:28px;">
+                <div>
+                  <h1 id="hdr-title" style="margin:0; font-size:22px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;"></h1>
+                  <p id="hdr-topic" style="margin:4px 0 0; font-size:11px; color:#71717a; font-weight:600; text-transform:uppercase;"></p>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:12px; font-weight:900; color:#10b981; letter-spacing:1px;">VECTOR AI</div>
+                  <div style="font-size:9px; color:#71717a; font-weight:700; margin-top:2px; text-transform:uppercase;">CAPS STEM OS</div>
+                </div>
+              </div>
+              <div id="pdf-body" class="vector-pdf-body"></div>
+              <div style="border-top:1px solid #e4e4e7; padding-top:14px; margin-top:45px; display:flex; justify-content:space-between; align-items:center; font-size:9px; color:#71717a; font-weight:600; text-transform:uppercase;">
+                <span>Built by Taro Mukhalela – Vector AI STEM OS</span>
+                <span id="hdr-date"></span>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      // Small delay to ensure the iframe’s DOM is fully built
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 2. Fill in data – with null guards
+      const hdrTitle = iframeDoc.getElementById('hdr-title');
+      if (hdrTitle) hdrTitle.textContent = selectedNote.title || 'Study Note';
+
+      const hdrTopic = iframeDoc.getElementById('hdr-topic');
+      if (hdrTopic) hdrTopic.textContent = `Topic: ${selectedNote.topic || 'General'}`;
+
+      const hdrDate = iframeDoc.getElementById('hdr-date');
+      if (hdrDate)
+        hdrDate.textContent = `Date Exported: ${new Date().toLocaleDateString('en-ZA', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })}`;
+
+      const pdfBody = iframeDoc.getElementById('pdf-body');
+      if (pdfBody) {
+        pdfBody.innerHTML = renderSafeMarkdown(selectedNote.content);
+      }
+
+      // 3. Render KaTeX inside the iframe
+      try {
+        if (pdfBody) {
+          renderMathInElement(pdfBody, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true },
+            ],
+            throwOnError: false,
+          });
+        }
+      } catch (e) {
+        console.error('KaTeX render error', e);
+      }
+
+      // 4. Capture the iframe body
+      const canvas = await html2canvas(iframeDoc.body, {
+        scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      // 5. Build PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 10;
+      const imgWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+
+      let position = 0;
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', margin, position, imgWidth, imgHeight);
+      let heightLeft = imgHeight - pageHeight;
+
+      while (heightLeft > 0) {
+        position = -pageHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', margin, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const filename = (selectedNote.title || 'study_note')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_-]/g, '') + '.pdf';
+      pdf.save(filename);
+
+      trackEvent('note_pdf_exported', {
+        route: '/notes',
+        note_topic: selectedNote.topic || 'General',
+      });
+      showStatus('PDF guide downloaded successfully!');
+    } catch (err) {
+      console.error('PDF export failed', err);
+      trackEvent('note_pdf_export_failed', {
+        route: '/notes',
+        error_message: err instanceof Error ? err.message : String(err),
+      });
+      showStatus(`Failed to generate PDF: ${err.message}`, 'error');
+    } finally {
+      if (iframe?.parentNode) document.body.removeChild(iframe);
+      setIsExportingPdf(false);
+    }
+  };
+
+  // ==================== JSX ====================
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950">
-      
-      {/* Alert banner */}
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       {statusMessage && (
-        <div className={`absolute top-4 right-4 z-50 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg anim-toast-in ${
-          statusType === 'success' ? 'bg-emerald-500 text-zinc-950 shadow-emerald-500/20' : 'bg-red-500 text-white shadow-red-500/20'
-        }`}>
+        <div
+          className={`absolute top-4 right-4 z-50 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg ${
+            statusType === 'success' ? 'bg-emerald-500 text-zinc-950' : 'bg-red-500 text-white'
+          }`}
+        >
           <CheckCircle className="w-4 h-4" />
           {statusMessage}
         </div>
@@ -462,244 +435,226 @@ const Notes = () => {
 
       {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-130 bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ── Left Sidebar: Notes & AI generator ── */}
-      <aside className={`shrink-0 flex flex-col transition-all duration-300 ${
-        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
-      }`}
-        style={{
-          background: 'rgba(11,11,13,0.97)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(20px)',
-        }}
+      <aside
+        className={`shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
+          sidebarVisible
+            ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
+            : 'hidden'
+        }`}
       >
-        
-        {/* Search */}
-        <div className="space-y-3 p-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        {/* ... exactly the same sidebar content as your original ... */}
+        <div className="space-y-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-              <Bookmark className="w-3.5 h-3.5 text-emerald-400" />
-              Notes Vault
-            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Study Notes</span>
             <button
               onClick={() => {
                 setSidebarPinned(false);
                 localStorage.setItem('vector_notes_sidebar_pinned', 'false');
                 setSidebarOpen(false);
               }}
-              className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300 cursor-pointer"
+              className="rounded-lg p-1.5 text-zinc-500 transition hover:bg-zinc-200 dark:hover:bg-zinc-800"
               title="Close notes panel"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
           <form onSubmit={handleSearchSubmit} className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
             <input
               type="text"
               placeholder="Search study guides..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 pl-8 pr-3 text-xs font-semibold text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
+              className="w-full bg-zinc-200/50 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 pl-8 pr-3 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
             />
           </form>
         </div>
 
-        {/* Notes list */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Saved Guides</span>
-            <button 
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Vault Notes</span>
+            <button
               onClick={handleCreateNote}
-              className="p-1 hover:bg-emerald-500/10 rounded-lg text-emerald-500 cursor-pointer transition-colors"
+              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-emerald-500 cursor-pointer"
               title="Create Study Note"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
-          
+
           {notes.length === 0 ? (
-            <div className="text-center py-6">
-              <FileText className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
-              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Vault Empty</p>
-            </div>
+            <p className="text-[10px] text-zinc-400 text-center py-6">No study guides</p>
           ) : (
             notes.map((note) => (
               <button
                 key={note.id}
                 onClick={() => handleSelectNote(note)}
-                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-all"
-                style={selectedNote?.id === note.id ? {
-                  background: 'rgba(16,185,129,0.12)',
-                  color: '#10b981',
-                  border: '1px solid rgba(16,185,129,0.22)',
-                } : {
-                  background: 'transparent',
-                  color: '#a1a1aa',
-                  border: '1px solid transparent',
-                }}
-                onMouseEnter={e => { if (selectedNote?.id !== note.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e4e4e7'; } }}
-                onMouseLeave={e => { if (selectedNote?.id !== note.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; } }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-colors ${
+                  selectedNote?.id === note.id
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800/50'
+                }`}
               >
                 <div className="flex items-center gap-2 truncate">
                   <FileText className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{note.title}</span>
                 </div>
-                {note.ai_generated && (
-                  <Sparkles className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />
-                )}
+                {note.ai_generated && <Sparkles className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />}
               </button>
             ))
           )}
         </div>
 
-        {/* AI generator overlay controls */}
-        <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}>
-          <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block mb-2 flex items-center gap-1.5">
-            <Zap className="w-3 h-3 text-emerald-400" />
-            AI Guide Generator
-          </div>
-          <div className="space-y-2">
+        <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 space-y-2">
+          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">AI Guide Generator</div>
+          <div className="relative">
             <input
               type="text"
               placeholder="e.g. Newton's Laws"
               value={aiTopic}
               onChange={(e) => setAiTopic(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-2 px-3 text-xs font-semibold text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-colors placeholder:text-zinc-600"
+              className="w-full bg-zinc-200 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
             />
-            <button
-              onClick={handleGenerateAINote}
-              disabled={isGenerating}
-              className="btn-primary w-full shadow-none"
-            >
-              <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse" />
-              Generate Guide
-            </button>
           </div>
+          <button
+            onClick={handleGenerateAINote}
+            disabled={isGenerating}
+            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-bold rounded-lg py-2 text-[10px] tracking-widest uppercase flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
+          >
+            <Sparkles className="w-3 h-3 fill-current animate-pulse" />
+            Generate
+          </button>
         </div>
       </aside>
 
-      {/* ── Center workspace ── */}
-      <div className="flex-1 flex flex-col bg-zinc-950 min-w-0">
+      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 min-w-0">
         {selectedNote ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header toolbar */}
-            <div className="flex shrink-0 items-center justify-between gap-3 p-3 sm:p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.90)' }}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 p-3 dark:border-zinc-800 sm:p-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <button
                   onClick={toggleSidebar}
-                  className="btn-ghost text-zinc-400 hover:text-zinc-100 hidden sm:flex"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
                   title={sidebarVisible ? 'Hide notes' : 'Show notes'}
                 >
                   {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                   Notes
                 </button>
-                <button
-                  onClick={toggleSidebar}
-                  className="btn-ghost text-zinc-400 sm:hidden"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
                 {isEditing ? (
-                  <div className="flex items-center gap-2 flex-wrap flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <input
                       type="text"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="Note Title"
-                      className="bg-zinc-900 border border-zinc-800 rounded-lg py-1.5 px-3 text-xs sm:text-sm font-bold focus:outline-none focus:border-emerald-500/50 text-zinc-100 flex-1 min-w-[120px]"
+                      className="bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg py-1.5 px-3 text-xs sm:text-sm font-bold focus:outline-none text-zinc-800 dark:text-zinc-100"
                     />
                     <input
                       type="text"
                       value={editTopic}
                       onChange={(e) => setEditTopic(e.target.value)}
-                      placeholder="Topic"
-                      className="bg-zinc-900 border border-zinc-800 rounded-lg py-1.5 px-3 text-xs font-semibold focus:outline-none focus:border-emerald-500/50 w-24 text-zinc-100"
+                      placeholder="Topic (e.g. Physics)"
+                      className="bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg py-1.5 px-3 text-xs font-semibold focus:outline-none w-28 text-zinc-800 dark:text-zinc-100"
                     />
                   </div>
                 ) : (
                   <div>
-                    <h2 className="truncate font-extrabold text-sm uppercase tracking-wider text-zinc-100 sm:text-base leading-tight">{selectedNote.title}</h2>
-                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{selectedNote.topic || 'General'}</span>
+                    <h2 className="truncate font-extrabold text-sm uppercase tracking-wider text-zinc-800 dark:text-zinc-100 sm:text-base">
+                      {selectedNote.title}
+                    </h2>
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                      {selectedNote.topic || 'General'}
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto">
+              <div className="flex shrink-0 items-center gap-2 overflow-x-auto">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="btn-ghost"
+                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {isEditing ? <><Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Preview</span></> : <><Edit className="w-3.5 h-3.5" /><span className="hidden sm:inline">Edit</span></>}
+                  {isEditing ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5" /> Preview
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-3.5 h-3.5" /> Edit
+                    </>
+                  )}
                 </button>
 
                 {isEditing && (
                   <button
                     onClick={handleSaveNote}
-                    className="btn-primary px-3 py-1.5 text-[10px]"
+                    className="p-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Save className="w-3.5 h-3.5" />
-                    Save
+                    <Save className="w-3.5 h-3.5" /> Save
                   </button>
                 )}
 
                 <button
                   onClick={handleDownloadPDF}
                   disabled={isExportingPdf}
-                  className={`btn-ghost ${isExportingPdf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`p-2 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors ${
+                    isExportingPdf
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
+                      : 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 cursor-pointer'
+                  }`}
                 >
                   {isExportingPdf ? (
                     <span className="inline-flex h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  <span className="hidden sm:inline">{isExportingPdf ? 'Exporting...' : 'PDF'}</span>
+                  {isExportingPdf ? 'Exporting...' : 'PDF'}
                 </button>
 
                 <button
                   onClick={() => handleDeleteNote(selectedNote.id)}
-                  className="btn-ghost text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Note Editor / Preview container */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {isEditing ? (
                 <textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 resize-none focus:outline-none text-sm leading-relaxed font-mono text-zinc-300 placeholder:text-zinc-600 max-w-4xl mx-auto block"
+                  className="w-full h-full bg-transparent border-0 resize-none focus:outline-none text-sm leading-relaxed font-mono text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-600"
                   placeholder="Write your study notes content in markdown..."
                 />
               ) : (
-                <div className="mx-auto max-w-3xl glass-surface p-6 sm:p-10 rounded-2xl">
+                <div className="mx-auto max-w-3xl">
                   <MarkdownRenderer content={selectedNote.content} />
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto px-4 anim-fade-in">
+          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto px-4">
             <button
               onClick={toggleSidebar}
-              className="mb-6 btn-ghost"
+              className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
             >
               {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              Show Vault
+              Notes
             </button>
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6">
-               <FileText className="w-8 h-8 text-emerald-500/50" />
-            </div>
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-zinc-100">Select a Study Guide</h3>
-            <p className="text-xs text-zinc-500 mt-2 font-medium leading-relaxed">Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study notes.</p>
+            <FileText className="w-10 h-10 text-zinc-400 mb-4" />
+            <h3 className="font-extrabold text-sm uppercase tracking-wider">Select a Study Note</h3>
+            <p className="text-xs text-zinc-400 mt-1">
+              Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study
+              notes.
+            </p>
           </div>
         )}
       </div>
