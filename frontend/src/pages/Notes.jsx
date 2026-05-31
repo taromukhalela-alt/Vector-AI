@@ -303,11 +303,11 @@ const Notes = () => {
       
       const dateStr = new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
       
-      contentDiv.innerHTML = \`
+      contentDiv.innerHTML = `
         <div class="pdf-header">
           <div class="pdf-header-left">
-            <h1>\${selectedNote.title || 'Study Note'}</h1>
-            <p>Topic: \${selectedNote.topic || 'General'}</p>
+            <h1>${selectedNote.title || 'Study Note'}</h1>
+            <p>Topic: ${selectedNote.topic || 'General'}</p>
           </div>
           <div class="pdf-header-right">
             <div class="pdf-header-brand">Vector AI</div>
@@ -315,13 +315,13 @@ const Notes = () => {
           </div>
         </div>
         <div id="pdf-body-content">
-          \${renderSafeMarkdown(selectedNote.content)}
+          ${renderSafeMarkdown(selectedNote.content)}
         </div>
         <div class="pdf-footer">
           <span>Built by Taro Mukhalela • Vector AI STEM OS</span>
-          <span>Date Exported: \${dateStr}</span>
+          <span>Date Exported: ${dateStr}</span>
         </div>
-      \`;
+      `;
       container.appendChild(contentDiv);
 
       const pdfBody = container.querySelector('#pdf-body-content');
@@ -374,7 +374,7 @@ const Notes = () => {
         route: '/notes',
         error_message: err instanceof Error ? err.message : String(err),
       });
-      showStatus(\`Failed to generate PDF: \${err.message}\`, 'error');
+      showStatus(`Failed to generate PDF: ${err.message}`, 'error');
     } finally {
       setIsExportingPdf(false);
     }
