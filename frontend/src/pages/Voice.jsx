@@ -16,6 +16,9 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
 
   const isSpeakingRef = useRef(false);
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const interimTranscriptRef = useRef('');
   const audioRef = useRef(null);
   const synthUtteranceRef = useRef(null);
   const ampIntervalRef = useRef(null);
@@ -34,7 +37,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const cambVoiceId = localStorage.getItem('preferred_camb_voice') || '147320';
   const browserVoiceURI = localStorage.getItem('preferred_browser_voice') || '';
 
-  // Setup Web Speech Recognition
+  // Setup Web Speech Recognition for interim fallback
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -48,10 +51,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     rec.lang = 'en-ZA';
 
     rec.onstart = () => {
-      setIsListening(true);
-      setAvatarState('listening');
-      setStatus('Listening...');
-      setYouTranscript('...');
+      interimTranscriptRef.current = '';
     };
 
     rec.onresult = (event) => {
@@ -65,26 +65,21 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           interim += text;
         }
       }
-      if (interim) setYouTranscript(interim + '...');
-      if (final) {
-        setYouTranscript(final.trim());
-        // eslint-disable-next-line react-hooks/immutability
-        handleSpeechInput(final.trim());
+      const combined = (final + ' ' + interim).trim();
+      if (combined) {
+        interimTranscriptRef.current = combined;
+        setYouTranscript(combined + '...');
       }
     };
 
     rec.onend = () => {
-      setIsListening(false);
-      if (!isSpeakingRef.current) {
-        setAvatarState('idle');
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
       }
     };
 
     rec.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
-      setIsListening(false);
-      setAvatarState('idle');
-      setStatus('Tap to speak');
       if (event.error === 'not-allowed') {
         setMicError(true);
       }
@@ -93,11 +88,45 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
     recognitionRef.current = rec;
 
     return () => {
-      // eslint-disable-next-line react-hooks/immutability
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       stopAllVoiceState();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const processWhisperSTT = async (audioBlob) => {
+    setStatus('Transcribing...');
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      
+      const res = await fetch('/api/stt', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (data.success && data.text) {
+        setYouTranscript(data.text);
+        handleSpeechInput(data.text);
+        return;
+      }
+    } catch (e) {
+      console.error('Whisper STT error', e);
+    }
+    
+    // Fallback to browser
+    const fallbackText = interimTranscriptRef.current;
+    if (fallbackText) {
+      console.warn('Falling back to browser STT text');
+      setYouTranscript(fallbackText);
+      handleSpeechInput(fallbackText);
+    } else {
+      setStatus('Could not hear anything');
+      setAvatarState('idle');
+    }
+  };
 
   const setupAudioAnalyser = async () => {
     if (audioContextRef.current) return;
@@ -129,6 +158,9 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   const stopAllVoiceState = () => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch { /* noop */ }
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
     }
     stopSpeaking();
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
@@ -298,6 +330,8 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
           stopAmplitudeTracking();
           setStatus('Tap to speak');
           URL.revokeObjectURL(url);
+          console.error('Audio playback error (Cloud TTS format unsupported or corrupted)');
+          speakWithBrowser(cleanText, sessionId);
         };
 
         await aud.play();
@@ -388,20 +422,50 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
       return;
     }
 
-    if (recognitionRef.current) {
-      setMicError(false);
-      try {
-        await setupAudioAnalyser();
-        recognitionRef.current.start();
-      } catch {
-        setMicError(true);
-        setStatus('Microphone unavailable');
+    setMicError(false);
+    try {
+      await setupAudioAnalyser();
+      
+      if (audioContextRef.current?.stream) {
+        audioChunksRef.current = [];
+        const mr = new MediaRecorder(audioContextRef.current.stream);
+        mr.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        mr.onstop = async () => {
+          setIsListening(false);
+          if (!isSpeakingRef.current) setAvatarState('idle');
+          
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          if (audioBlob.size > 0) {
+            await processWhisperSTT(audioBlob);
+          } else {
+            setStatus('No audio recorded');
+            setAvatarState('idle');
+          }
+        };
+        mediaRecorderRef.current = mr;
+        mr.start();
       }
-    } else {
-      alert('Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
+
+      if (recognitionRef.current) {
+        interimTranscriptRef.current = '';
+        recognitionRef.current.start();
+      }
+      
+      setIsListening(true);
+      setAvatarState('listening');
+      setStatus('Listening...');
+      setYouTranscript('...');
+    } catch {
+      setMicError(true);
+      setStatus('Microphone unavailable');
     }
   };
 

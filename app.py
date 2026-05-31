@@ -171,7 +171,7 @@ else:
 openrouter_key = os.getenv("OPENROUTER_API_KEY")
 if openrouter_key:
     logger.info("OpenRouter API key loaded (length: %d)", len(openrouter_key))
-    chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "inclusionai/ring-2.6-1t")
+    chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct")
     logger.info("OpenRouter chat model: %s", chat_model)
 else:
     logger.warning("OpenRouter API key NOT found. Set OPENROUTER_API_KEY environment variable.")
@@ -208,7 +208,7 @@ RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
 CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-8.1-flash-beta")
-CAMB_TTS_LANGUAGE = os.getenv("CAMB_TTS_LANGUAGE", "en-us")
+CAMB_TTS_LANGUAGE = env_int("CAMB_TTS_LANGUAGE", 1)
 CAMB_TTS_VOICE_ID = env_int("CAMB_TTS_VOICE_ID", 147320, min_value=1)
 
 rate_limit_events = defaultdict(deque)
@@ -1221,7 +1221,7 @@ def generate_response(
     api_key = os.getenv("OPENROUTER_API_KEY")
     if api_key:
         try:
-            chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "inclusionai/ring-2.6-1t")
+            chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct")
             timeout_seconds = env_float("OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0)
 
             # Build messages array with system prompt and history
@@ -2545,6 +2545,52 @@ Note:
         if question and answer:
             clean_cards.append({"question": question, "answer": answer})
     return jsonify({"success": True, "flashcards": clean_cards or fallback["flashcards"]})
+
+
+@app.route("/api/stt", methods=["POST"])
+@login_required
+def speech_to_text():
+    """Process Speech-to-Text using Groq Whisper API."""
+    if "audio" not in request.files:
+        return jsonify({"success": False, "message": "No audio file provided"}), 400
+        
+    audio_file = request.files["audio"]
+    if audio_file.filename == "":
+        return jsonify({"success": False, "message": "No selected file"}), 400
+
+    api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
+    if not api_key:
+        return jsonify({"success": False, "message": "Groq API key not configured"}), 500
+        
+    try:
+        from groq import Groq
+        import tempfile
+        import os
+        
+        client = Groq(api_key=api_key)
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
+            audio_file.save(temp_audio.name)
+            temp_path = temp_audio.name
+            
+        with open(temp_path, "rb") as f:
+            transcription = client.audio.transcriptions.create(
+                file=(audio_file.filename, f.read()),
+                model="whisper-large-v3-turbo",
+                response_format="verbose_json",
+                language="en"
+            )
+            
+        os.remove(temp_path)
+        return jsonify({"success": True, "text": transcription.text})
+    except Exception as e:
+        logger.error(f"Groq Whisper STT error: {str(e)}")
+        try:
+            if 'temp_path' in locals() and os.path.exists(temp_path):
+                os.remove(temp_path)
+        except:
+            pass
+        return jsonify({"success": False, "message": "Failed to process audio"}), 500
 
 
 @app.route("/api/tts", methods=["POST"])

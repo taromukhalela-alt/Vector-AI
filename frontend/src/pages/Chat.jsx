@@ -4,7 +4,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import {
   Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, CheckCircle, X, Atom, Sparkles
+  ChevronLeft, ChevronRight, Bookmark, CheckCircle, X, Atom, Sparkles, Mic, MicOff, Loader2
 } from 'lucide-react';
 
 const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
@@ -41,6 +41,13 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [voiceId, setVoiceId] = useState('');
   const [browserVoices, setBrowserVoices] = useState([]);
   const [saveSuccess, setSaveSuccess] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
+  const interimTranscriptRef = useRef('');
 
   const messagesEndRef = useRef(null);
   const consumedPromptRef = useRef('');
@@ -159,6 +166,105 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const data = await res.json();
       if (data.success) { setCurrentSessionId(chatId); setMessages(data.history || []); }
     } catch (e) { console.error(e); }
+  };
+
+  const stopDictation = () => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* noop */ }
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
+    }
+    setIsRecording(false);
+  };
+
+  const toggleDictation = async () => {
+    if (isRecording) {
+      stopDictation();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        setIsRecording(false);
+        setIsProcessingAudio(true);
+        stream.getTracks().forEach(t => t.stop());
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        let whisperSuccess = false;
+        if (audioBlob.size > 0) {
+          try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'chat_dictation.webm');
+            const res = await fetch('/api/stt', {
+              method: 'POST',
+              headers: { 'X-CSRF-Token': csrfToken },
+              body: formData
+            });
+            const data = await res.json();
+            if (data.success && data.text) {
+              setInputValue(prev => {
+                const newText = prev + (prev ? ' ' : '') + data.text;
+                return newText;
+              });
+              whisperSuccess = true;
+            }
+          } catch (e) {
+            console.error('STT error', e);
+          }
+        }
+        
+        // Fallback to browser STT if Whisper failed
+        if (!whisperSuccess && interimTranscriptRef.current) {
+          setInputValue(prev => {
+            const newText = prev + (prev ? ' ' : '') + interimTranscriptRef.current;
+            return newText;
+          });
+        }
+        setIsProcessingAudio(false);
+      };
+      
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setIsRecording(true);
+
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const rec = new SR();
+        rec.continuous = false;
+        rec.interimResults = true;
+        rec.lang = 'en-ZA';
+        
+        rec.onstart = () => { interimTranscriptRef.current = ''; };
+        rec.onresult = (e) => {
+          let interim = '';
+          let final = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) final += e.results[i][0].transcript;
+            else interim += e.results[i][0].transcript;
+          }
+          interimTranscriptRef.current = (final + ' ' + interim).trim();
+        };
+        rec.onend = () => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+        };
+        
+        recognitionRef.current = rec;
+        rec.start();
+      }
+
+    } catch (e) {
+      console.error('Microphone error', e);
+      alert('Could not access microphone.');
+    }
   };
 
   const handleSendMessage = async (text) => {
@@ -519,6 +625,20 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.35)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.06)'; }}
               onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none'; }}
             />
+            <button
+              id="dictate-btn"
+              onClick={toggleDictation}
+              disabled={isProcessingAudio}
+              className={`p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 ${
+                isRecording ? 'bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse' : 'bg-zinc-800/50 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800'
+              }`}
+              style={{
+                border: !isRecording ? '1px solid rgba(255,255,255,0.09)' : undefined
+              }}
+              title="Dictate with Whisper"
+            >
+              {isProcessingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
             <button
               id="send-btn"
               onClick={() => handleSendMessage()}
