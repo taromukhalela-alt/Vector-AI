@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en" class="dark">
   <head>
-    <meta name="google-site-verification" content="dmkXwFpybgD67e_1H3uRuSmGVNgJ4i8k6l6Si1ex1KY" />
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-192.svg" />
@@ -12,40 +11,78 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Vector AI" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="Vector AI is a CAPS-aligned STEM learning platform for South African Physical Sciences, Chemistry, study notes, voice tutoring, and simulations." />
-    <meta name="robots" content="index, follow" />
+
+    <!-- Primary SEO tags – refined with high-value keywords -->
+    <title>Vector AI – CAPS Physical Sciences & Chemistry AI Tutor | Grades 10–12 South Africa</title>
+    <meta name="description" content="Master CAPS Physical Sciences and Chemistry with Vector AI. AI-powered study notes, voice tutoring, and interactive simulations for South African learners in Grades 10, 11, and 12. Aligned to the CAPS curriculum." />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="google-site-verification" content="dmkXwFpybgD67e_1H3uRuSmGVNgJ4i8k6l6Si1ex1KY" />
     <link rel="canonical" href="https://vector-ai.co.za" />
+
+    <!-- Open Graph – mirrors the improved title/description -->
     <meta property="og:site_name" content="Vector AI" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Vector AI - CAPS Physical Science AI Tutor" />
-    <meta property="og:description" content="CAPS-aligned AI tutoring, study notes, voice learning, and visual physics simulations for South African Physical Sciences and Chemistry." />
+    <meta property="og:title" content="Vector AI – CAPS Physical Sciences & Chemistry AI Tutor | Grades 10–12" />
+    <meta property="og:description" content="CAPS-aligned AI tutoring, study notes, voice learning, and visual physics simulations for South African Physical Sciences and Chemistry. Built for Grades 10, 11 & 12." />
     <meta property="og:url" content="https://vector-ai.co.za" />
     <meta property="og:image" content="https://vector-ai.co.za/icon-512.svg" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Vector AI - CAPS Physical Science AI Tutor" />
+    <meta name="twitter:title" content="Vector AI – CAPS Physical Sciences & Chemistry AI Tutor | Grades 10–12" />
     <meta name="twitter:description" content="CAPS-aligned AI tutoring, study notes, voice learning, and visual physics simulations for South African Physical Sciences and Chemistry." />
     <meta name="twitter:image" content="https://vector-ai.co.za/icon-512.svg" />
-    <title>Vector AI - CAPS Physical Science AI Tutor</title>
-    
-    <!-- Google Fonts -->
+
+    <!-- Structured Data (JSON-LD) for Organization & Website -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "Vector AI",
+            "url": "https://vector-ai.co.za",
+            "logo": "https://vector-ai.co.za/icon-512.svg",
+            "description": "CAPS-aligned AI tutoring platform for South African Physical Sciences and Chemistry, covering Grades 10–12.",
+            "sameAs": [],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer support",
+              "availableLanguage": ["English"]
+            }
+          },
+          {
+            "@type": "WebSite",
+            "name": "Vector AI",
+            "url": "https://vector-ai.co.za",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://vector-ai.co.za/search?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
+      }
+    </script>
+
+    <!-- Google Fonts (preconnect kept) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SKRLQ4J4RD"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-SKRLQ4J4RD', { send_page_view: false });
-    </script>
-    <!-- Google tag (gtag.js) -->
+    <!-- Unified Google Analytics (GA4) – merged two tags, removed duplicate -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-3GVHPPD2PW"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
+      // Track both measurement IDs; the first one disables automatic page views if needed
+      gtag('config', 'G-SKRLQ4J4RD', { send_page_view: false });
       gtag('config', 'G-3GVHPPD2PW');
     </script>
   </head>
