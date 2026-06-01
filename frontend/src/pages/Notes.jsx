@@ -15,8 +15,6 @@ import jsPDF from 'jspdf';
 
 // No global side‑effects – pass options directly to marked.parse
 
-import { marked } from 'marked';
-
 const renderSafeMarkdown = (content) => {
   return DOMPurify.sanitize(
     marked.parse(content || '', {
