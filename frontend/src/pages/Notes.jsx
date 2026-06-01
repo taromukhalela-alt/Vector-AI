@@ -14,8 +14,20 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 // No global side‑effects – pass options directly to marked.parse
+
+import { marked } from 'marked';
+
 const renderSafeMarkdown = (content) => {
-  return DOMPurify.sanitize(marked.parse(content || '', { breaks: true, gfm: true }));
+  return DOMPurify.sanitize(
+    marked.parse(content || '', {
+      breaks: true,
+      gfm: true,
+    }),
+    {
+      ADD_TAGS: ['math', 'semantics', 'annotation'],
+      ADD_ATTR: ['xmlns'],
+    }
+  );
 };
 
 const Notes = () => {
@@ -359,9 +371,8 @@ const Notes = () => {
           renderMathInElement(pdfBody, {
             delimiters: [
               { left: '$$', right: '$$', display: true },
-              { left: '$', right: '$', display: false },
-              { left: '\\\\(', right: '\\\\)', display: false },
-              { left: '\\\\[', right: '\\\\]', display: true },
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true },
             ],
             throwOnError: false,
           });
