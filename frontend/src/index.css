@@ -499,3 +499,79 @@ code, pre, .font-mono {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Print styles ─── */
+@media print {
+  /* 1. Hide everything not meant for print */
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  /* 2. Clean up body */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* 3. Add Vector AI header branding */
+  @page {
+    margin: 50px;
+  }
+
+  body::before {
+    content: "Vector AI";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10pt;
+    font-weight: bold;
+    color: #10b981;
+    padding: 10px;
+    border-bottom: 2px solid #10b981;
+    background: white;
+  }
+
+  /* 4. Add Vector AI footer branding */
+  body::after {
+    content: "Built by Taro Mukhalela • Vector AI STEM OS";
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #666;
+    padding: 10px;
+    border-top: 1px solid #e5e5e5;
+    background: white;
+  }
+
+  /* 5. The note container becomes the full page */
+  #print-note-root {
+    display: block;
+    max-width: 100%;
+    padding: 70px 30px 60px 30px;
+    margin: 0 auto;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* 6. Prevent page breaks inside important elements */
+  h1, h2, h3, h4,
+  .katex-display,
+  pre,
+  table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
