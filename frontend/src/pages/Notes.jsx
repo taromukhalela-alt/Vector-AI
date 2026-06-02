@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import html2pdf from 'html2pdf.js';
 
 // No global side‑effects – pass options directly to marked.parse
 
@@ -39,6 +40,7 @@ const Notes = () => {
 
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isDesktop, setIsDesktop] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true)
   );
@@ -256,39 +258,188 @@ const Notes = () => {
     fetchNotes(searchQuery);
   };
 
-  // ==================== PDF Export (native browser print) ====================
-  const handleDownloadPDF = async () => {
+  // ==================== PDF Export (html2pdf.js) ====================
+  const handleDownloadPDF = useCallback(async () => {
     if (!selectedNote) return;
 
-    // Force KaTeX to re-render (safety net)
-    const printRoot = document.getElementById('print-note-root');
-    if (printRoot && window.renderMathInElement) {
-      renderMathInElement(printRoot, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false },
-        ],
-        throwOnError: false,
-        strict: false,
-      });
+    const element = document.getElementById('print-note-root');
+    if (!element) {
+      console.error('Print root element not found');
+      showStatus('Could not find note content to export', 'error');
+      return;
     }
 
-    // Wait for ALL fonts to load (KaTeX fonts are critical)
-    await document.fonts.ready;
+    setIsExporting(true);
 
-    // Double RAF to ensure layout is painted
-    await new Promise(resolve => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
+    const options = {
+      margin: [12, 15, 12, 15], // top, right, bottom, left (mm)
+      filename: `${selectedNote.title || 'study_note'}.pdf`,
+      image: { type: 'jpeg', quality: 1.0 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // Force all elements to light color scheme (kills OKLCH issues)
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('*').forEach((el) => {
+            el.style.setProperty('color-scheme', 'light', 'important');
+          });
+
+          // Inject custom print styles directly into the clone
+          const style = clonedDoc.createElement('style');
+          style.textContent = `
+            /* Typography */
+            #print-note-root {
+              font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+              font-size: 12pt !important;
+              line-height: 1.7 !important;
+              color: #1a1a2e !important;
+              background: #ffffff !important;
+              padding: 30px !important;
+            }
+
+            /* Headings */
+            #print-note-root h1 {
+              font-size: 24pt !important;
+              font-weight: 700 !important;
+              border-bottom: 2px solid #10b981 !important;
+              padding-bottom: 8px !important;
+              margin: 0 0 16px 0 !important;
+              break-after: avoid !important;
+            }
+            #print-note-root h2 {
+              font-size: 18pt !important;
+              font-weight: 600 !important;
+              border-bottom: 1px solid #10b981 !important;
+              padding-bottom: 6px !important;
+              margin: 28px 0 12px 0 !important;
+              break-after: avoid !important;
+            }
+            #print-note-root h3 {
+              font-size: 14pt !important;
+              font-weight: 600 !important;
+              margin: 24px 0 8px 0 !important;
+              break-after: avoid !important;
+            }
+            #print-note-root h4 {
+              font-size: 12pt !important;
+              font-weight: 600 !important;
+              margin: 16px 0 4px 0 !important;
+              break-after: avoid !important;
+            }
+
+            /* KaTeX math */
+            .katex-display {
+              margin: 18px 0 !important;
+              padding: 4px 0 !important;
+            }
+            .katex-display > .katex {
+              display: block !important;
+              text-align: center !important;
+            }
+            .katex {
+              font-size: 1.1em !important;
+            }
+
+            /* Code blocks */
+            pre {
+              background: #f8fafc !important;
+              border: 1px solid #e2e8f0 !important;
+              border-radius: 6px !important;
+              padding: 16px !important;
+              margin: 16px 0 !important;
+              font-family: 'JetBrains Mono', monospace !important;
+              font-size: 10pt !important;
+              line-height: 1.5 !important;
+              white-space: pre-wrap !important;
+              word-wrap: break-word !important;
+              break-inside: avoid !important;
+            }
+            code {
+              background: #f1f5f9 !important;
+              padding: 2px 6px !important;
+              border-radius: 4px !important;
+              font-family: 'JetBrains Mono', monospace !important;
+              font-size: 0.9em !important;
+            }
+            pre code {
+              background: transparent !important;
+              padding: 0 !important;
+              border-radius: 0 !important;
+            }
+
+            /* Tables */
+            table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin: 16px 0 !important;
+              break-inside: avoid !important;
+            }
+            th {
+              background: #f1f5f9 !important;
+              border: 1px solid #cbd5e1 !important;
+              padding: 10px 12px !important;
+              font-weight: 600 !important;
+              text-align: left !important;
+            }
+            td {
+              border: 1px solid #e2e8f0 !important;
+              padding: 8px 12px !important;
+            }
+
+            /* Blockquotes */
+            blockquote {
+              border-left: 4px solid #10b981 !important;
+              background: #f8fafc !important;
+              padding: 12px 16px !important;
+              margin: 16px 0 !important;
+              color: #475569 !important;
+              break-inside: avoid !important;
+            }
+
+            /* Lists */
+            ul, ol {
+              margin: 8px 0 12px 0 !important;
+              padding-left: 24px !important;
+            }
+            li {
+              margin-bottom: 4px !important;
+            }
+
+            /* Images */
+            img {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+        },
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait',
+      },
+      pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'],
+      },
+    };
+
+    try {
+      await html2pdf().set(options).from(element).save();
+      showStatus('PDF exported successfully!');
+      trackEvent('pdf_exported', {
+        route: '/notes',
+        note_title: selectedNote.title,
       });
-    });
-
-    // Trigger print
-    const originalTitle = document.title;
-    document.title = selectedNote.title || 'Study Note';
-    window.print();
-    document.title = originalTitle;
-  };
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      showStatus('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [selectedNote, showStatus, trackEvent]);
 
   // ==================== JSX ====================
   return (
@@ -461,10 +612,11 @@ const Notes = () => {
 
                 <button
                   onClick={handleDownloadPDF}
-                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                  disabled={isExporting}
+                  className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors text-zinc-900 dark:text-zinc-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  PDF
+                  {isExporting ? 'Exporting...' : 'PDF'}
                 </button>
 
                 <button
