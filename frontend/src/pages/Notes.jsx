@@ -295,7 +295,7 @@ const Notes = () => {
     <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       {sidebarVisible && !isDesktop && (
         <div
-          className="fixed inset-0 z-130 bg-black/40 md:hidden"
+          className="no-print fixed inset-0 z-130 bg-black/40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -434,7 +434,7 @@ const Notes = () => {
                 )}
               </div>
 
-              <div className="flex shrink-0 items-center gap-2 overflow-x-auto">
+              <div className="no-print flex shrink-0 items-center gap-2 overflow-x-auto">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="p-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"

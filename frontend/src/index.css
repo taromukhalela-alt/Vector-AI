@@ -503,228 +503,30 @@ code, pre, .font-mono {
 /* ─── Print styles ─── */
 @media print {
   /* ============================================
-     RESET: Hide everything except the note
+     1. HIDE APP UI (but keep the print container)
+     ============================================ */
+  /* Hide common UI elements */
+  header,
+  nav,
+  aside,
+  footer,
+  .sidebar,
+  .no-print,
+  button,
+  [class*="sidebar"],
+  [class*="Sidebar"] {
+    display: none !important;
+  }
+
+  /* ============================================
+     2. CLEAN BODY & BACKGROUND
      ============================================ */
   html, body {
-    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
-  }
-
-  /* Aggressively hide all app UI */
-  body > *:not(#print-note-root) {
-    display: none !important;
-  }
-
-  /* But also hide siblings inside the main layout */
-  #root > *:not(#print-note-root),
-  [class*="sidebar"],
-  [class*="Sidebar"],
-  nav,
-  header,
-  footer,
-  aside,
-  .no-print {
-    display: none !important;
-  }
-
-  /* ============================================
-     PRINT CONTAINER: Full-width, clean slate
-     ============================================ */
-  #print-note-root {
-    display: block !important;
-    position: relative !important;
+    color: black !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 auto !important;
-    padding: 40px 50px !important;
-    background: white !important;
-    color: #1a1a2e !important;
-    
-    /* Your preferred font stack */
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-    font-size: 12pt !important;
-    line-height: 1.7 !important;
-    
-    box-sizing: border-box !important;
-    overflow: visible !important;
-  }
-
-  /* Force everything inside to be visible and properly flowing */
-  #print-note-root * {
-    overflow: visible !important;
-  }
-
-  /* ============================================
-     TYPOGRAPHY: Match your app's dark/light styling
-     ============================================ */
-  #print-note-root h1 {
-    font-size: 24pt !important;
-    font-weight: 700 !important;
-    color: #0f0f23 !important;
-    margin: 0 0 12px 0 !important;
-    padding-bottom: 8px !important;
-    border-bottom: 2px solid #10b981 !important;
-    page-break-after: avoid !important;
-  }
-
-  #print-note-root h2 {
-    font-size: 18pt !important;
-    font-weight: 600 !important;
-    color: #1e1e3a !important;
-    margin: 28px 0 12px 0 !important;
-    padding-bottom: 6px !important;
-    border-bottom: 1px solid #10b981 !important;
-    page-break-after: avoid !important;
-  }
-
-  #print-note-root h3 {
-    font-size: 14pt !important;
-    font-weight: 600 !important;
-    color: #2d2d4a !important;
-    margin: 24px 0 8px 0 !important;
-    page-break-after: avoid !important;
-  }
-
-  #print-note-root p {
-    margin: 0 0 12px 0 !important;
-    orphans: 3 !important;
-    widows: 3 !important;
-  }
-
-  /* ============================================
-     KaTeX / MATH: Fix the merging issue
-     ============================================ */
-  #print-note-root .katex {
-    font-size: 1.1em !important;
-    font-family: 'KaTeX_Main', 'Times New Roman', serif !important;
-  }
-
-  #print-note-root .katex-display {
-    margin: 16px 0 !important;
-    padding: 8px 0 !important;
-    display: block !important;
-    overflow: visible !important;
-  }
-
-  /* Prevent display math from overlapping */
-  #print-note-root .katex-display > .katex {
-    display: block !important;
-    white-space: normal !important;
-    text-align: center !important;
-  }
-
-  /* Inline math spacing */
-  #print-note-root .katex:not(.katex-display > .katex) {
-    padding: 0 2px !important;
-  }
-
-  /* ============================================
-     CODE BLOCKS
-     ============================================ */
-  #print-note-root pre {
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 6px !important;
-    padding: 16px !important;
-    margin: 16px 0 !important;
-    overflow-x: auto !important;
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-    font-size: 10pt !important;
-    line-height: 1.5 !important;
-    page-break-inside: avoid !important;
-  }
-
-  #print-note-root code {
-    background: #f1f5f9 !important;
-    padding: 2px 6px !important;
-    border-radius: 4px !important;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-    font-size: 0.9em !important;
-  }
-
-  #print-note-root pre code {
-    background: transparent !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-  }
-
-  /* ============================================
-     TABLES
-     ============================================ */
-  #print-note-root table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin: 16px 0 !important;
-    font-size: 11pt !important;
-    page-break-inside: avoid !important;
-  }
-
-  #print-note-root th {
-    background: #f1f5f9 !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 10px 12px !important;
-    font-weight: 600 !important;
-    text-align: left !important;
-  }
-
-  #print-note-root td {
-    border: 1px solid #e2e8f0 !important;
-    padding: 8px 12px !important;
-  }
-
-  /* ============================================
-     BLOCKQUOTES
-     ============================================ */
-  #print-note-root blockquote {
-    border-left: 4px solid #10b981 !important;
-    background: #f8fafc !important;
-    padding: 12px 16px !important;
-    margin: 16px 0 !important;
-    color: #475569 !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* ============================================
-     LISTS
-     ============================================ */
-  #print-note-root ul, 
-  #print-note-root ol {
-    margin: 8px 0 12px 0 !important;
-    padding-left: 24px !important;
-  }
-
-  #print-note-root li {
-    margin-bottom: 4px !important;
-  }
-
-  /* ============================================
-     HORIZONTAL RULES
-     ============================================ */
-  #print-note-root hr {
-    border: none !important;
-    border-top: 1px solid #e2e8f0 !important;
-    margin: 24px 0 !important;
-  }
-
-  /* ============================================
-     PAGE BREAKS: Keep content together
-     ============================================ */
-  #print-note-root h1,
-  #print-note-root h2,
-  #print-note-root h3,
-  #print-note-root h4 {
-    break-after: avoid !important;
-  }
-
-  #print-note-root .katex-display,
-  #print-note-root pre,
-  #print-note-root table,
-  #print-note-root blockquote {
-    break-inside: avoid !important;
   }
 
   /* ============================================
@@ -763,14 +565,162 @@ code, pre, .font-mono {
     z-index: 1000;
   }
 
-  /* Adjust print container padding to account for header/footer */
+  /* ============================================
+     3. PRINT CONTAINER — FULL WIDTH, STYLED
+     ============================================ */
   #print-note-root {
-    padding-top: 60px !important;
-    padding-bottom: 50px !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 60px 50px 50px 50px !important;
+    background: white !important;
+    color: #1a1a2e !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 12pt !important;
+    line-height: 1.7 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  #print-note-root * {
+    overflow: visible !important;
   }
 
   /* ============================================
-     PAGE SETUP
+     4. TYPOGRAPHY
+     ============================================ */
+  #print-note-root h1 {
+    font-size: 24pt !important;
+    font-weight: 700 !important;
+    margin: 0 0 12px 0 !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid #10b981 !important;
+    page-break-after: avoid !important;
+  }
+
+  #print-note-root h2 {
+    font-size: 18pt !important;
+    font-weight: 600 !important;
+    margin: 28px 0 12px 0 !important;
+    padding-bottom: 6px !important;
+    border-bottom: 1px solid #10b981 !important;
+    page-break-after: avoid !important;
+  }
+
+  #print-note-root h3 {
+    font-size: 14pt !important;
+    font-weight: 600 !important;
+    margin: 24px 0 8px 0 !important;
+    page-break-after: avoid !important;
+  }
+
+  #print-note-root p {
+    margin: 0 0 12px 0 !important;
+  }
+
+  /* ============================================
+     5. KATEX MATH — FIX MERGING
+     ============================================ */
+  #print-note-root .katex {
+    font-size: 1.1em !important;
+  }
+
+  #print-note-root .katex-display {
+    margin: 16px 0 !important;
+    padding: 4px 0 !important;
+    display: block !important;
+  }
+
+  #print-note-root .katex-display > .katex {
+    display: block !important;
+    text-align: center !important;
+  }
+
+  /* ============================================
+     6. CODE BLOCKS
+     ============================================ */
+  #print-note-root pre {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    padding: 16px !important;
+    margin: 16px 0 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10pt !important;
+    line-height: 1.5 !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    page-break-inside: avoid !important;
+  }
+
+  #print-note-root code {
+    background: #f1f5f9 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.9em !important;
+  }
+
+  #print-note-root pre code {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* ============================================
+     7. TABLES
+     ============================================ */
+  #print-note-root table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 16px 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  #print-note-root th {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 10px 12px !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+  }
+
+  #print-note-root td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 8px 12px !important;
+  }
+
+  /* ============================================
+     8. BLOCKQUOTES
+     ============================================ */
+  #print-note-root blockquote {
+    border-left: 4px solid #10b981 !important;
+    background: #f8fafc !important;
+    padding: 12px 16px !important;
+    margin: 16px 0 !important;
+    color: #475569 !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* ============================================
+     9. PAGE BREAKS
+     ============================================ */
+  #print-note-root h1,
+  #print-note-root h2,
+  #print-note-root h3,
+  #print-note-root h4 {
+    break-after: avoid !important;
+  }
+
+  #print-note-root .katex-display,
+  #print-note-root pre,
+  #print-note-root table,
+  #print-note-root blockquote {
+    break-inside: avoid !important;
+  }
+
+  /* ============================================
+     10. PAGE SETUP
      ============================================ */
   @page {
     size: A4;
