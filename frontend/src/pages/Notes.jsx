@@ -259,10 +259,36 @@ const Notes = () => {
   // ==================== PDF Export (native browser print) ====================
   const handleDownloadPDF = () => {
     if (!selectedNote) return;
-    const originalTitle = document.title;
-    document.title = selectedNote.title || 'Study Note';
-    window.print();
-    document.title = originalTitle;
+
+    // Force any lazy-loaded content to render
+    const printRoot = document.getElementById('print-note-root');
+    if (printRoot) {
+      // Ensure all KaTeX is fully rendered
+      if (window.renderMathInElement) {
+        window.renderMathInElement(printRoot, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // Wait for fonts (critical for KaTeX)
+    document.fonts.ready.then(() => {
+      // Double RAF ensures layout is complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const originalTitle = document.title;
+          document.title = selectedNote.title || 'Study Note';
+          window.print();
+          document.title = originalTitle;
+        });
+      });
+    });
   };
 
   // ==================== JSX ====================
