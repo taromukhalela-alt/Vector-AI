@@ -257,38 +257,37 @@ const Notes = () => {
   };
 
   // ==================== PDF Export (native browser print) ====================
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!selectedNote) return;
 
-    // Force any lazy-loaded content to render
+    // Force KaTeX to re-render (safety net)
     const printRoot = document.getElementById('print-note-root');
-    if (printRoot) {
-      // Ensure all KaTeX is fully rendered
-      if (window.renderMathInElement) {
-        window.renderMathInElement(printRoot, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-            { left: '\\(', right: '\\)', display: false },
-            { left: '\\[', right: '\\]', display: true }
-          ],
-          throwOnError: false
-        });
-      }
+    if (printRoot && window.renderMathInElement) {
+      renderMathInElement(printRoot, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+        ],
+        throwOnError: false,
+        strict: false,
+      });
     }
 
-    // Wait for fonts (critical for KaTeX)
-    document.fonts.ready.then(() => {
-      // Double RAF ensures layout is complete
+    // Wait for ALL fonts to load (KaTeX fonts are critical)
+    await document.fonts.ready;
+
+    // Double RAF to ensure layout is painted
+    await new Promise(resolve => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const originalTitle = document.title;
-          document.title = selectedNote.title || 'Study Note';
-          window.print();
-          document.title = originalTitle;
-        });
+        requestAnimationFrame(resolve);
       });
     });
+
+    // Trigger print
+    const originalTitle = document.title;
+    document.title = selectedNote.title || 'Study Note';
+    window.print();
+    document.title = originalTitle;
   };
 
   // ==================== JSX ====================

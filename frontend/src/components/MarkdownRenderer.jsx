@@ -24,7 +24,11 @@ const MarkdownRenderer = ({ content }) => {
     >
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[[rehypeKatex, { strict: false }]]}
+        components={{
+          // Force proper paragraph spacing for print
+          p: ({ children }) => <p style={{ margin: '12px 0' }}>{children}</p>
+        }}
       >
         {content || ''}
       </ReactMarkdown>
