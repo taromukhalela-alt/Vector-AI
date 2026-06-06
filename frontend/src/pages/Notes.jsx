@@ -7,6 +7,9 @@ import {
   FileText, Search, Plus, Trash2, Edit, Eye, Download,
   Sparkles, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
+import katex from 'katex';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import html2pdf from 'html2pdf.js';
 
 const PDF_BODY_STYLES = `
@@ -311,6 +314,88 @@ const waitForNextPaint = () =>
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
 
+const waitForPdfAssets = async () => {
+  if (typeof requestAnimationFrame === 'function') {
+    await waitForNextPaint();
+  }
+
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+};
+
+const renderKatex = (source, displayMode) => {
+  try {
+    return katex.renderToString(String(source || '').trim(), {
+      displayMode,
+      throwOnError: false,
+      strict: false,
+      output: 'htmlAndMathml',
+    });
+  } catch (error) {
+    console.warn('KaTeX render failed:', error);
+    return displayMode ? `<pre>${source}</pre>` : String(source || '');
+  }
+};
+
+const renderMathInMarkdownSegment = (segment) => {
+  const inlineCodeParts = String(segment).split(/(`[^`\n]*`)/g);
+
+  return inlineCodeParts
+    .map((part) => {
+      if (part.startsWith('`') && part.endsWith('`')) return part;
+
+      return part
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_match, math) => renderKatex(math, true))
+        .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_match, math) => renderKatex(math, true))
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_match, math) => renderKatex(math, false))
+        .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g, (_match, math) => renderKatex(math, false));
+    })
+    .join('');
+};
+
+const renderPdfMarkdownToHtml = (content) => {
+  const markdownWithKatex = String(content || '')
+    .split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g)
+    .map((part) => {
+      if (part.startsWith('```') || part.startsWith('~~~')) return part;
+      return renderMathInMarkdownSegment(part);
+    })
+    .join('');
+
+  const html = marked.parse(markdownWithKatex, {
+    breaks: true,
+    gfm: true,
+  });
+
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: [
+      'math',
+      'semantics',
+      'annotation',
+      'mrow',
+      'mi',
+      'mo',
+      'mn',
+      'msup',
+      'msub',
+      'msubsup',
+      'mfrac',
+      'msqrt',
+      'mroot',
+      'mtext',
+      'mspace',
+      'mover',
+      'munder',
+      'munderover',
+      'mtable',
+      'mtr',
+      'mtd',
+    ],
+    ADD_ATTR: ['aria-hidden', 'class', 'encoding', 'xmlns'],
+  });
+};
+
 const Notes = () => {
   const pdfExportRef = useRef(null);
   const { csrfToken } = useAuth();
@@ -555,9 +640,7 @@ const Notes = () => {
       .replace(/\s+/g, '_');
 
     try {
-      if (typeof requestAnimationFrame === 'function') {
-        await waitForNextPaint();
-      }
+      await waitForPdfAssets();
 
       const options = {
         margin: [10, 10, 10, 10],
@@ -896,7 +979,7 @@ const Notes = () => {
             </header>
 
             <main className="vai-pdf-body">
-              <MarkdownRenderer content={selectedNote?.content || ''} />
+              <div dangerouslySetInnerHTML={{ __html: renderPdfMarkdownToHtml(selectedNote?.content || '') }} />
             </main>
           </div>
         </div>
