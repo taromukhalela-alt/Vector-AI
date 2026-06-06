@@ -599,10 +599,9 @@ const Notes = () => {
           `}} />
 
           {/* Body */}
-          <div 
-            className="vai-pdf-body" 
-            dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(selectedNote?.content) }} 
-          />
+          <div className="vai-pdf-body">
+            <MarkdownRenderer content={selectedNote?.content || ''} />
+          </div>
         </div>
       </div>
     </div>
