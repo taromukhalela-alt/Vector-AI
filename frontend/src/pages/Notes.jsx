@@ -282,8 +282,8 @@ const Notes = () => {
     const wrapper = document.createElement('div');
     wrapper.id = 'vai-pdf-offscreen';
     wrapper.style.cssText = [
-      'position:fixed',
-      'left:-9999px',
+      'position:absolute',
+      'left:0',
       'top:0',
       'width:794px',      // A4 @ 96 dpi
       'background:#ffffff',
@@ -303,16 +303,16 @@ const Notes = () => {
       ${katexStyle}
       <style>
         /* ── Reset ── */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        #vai-pdf-offscreen * { box-sizing: border-box; margin: 0; padding: 0; border-color: #e5e7eb; outline-color: #e5e7eb; }
 
         /* ── Cover ── */
-        .vai-cover {
+        #vai-pdf-offscreen .vai-cover {
           background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
           padding: 36px 40px 28px;
           border-radius: 0;
           margin-bottom: 0;
         }
-        .vai-cover-wordmark {
+        #vai-pdf-offscreen .vai-cover-wordmark {
           font-size: 11pt;
           font-weight: 800;
           letter-spacing: 0.18em;
@@ -320,7 +320,7 @@ const Notes = () => {
           text-transform: uppercase;
           margin-bottom: 22px;
         }
-        .vai-cover-title {
+        #vai-pdf-offscreen .vai-cover-title {
           font-size: 26pt;
           font-weight: 800;
           color: #ffffff;
@@ -328,14 +328,14 @@ const Notes = () => {
           margin-bottom: 14px;
           letter-spacing: -0.01em;
         }
-        .vai-cover-meta {
+        #vai-pdf-offscreen .vai-cover-meta {
           display: flex;
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
           margin-top: 10px;
         }
-        .vai-cover-badge {
+        #vai-pdf-offscreen .vai-cover-badge {
           background: rgba(255,255,255,0.22);
           border: 1px solid rgba(255,255,255,0.35);
           color: #ffffff;
@@ -346,31 +346,31 @@ const Notes = () => {
           padding: 4px 12px;
           border-radius: 999px;
         }
-        .vai-cover-date {
+        #vai-pdf-offscreen .vai-cover-date {
           font-size: 9pt;
           color: rgba(255,255,255,0.7);
           font-weight: 500;
         }
-        .vai-cover-author {
+        #vai-pdf-offscreen .vai-cover-author {
           font-size: 9pt;
           color: rgba(255,255,255,0.6);
           font-style: italic;
         }
 
         /* ── Divider ── */
-        .vai-divider {
+        #vai-pdf-offscreen .vai-divider {
           height: 3px;
           background: linear-gradient(90deg, #10b981 0%, #34d399 50%, transparent 100%);
           margin-bottom: 32px;
         }
 
         /* ── Body ── */
-        .vai-body {
+        #vai-pdf-offscreen .vai-body {
           padding: 0 40px 40px;
         }
 
         /* ── Typography ── */
-        .vai-body h1 {
+        #vai-pdf-offscreen .vai-body h1 {
           font-size: 22pt;
           font-weight: 800;
           color: #0a0a0a;
@@ -380,7 +380,7 @@ const Notes = () => {
           break-after: avoid;
           letter-spacing: -0.01em;
         }
-        .vai-body h2 {
+        #vai-pdf-offscreen .vai-body h2 {
           font-size: 16pt;
           font-weight: 700;
           color: #0a0a0a;
@@ -389,44 +389,44 @@ const Notes = () => {
           margin: 28px 0 12px;
           break-after: avoid;
         }
-        .vai-body h3 {
+        #vai-pdf-offscreen .vai-body h3 {
           font-size: 13pt;
           font-weight: 700;
           color: #059669;
           margin: 22px 0 8px;
           break-after: avoid;
         }
-        .vai-body h4 {
+        #vai-pdf-offscreen .vai-body h4 {
           font-size: 11pt;
           font-weight: 700;
           color: #065f46;
           margin: 16px 0 6px;
           break-after: avoid;
         }
-        .vai-body p {
+        #vai-pdf-offscreen .vai-body p {
           margin: 10px 0;
           color: #1a1a2e;
           font-size: 11.5pt;
           line-height: 1.75;
         }
-        .vai-body strong { color: #0a0a0a; font-weight: 700; }
-        .vai-body em { color: #374151; }
+        #vai-pdf-offscreen .vai-body strong { color: #0a0a0a; font-weight: 700; }
+        #vai-pdf-offscreen .vai-body em { color: #374151; }
 
         /* ── Lists ── */
-        .vai-body ul, .vai-body ol {
+        #vai-pdf-offscreen .vai-body ul, #vai-pdf-offscreen .vai-body ol {
           margin: 8px 0 12px 0;
           padding-left: 22px;
         }
-        .vai-body li {
+        #vai-pdf-offscreen .vai-body li {
           margin-bottom: 5px;
           font-size: 11.5pt;
           line-height: 1.7;
           color: #1a1a2e;
         }
-        .vai-body li::marker { color: #10b981; font-weight: 700; }
+        #vai-pdf-offscreen .vai-body li::marker { color: #10b981; font-weight: 700; }
 
         /* ── Blockquote ── */
-        .vai-body blockquote {
+        #vai-pdf-offscreen .vai-body blockquote {
           border-left: 4px solid #10b981;
           background: #f0fdf4;
           padding: 14px 18px;
@@ -438,17 +438,17 @@ const Notes = () => {
         }
 
         /* ── Tables ── */
-        .vai-body table {
+        #vai-pdf-offscreen .vai-body table {
           width: 100%;
           border-collapse: collapse;
           margin: 18px 0;
           font-size: 10.5pt;
           break-inside: avoid;
         }
-        .vai-body thead tr {
+        #vai-pdf-offscreen .vai-body thead tr {
           background: linear-gradient(135deg, #10b981, #059669);
         }
-        .vai-body th {
+        #vai-pdf-offscreen .vai-body th {
           color: #ffffff;
           font-weight: 700;
           padding: 10px 14px;
@@ -458,21 +458,21 @@ const Notes = () => {
           text-transform: uppercase;
           border: 1px solid #059669;
         }
-        .vai-body td {
+        #vai-pdf-offscreen .vai-body td {
           border: 1px solid #d1fae5;
           padding: 9px 14px;
           color: #1a1a2e;
           vertical-align: top;
         }
-        .vai-body tbody tr:nth-child(even) td {
+        #vai-pdf-offscreen .vai-body tbody tr:nth-child(even) td {
           background: #f0fdf4;
         }
-        .vai-body tbody tr:nth-child(odd) td {
+        #vai-pdf-offscreen .vai-body tbody tr:nth-child(odd) td {
           background: #ffffff;
         }
 
         /* ── Code ── */
-        .vai-body pre {
+        #vai-pdf-offscreen .vai-body pre {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-left: 3px solid #10b981;
@@ -487,7 +487,7 @@ const Notes = () => {
           break-inside: avoid;
           color: #1e293b;
         }
-        .vai-body code {
+        #vai-pdf-offscreen .vai-body code {
           background: #ecfdf5;
           color: #065f46;
           padding: 2px 6px;
@@ -496,7 +496,7 @@ const Notes = () => {
           font-size: 0.88em;
           font-weight: 500;
         }
-        .vai-body pre code {
+        #vai-pdf-offscreen .vai-body pre code {
           background: transparent;
           color: inherit;
           padding: 0;
@@ -505,25 +505,25 @@ const Notes = () => {
         }
 
         /* ── KaTeX math ── */
-        .katex-display {
+        #vai-pdf-offscreen .katex-display {
           margin: 20px 0 !important;
           overflow-x: auto;
         }
-        .katex-display > .katex {
+        #vai-pdf-offscreen .katex-display > .katex {
           display: block;
           text-align: center;
         }
-        .katex { font-size: 1.1em; }
+        #vai-pdf-offscreen .katex { font-size: 1.1em; }
 
         /* ── Horizontal rule ── */
-        .vai-body hr {
+        #vai-pdf-offscreen .vai-body hr {
           border: none;
           border-top: 1.5px solid #d1fae5;
           margin: 24px 0;
         }
 
         /* ── Images ── */
-        .vai-body img {
+        #vai-pdf-offscreen .vai-body img {
           max-width: 100%;
           height: auto;
           border-radius: 6px;
@@ -531,7 +531,7 @@ const Notes = () => {
         }
 
         /* ── Footer ── */
-        .vai-footer {
+        #vai-pdf-offscreen .vai-footer {
           margin: 36px 40px 0;
           padding-top: 10px;
           border-top: 1.5px solid #d1fae5;
@@ -542,13 +542,13 @@ const Notes = () => {
           color: #6b7280;
           break-inside: avoid;
         }
-        .vai-footer-brand {
+        #vai-pdf-offscreen .vai-footer-brand {
           font-weight: 700;
           color: #10b981;
           letter-spacing: 0.06em;
           text-transform: uppercase;
         }
-        .vai-footer-right {
+        #vai-pdf-offscreen .vai-footer-right {
           text-align: right;
         }
       </style>
@@ -595,6 +595,10 @@ const Notes = () => {
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
         onclone: (clonedDoc) => {
           // Strip oklch() and other unsupported CSS color functions
           // html2canvas (bundled in html2pdf) crashes on oklch — replace with safe values
