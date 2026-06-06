@@ -273,7 +273,58 @@ const Notes = () => {
       margin: [15, 15, 15, 15],
       filename: `${safeFilename}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true,
+        onclone: (clonedDoc) => {
+          const OKLCH_RE = /oklch\([^)]*\)/gi;
+          const CSS_COLOR_FN_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
+
+          clonedDoc.querySelectorAll('*').forEach((el) => {
+            el.style.setProperty('color-scheme', 'light', 'important');
+            try {
+              const cloneWin = clonedDoc.defaultView || window;
+              const computed = cloneWin.getComputedStyle(el);
+              const propsToCheck = [
+                'color', 'background-color', 'border-color',
+                'border-top-color', 'border-right-color',
+                'border-bottom-color', 'border-left-color',
+                'outline-color', 'text-decoration-color',
+                'fill', 'stroke', 'caret-color',
+                'box-shadow', 'text-shadow',
+              ];
+
+              propsToCheck.forEach((prop) => {
+                const val = computed.getPropertyValue(prop);
+                if (val && (OKLCH_RE.test(val) || CSS_COLOR_FN_RE.test(val))) {
+                  const isBackground = prop.includes('background');
+                  const isBorder = prop.includes('border') || prop.includes('outline');
+                  const fallback = isBackground ? '#ffffff' : isBorder ? '#e5e7eb' : '#0a0a0a';
+                  el.style.setProperty(prop, fallback, 'important');
+                }
+              });
+
+              if (el.getAttribute('style')) {
+                el.setAttribute(
+                  'style',
+                  el.getAttribute('style')
+                    .replace(OKLCH_RE, '#0a0a0a')
+                    .replace(CSS_COLOR_FN_RE, '#0a0a0a')
+                );
+              }
+            } catch (_) {}
+          });
+
+          clonedDoc.querySelectorAll('style').forEach((styleEl) => {
+            if (styleEl.textContent.includes('oklch')) {
+              styleEl.textContent = styleEl.textContent
+                .replace(/:\s*oklch\([^)]*\)/g, ': #0a0a0a')
+                .replace(/oklch\([^)]*\)/g, '#0a0a0a');
+            }
+          });
+        }
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
     };
 
