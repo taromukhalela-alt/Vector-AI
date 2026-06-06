@@ -4,16 +4,28 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
 import {
-  FileText, Search, Plus, Trash2, Edit, Eye, Download,
-  Sparkles, Save, ChevronLeft, ChevronRight, X
+  FileText,
+  Search,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  Download,
+  Sparkles,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import html2pdf from 'html2pdf.js';
 
 const PDF_BODY_STYLES = `
-  .vai-pdf-shell, .vai-pdf-shell * {
+  .vai-pdf-shell,
+  .vai-pdf-shell * {
     box-sizing: border-box;
     border-color: #d1fae5;
     outline-color: #a7f3d0;
@@ -280,6 +292,7 @@ const PDF_BODY_STYLES = `
   .vai-pdf-body .katex {
     color: #10231c;
     font-size: 1.03em;
+    white-space: normal;
   }
 
   .vai-pdf-body .katex-display {
@@ -296,8 +309,13 @@ const PDF_BODY_STYLES = `
   }
 
   .vai-pdf-body .katex-display > .katex {
+    display: inline-block;
     max-width: 100%;
     font-size: 1.04em;
+  }
+
+  .vai-pdf-body .katex .base {
+    white-space: nowrap;
   }
 
   .vai-pdf-body img {
@@ -314,13 +332,51 @@ const waitForNextPaint = () =>
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
 
-const waitForPdfAssets = async () => {
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const waitForPdfAssets = async (rootEl) => {
   if (typeof requestAnimationFrame === 'function') {
     await waitForNextPaint();
   }
 
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
+  if (typeof document !== 'undefined' && document.fonts) {
     await document.fonts.ready;
+
+    await Promise.allSettled([
+      document.fonts.load('16px Inter'),
+      document.fonts.load('16px KaTeX_Main'),
+      document.fonts.load('16px KaTeX_Math'),
+      document.fonts.load('16px KaTeX_Size1'),
+      document.fonts.load('16px KaTeX_Size2'),
+      document.fonts.load('16px KaTeX_Size3'),
+      document.fonts.load('16px KaTeX_Size4'),
+    ]);
+  }
+
+  if (rootEl) {
+    const images = Array.from(rootEl.querySelectorAll('img'));
+    await Promise.allSettled(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+        if (typeof img.decode === 'function') {
+          return img.decode().catch(() => {});
+        }
+        return new Promise((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      })
+    );
+  }
+
+  if (typeof requestAnimationFrame === 'function') {
+    await waitForNextPaint();
   }
 };
 
@@ -330,11 +386,12 @@ const renderKatex = (source, displayMode) => {
       displayMode,
       throwOnError: false,
       strict: false,
-      output: 'htmlAndMathml',
+      output: 'html',
     });
   } catch (error) {
     console.warn('KaTeX render failed:', error);
-    return displayMode ? `<pre>${source}</pre>` : String(source || '');
+    const safe = escapeHtml(String(source || ''));
+    return displayMode ? `<pre>${safe}</pre>` : safe;
   }
 };
 
@@ -392,7 +449,7 @@ const renderPdfMarkdownToHtml = (content) => {
       'mtr',
       'mtd',
     ],
-    ADD_ATTR: ['aria-hidden', 'class', 'encoding', 'xmlns'],
+    ADD_ATTR: ['aria-hidden', 'class', 'encoding', 'xmlns', 'style'],
   });
 };
 
@@ -400,6 +457,7 @@ const Notes = () => {
   const pdfExportRef = useRef(null);
   const { csrfToken } = useAuth();
   const { showToast } = useToast();
+
   const [notes, setNotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState(null);
@@ -412,14 +470,17 @@ const Notes = () => {
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
   const [isDesktop, setIsDesktop] = useState(
     () => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true)
   );
+
   const [sidebarPinned, setSidebarPinned] = useState(() =>
     typeof window !== 'undefined'
       ? localStorage.getItem('vector_notes_sidebar_pinned') === 'true'
       : false
   );
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const sidebarVisible = isDesktop ? sidebarPinned || sidebarOpen : sidebarOpen;
@@ -430,10 +491,12 @@ const Notes = () => {
       setIsDesktop(desktop);
       if (desktop) setSidebarOpen(false);
     };
+
     if (typeof window !== 'undefined') {
       handleResize();
       window.addEventListener('resize', handleResize);
     }
+
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('resize', handleResize);
@@ -460,6 +523,7 @@ const Notes = () => {
     setEditTopic(note.topic || 'General');
     setEditContent(note.content || '');
     setIsEditing(false);
+
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setSidebarOpen(false);
     }
@@ -469,8 +533,10 @@ const Notes = () => {
     try {
       const res = await fetch(`/api/notes${query ? `?q=${encodeURIComponent(query)}` : ''}`);
       const data = await res.json();
+
       if (data.success && Array.isArray(data.notes)) {
         setNotes(data.notes);
+
         if (data.notes.length > 0 && !selectedNote) {
           handleSelectNote(data.notes[0]);
         }
@@ -482,7 +548,8 @@ const Notes = () => {
 
   useEffect(() => {
     fetchNotes();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showStatus = (message, type = 'success', title) => {
     showToast({
@@ -501,6 +568,7 @@ const Notes = () => {
         '# New Study Note\n\nStart writing notes in markdown. Math equations work here: $$E=mc^2$$',
       isTemp: true,
     };
+
     setSelectedNote(newNote);
     setEditTitle(newNote.title);
     setEditTopic(newNote.topic);
@@ -534,21 +602,26 @@ const Notes = () => {
       });
 
       const data = await res.json();
+
       if (data.success) {
         trackEvent('note_saved', {
           route: '/notes',
           note_topic: editTopic || 'General',
           is_new: isNew,
         });
+
         showStatus('Note saved successfully!');
-        await fetchNotes(); // get real IDs from the server
+        await fetchNotes();
+
         const savedNote = data.note || notes.find((n) => n.title === editTitle);
+
         if (savedNote) {
           setSelectedNote(savedNote);
           setEditTitle(savedNote.title);
           setEditTopic(savedNote.topic || 'General');
           setEditContent(savedNote.content || '');
         }
+
         setIsEditing(false);
       } else {
         console.warn('Note save failed:', data.message);
@@ -565,6 +638,7 @@ const Notes = () => {
       setSelectedNote(null);
       return;
     }
+
     if (!confirm('Are you sure you want to delete this study note?')) return;
 
     try {
@@ -572,7 +646,9 @@ const Notes = () => {
         method: 'DELETE',
         headers: { 'X-CSRF-Token': csrfToken },
       });
+
       const data = await res.json();
+
       if (data.success) {
         showStatus('Note deleted successfully');
         setSelectedNote(null);
@@ -601,6 +677,7 @@ const Notes = () => {
         },
         body: JSON.stringify({ topic: aiTopic }),
       });
+
       const data = await res.json();
 
       if (data.success) {
@@ -608,13 +685,19 @@ const Notes = () => {
           route: '/notes',
           topic_length: aiTopic.length,
         });
+
         showStatus('Study guide generated successfully!');
         setAiTopic('');
         fetchNotes();
+
         if (data.note) handleSelectNote(data.note);
       } else {
         console.warn('AI note generation failed:', data.message);
-        showStatus('The study guide could not be generated. Please try again.', 'error', 'Generation failed');
+        showStatus(
+          'The study guide could not be generated. Please try again.',
+          'error',
+          'Generation failed'
+        );
       }
     } catch (e) {
       console.error(e);
@@ -629,9 +712,9 @@ const Notes = () => {
     fetchNotes(searchQuery);
   };
 
-  // ==================== PDF Export (html2pdf.js) ====================
   const handleDownloadPDF = useCallback(async () => {
     if (!selectedNote || !pdfExportRef.current) return;
+
     setIsExporting(true);
 
     const safeFilename = (selectedNote.title || 'study_note')
@@ -640,7 +723,7 @@ const Notes = () => {
       .replace(/\s+/g, '_');
 
     try {
-      await waitForPdfAssets();
+      await waitForPdfAssets(pdfExportRef.current);
 
       const options = {
         margin: [10, 10, 10, 10],
@@ -670,20 +753,31 @@ const Notes = () => {
 
             clonedDoc.querySelectorAll('*').forEach((el) => {
               el.style.setProperty('color-scheme', 'light', 'important');
+
               try {
                 const cloneWin = clonedDoc.defaultView || window;
                 const computed = cloneWin.getComputedStyle(el);
+
                 const propsToCheck = [
-                  'color', 'background-color', 'border-color',
-                  'border-top-color', 'border-right-color',
-                  'border-bottom-color', 'border-left-color',
-                  'outline-color', 'text-decoration-color',
-                  'fill', 'stroke', 'caret-color',
-                  'box-shadow', 'text-shadow',
+                  'color',
+                  'background-color',
+                  'border-color',
+                  'border-top-color',
+                  'border-right-color',
+                  'border-bottom-color',
+                  'border-left-color',
+                  'outline-color',
+                  'text-decoration-color',
+                  'fill',
+                  'stroke',
+                  'caret-color',
+                  'box-shadow',
+                  'text-shadow',
                 ];
 
                 propsToCheck.forEach((prop) => {
                   const val = computed.getPropertyValue(prop);
+
                   if (val && MODERN_COLOR_RE.test(val)) {
                     const isBackground = prop.includes('background');
                     const isBorder = prop.includes('border') || prop.includes('outline');
@@ -695,11 +789,12 @@ const Notes = () => {
                 if (el.getAttribute('style')) {
                   el.setAttribute(
                     'style',
-                    el.getAttribute('style')
-                      .replace(MODERN_COLOR_RE_GLOBAL, '#111827')
+                    el.getAttribute('style').replace(MODERN_COLOR_RE_GLOBAL, '#111827')
                   );
                 }
-              } catch (_) {}
+              } catch (_) {
+                // ignore style inspection failures on clone
+              }
             });
 
             clonedDoc.querySelectorAll('style').forEach((styleEl) => {
@@ -711,11 +806,18 @@ const Notes = () => {
             });
           },
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+          compress: true,
+        },
       };
 
       await html2pdf().set(options).from(pdfExportRef.current).save();
+
       showStatus('PDF exported — beautifully crafted! ✓');
+
       trackEvent('pdf_exported', {
         route: '/notes',
         note_title: selectedNote.title,
@@ -727,9 +829,8 @@ const Notes = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [selectedNote, showStatus]);
+  }, [selectedNote]);
 
-  // ==================== JSX ====================
   return (
     <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       {sidebarVisible && !isDesktop && (
@@ -746,10 +847,11 @@ const Notes = () => {
             : 'hidden'
         }`}
       >
-        {/* ... exactly the same sidebar content as your original ... */}
         <div className="space-y-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Study Notes</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              Study Notes
+            </span>
             <button
               onClick={() => {
                 setSidebarPinned(false);
@@ -762,6 +864,7 @@ const Notes = () => {
               <X className="h-4 w-4" />
             </button>
           </div>
+
           <form onSubmit={handleSearchSubmit} className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
             <input
@@ -776,7 +879,9 @@ const Notes = () => {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Vault Notes</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+              Vault Notes
+            </span>
             <button
               onClick={handleCreateNote}
               className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-emerald-500 cursor-pointer"
@@ -803,14 +908,19 @@ const Notes = () => {
                   <FileText className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{note.title}</span>
                 </div>
-                {note.ai_generated && <Sparkles className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />}
+                {note.ai_generated && (
+                  <Sparkles className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />
+                )}
               </button>
             ))
           )}
         </div>
 
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 space-y-2">
-          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">AI Guide Generator</div>
+          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">
+            AI Guide Generator
+          </div>
+
           <div className="relative">
             <input
               type="text"
@@ -820,6 +930,7 @@ const Notes = () => {
               className="w-full bg-zinc-200 dark:bg-zinc-800/80 border border-zinc-300 dark:border-zinc-700/50 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none"
             />
           </div>
+
           <button
             onClick={handleGenerateAINote}
             disabled={isGenerating}
@@ -841,9 +952,14 @@ const Notes = () => {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
                   title={sidebarVisible ? 'Hide notes' : 'Show notes'}
                 >
-                  {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                  {sidebarVisible ? (
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
                   Notes
                 </button>
+
                 {isEditing ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <input
@@ -937,20 +1053,24 @@ const Notes = () => {
               onClick={toggleSidebar}
               className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-200/70 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
             >
-              {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              {sidebarVisible ? (
+                <ChevronLeft className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
               Notes
             </button>
+
             <FileText className="w-10 h-10 text-zinc-400 mb-4" />
             <h3 className="font-extrabold text-sm uppercase tracking-wider">Select a Study Note</h3>
             <p className="text-xs text-zinc-400 mt-1">
-              Review saved summaries, draft practice guides, or prompt the AI helper to generate comprehensive study
-              notes.
+              Review saved summaries, draft practice guides, or prompt the AI helper to generate
+              comprehensive study notes.
             </p>
           </div>
         )}
       </div>
 
-      {/* Hidden PDF Export Container */}
       <div
         aria-hidden="true"
         style={{
@@ -974,12 +1094,22 @@ const Notes = () => {
 
               <div className="vai-pdf-meta">
                 <span className="vai-pdf-badge">{selectedNote?.topic || 'General'}</span>
-                <span>{new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span>
+                  {new Date().toLocaleDateString('en-ZA', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
               </div>
             </header>
 
             <main className="vai-pdf-body">
-              <div dangerouslySetInnerHTML={{ __html: renderPdfMarkdownToHtml(selectedNote?.content || '') }} />
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: renderPdfMarkdownToHtml(selectedNote?.content || ''),
+                }}
+              />
             </main>
           </div>
         </div>
