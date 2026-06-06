@@ -577,8 +577,6 @@ const Notes = () => {
       </div>
     `;
 
-    document.body.appendChild(wrapper);
-
     // ── 6. html2pdf options ────────────────────────────────────────
     const safeFilename = (selectedNote.title || 'study_note')
       .replace(/[^a-zA-Z0-9_\- ]/g, '')
@@ -686,8 +684,6 @@ const Notes = () => {
       console.error('PDF export failed:', error);
       showStatus('Failed to generate PDF. Please try again.', 'error');
     } finally {
-      // ── 7. Tear down off-screen node ────────────────────────────
-      if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
       setIsExporting(false);
     }
   }, [selectedNote, showStatus]);
