@@ -111,7 +111,20 @@ const PDF_BODY_STYLES = `
     color: #111827;
     font-weight: 800;
     line-height: 1.25;
+    break-after: avoid;
     page-break-after: avoid;
+  }
+
+  .vai-pdf-body p,
+  .vai-pdf-body li,
+  .vai-pdf-body blockquote,
+  .vai-pdf-body pre,
+  .vai-pdf-body table,
+  .vai-pdf-body tr,
+  .vai-pdf-body img,
+  .vai-pdf-body .katex-display {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .vai-pdf-body h1 {
@@ -146,6 +159,8 @@ const PDF_BODY_STYLES = `
   .vai-pdf-body ul,
   .vai-pdf-body ol {
     margin: 0 0 12px;
+    orphans: 3;
+    widows: 3;
   }
 
   .vai-pdf-body ul,
@@ -272,7 +287,8 @@ const PDF_BODY_STYLES = `
     border-radius: 9px;
     background: #f7fef9;
     text-align: center;
-    overflow: hidden;
+    overflow: visible;
+    max-width: 100%;
     page-break-inside: avoid;
   }
 
@@ -547,6 +563,19 @@ const Notes = () => {
         margin: [10, 10, 10, 10],
         filename: `${safeFilename}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
+        pagebreak: {
+          mode: ['css', 'legacy'],
+          avoid: [
+            '.vai-pdf-body p',
+            '.vai-pdf-body li',
+            '.vai-pdf-body blockquote',
+            '.vai-pdf-body pre',
+            '.vai-pdf-body table',
+            '.vai-pdf-body tr',
+            '.vai-pdf-body img',
+            '.vai-pdf-body .katex-display',
+          ],
+        },
         html2canvas: {
           scale: 2,
           useCORS: true,

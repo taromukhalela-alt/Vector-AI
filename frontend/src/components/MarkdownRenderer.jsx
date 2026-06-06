@@ -4,7 +4,25 @@ import rehypeKatex from 'rehype-katex';
 
 import 'katex/dist/katex.min.css';
 
+const normalizeMathDelimiters = (value = '') => {
+  const parts = String(value).split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g);
+
+  return parts
+    .map((part) => {
+      if (part.startsWith('```') || part.startsWith('~~~')) {
+        return part;
+      }
+
+      return part
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_match, math) => `\n\n$$\n${math}\n$$\n\n`)
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_match, math) => `$${math}$`);
+    })
+    .join('');
+};
+
 const MarkdownRenderer = ({ content }) => {
+  const normalizedContent = normalizeMathDelimiters(content);
+
   return (
     <div
       className="
@@ -24,13 +42,13 @@ const MarkdownRenderer = ({ content }) => {
     >
       <ReactMarkdown
         remarkPlugins={[remarkMath]}
-        rehypePlugins={[[rehypeKatex, { strict: false }]]}
+        rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
         components={{
           // Force proper paragraph spacing for print
           p: ({ children }) => <p style={{ margin: '12px 0' }}>{children}</p>
         }}
       >
-        {content || ''}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   );
