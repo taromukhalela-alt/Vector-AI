@@ -261,185 +261,432 @@ const Notes = () => {
   // ==================== PDF Export (html2pdf.js) ====================
   const handleDownloadPDF = useCallback(async () => {
     if (!selectedNote) return;
-
-    const element = document.getElementById('print-note-root');
-    if (!element) {
-      console.error('Print root element not found');
-      showStatus('Could not find note content to export', 'error');
-      return;
-    }
-
     setIsExporting(true);
 
+    // ── 1. Build the note body HTML from markdown ──────────────────
+    const bodyHtml = renderSafeMarkdown(selectedNote.content || '');
+
+    // ── 2. Copy KaTeX CSS link from live <head> so math renders ───
+    const katexLinkHref = (() => {
+      const found = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .find((l) => l.href && l.href.includes('katex'));
+      return found ? found.href : '';
+    })();
+
+    // ── 3. Generate cover date string ──────────────────────────────
+    const dateStr = new Date().toLocaleDateString('en-ZA', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    // ── 4. Build off-screen container ─────────────────────────────
+    const wrapper = document.createElement('div');
+    wrapper.id = 'vai-pdf-offscreen';
+    wrapper.style.cssText = [
+      'position:fixed',
+      'left:-9999px',
+      'top:0',
+      'width:794px',      // A4 @ 96 dpi
+      'background:#ffffff',
+      'font-family:Inter,system-ui,sans-serif',
+      'color:#0a0a0a',
+      'font-size:13pt',
+      'line-height:1.75',
+      'z-index:-9999',
+    ].join(';');
+
+    // ── 5. Inline KaTeX stylesheet so math survives html2canvas ───
+    const katexStyle = katexLinkHref
+      ? `<link rel="stylesheet" href="${katexLinkHref}" />`
+      : '';
+
+    wrapper.innerHTML = `
+      ${katexStyle}
+      <style>
+        /* ── Reset ── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Cover ── */
+        .vai-cover {
+          background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+          padding: 36px 40px 28px;
+          border-radius: 0;
+          margin-bottom: 0;
+        }
+        .vai-cover-wordmark {
+          font-size: 11pt;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          color: rgba(255,255,255,0.75);
+          text-transform: uppercase;
+          margin-bottom: 22px;
+        }
+        .vai-cover-title {
+          font-size: 26pt;
+          font-weight: 800;
+          color: #ffffff;
+          line-height: 1.2;
+          margin-bottom: 14px;
+          letter-spacing: -0.01em;
+        }
+        .vai-cover-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 10px;
+        }
+        .vai-cover-badge {
+          background: rgba(255,255,255,0.22);
+          border: 1px solid rgba(255,255,255,0.35);
+          color: #ffffff;
+          font-size: 8pt;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          padding: 4px 12px;
+          border-radius: 999px;
+        }
+        .vai-cover-date {
+          font-size: 9pt;
+          color: rgba(255,255,255,0.7);
+          font-weight: 500;
+        }
+        .vai-cover-author {
+          font-size: 9pt;
+          color: rgba(255,255,255,0.6);
+          font-style: italic;
+        }
+
+        /* ── Divider ── */
+        .vai-divider {
+          height: 3px;
+          background: linear-gradient(90deg, #10b981 0%, #34d399 50%, transparent 100%);
+          margin-bottom: 32px;
+        }
+
+        /* ── Body ── */
+        .vai-body {
+          padding: 0 40px 40px;
+        }
+
+        /* ── Typography ── */
+        .vai-body h1 {
+          font-size: 22pt;
+          font-weight: 800;
+          color: #0a0a0a;
+          border-bottom: 3px solid #10b981;
+          padding-bottom: 8px;
+          margin: 8px 0 18px;
+          break-after: avoid;
+          letter-spacing: -0.01em;
+        }
+        .vai-body h2 {
+          font-size: 16pt;
+          font-weight: 700;
+          color: #0a0a0a;
+          padding-left: 10px;
+          border-left: 4px solid #10b981;
+          margin: 28px 0 12px;
+          break-after: avoid;
+        }
+        .vai-body h3 {
+          font-size: 13pt;
+          font-weight: 700;
+          color: #059669;
+          margin: 22px 0 8px;
+          break-after: avoid;
+        }
+        .vai-body h4 {
+          font-size: 11pt;
+          font-weight: 700;
+          color: #065f46;
+          margin: 16px 0 6px;
+          break-after: avoid;
+        }
+        .vai-body p {
+          margin: 10px 0;
+          color: #1a1a2e;
+          font-size: 11.5pt;
+          line-height: 1.75;
+        }
+        .vai-body strong { color: #0a0a0a; font-weight: 700; }
+        .vai-body em { color: #374151; }
+
+        /* ── Lists ── */
+        .vai-body ul, .vai-body ol {
+          margin: 8px 0 12px 0;
+          padding-left: 22px;
+        }
+        .vai-body li {
+          margin-bottom: 5px;
+          font-size: 11.5pt;
+          line-height: 1.7;
+          color: #1a1a2e;
+        }
+        .vai-body li::marker { color: #10b981; font-weight: 700; }
+
+        /* ── Blockquote ── */
+        .vai-body blockquote {
+          border-left: 4px solid #10b981;
+          background: #f0fdf4;
+          padding: 14px 18px;
+          margin: 16px 0;
+          color: #374151;
+          font-style: italic;
+          border-radius: 0 6px 6px 0;
+          break-inside: avoid;
+        }
+
+        /* ── Tables ── */
+        .vai-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 18px 0;
+          font-size: 10.5pt;
+          break-inside: avoid;
+        }
+        .vai-body thead tr {
+          background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .vai-body th {
+          color: #ffffff;
+          font-weight: 700;
+          padding: 10px 14px;
+          text-align: left;
+          font-size: 9.5pt;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          border: 1px solid #059669;
+        }
+        .vai-body td {
+          border: 1px solid #d1fae5;
+          padding: 9px 14px;
+          color: #1a1a2e;
+          vertical-align: top;
+        }
+        .vai-body tbody tr:nth-child(even) td {
+          background: #f0fdf4;
+        }
+        .vai-body tbody tr:nth-child(odd) td {
+          background: #ffffff;
+        }
+
+        /* ── Code ── */
+        .vai-body pre {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-left: 3px solid #10b981;
+          border-radius: 6px;
+          padding: 16px 18px;
+          margin: 16px 0;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+          font-size: 9.5pt;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+          break-inside: avoid;
+          color: #1e293b;
+        }
+        .vai-body code {
+          background: #ecfdf5;
+          color: #065f46;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+          font-size: 0.88em;
+          font-weight: 500;
+        }
+        .vai-body pre code {
+          background: transparent;
+          color: inherit;
+          padding: 0;
+          border-radius: 0;
+          font-weight: 400;
+        }
+
+        /* ── KaTeX math ── */
+        .katex-display {
+          margin: 20px 0 !important;
+          overflow-x: auto;
+        }
+        .katex-display > .katex {
+          display: block;
+          text-align: center;
+        }
+        .katex { font-size: 1.1em; }
+
+        /* ── Horizontal rule ── */
+        .vai-body hr {
+          border: none;
+          border-top: 1.5px solid #d1fae5;
+          margin: 24px 0;
+        }
+
+        /* ── Images ── */
+        .vai-body img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 6px;
+          margin: 12px 0;
+        }
+
+        /* ── Footer ── */
+        .vai-footer {
+          margin: 36px 40px 0;
+          padding-top: 10px;
+          border-top: 1.5px solid #d1fae5;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 8pt;
+          color: #6b7280;
+          break-inside: avoid;
+        }
+        .vai-footer-brand {
+          font-weight: 700;
+          color: #10b981;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .vai-footer-right {
+          text-align: right;
+        }
+      </style>
+
+      <!-- Cover -->
+      <div class="vai-cover">
+        <div class="vai-cover-wordmark">⬡ Vector AI · STEM OS</div>
+        <div class="vai-cover-title">${selectedNote.title || 'Study Note'}</div>
+        <div class="vai-cover-meta">
+          <span class="vai-cover-badge">${selectedNote.topic || 'General'}</span>
+          <span class="vai-cover-date">${dateStr}</span>
+          <span class="vai-cover-author">by Taro</span>
+        </div>
+      </div>
+
+      <!-- Emerald gradient divider -->
+      <div class="vai-divider"></div>
+
+      <!-- Note body -->
+      <div class="vai-body">${bodyHtml}</div>
+
+      <!-- Footer -->
+      <div class="vai-footer">
+        <span class="vai-footer-brand">Vector AI</span>
+        <span class="vai-footer-right">Generated by Vector AI · Taro · ${dateStr}</span>
+      </div>
+    `;
+
+    document.body.appendChild(wrapper);
+
+    // ── 6. html2pdf options ────────────────────────────────────────
+    const safeFilename = (selectedNote.title || 'study_note')
+      .replace(/[^a-zA-Z0-9_\- ]/g, '')
+      .trim()
+      .replace(/\s+/g, '_');
+
     const options = {
-      margin: [12, 15, 12, 15], // top, right, bottom, left (mm)
-      filename: `${selectedNote.title || 'study_note'}.pdf`,
-      image: { type: 'jpeg', quality: 1.0 },
+      margin: [10, 0, 10, 0],
+      filename: `${safeFilename}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        // Force all elements to light color scheme (kills OKLCH issues)
         onclone: (clonedDoc) => {
+          // Strip oklch() and other unsupported CSS color functions
+          // html2canvas (bundled in html2pdf) crashes on oklch — replace with safe values
+          const OKLCH_RE = /oklch\([^)]*\)/gi;
+          const CSS_COLOR_FN_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
+
           clonedDoc.querySelectorAll('*').forEach((el) => {
+            // Force light colour-scheme
             el.style.setProperty('color-scheme', 'light', 'important');
+
+            // Pull computed styles and overwrite any that contain oklch
+            try {
+              const cloneWin = clonedDoc.defaultView || window;
+              const computed = cloneWin.getComputedStyle(el);
+              const propsToCheck = [
+                'color', 'background-color', 'border-color',
+                'border-top-color', 'border-right-color',
+                'border-bottom-color', 'border-left-color',
+                'outline-color', 'text-decoration-color',
+                'fill', 'stroke', 'caret-color',
+                'box-shadow', 'text-shadow',
+              ];
+
+              propsToCheck.forEach((prop) => {
+                const val = computed.getPropertyValue(prop);
+                if (val && (OKLCH_RE.test(val) || CSS_COLOR_FN_RE.test(val))) {
+                  // Map common semantic roles to safe fallbacks
+                  const isBackground = prop.includes('background');
+                  const isBorder = prop.includes('border') || prop.includes('outline');
+                  const fallback = isBackground ? '#ffffff'
+                    : isBorder ? '#e5e7eb'
+                    : '#0a0a0a';
+                  el.style.setProperty(prop, fallback, 'important');
+                }
+              });
+
+              // Also scrub inline style attribute for any oklch refs
+              if (el.getAttribute('style')) {
+                el.setAttribute(
+                  'style',
+                  el.getAttribute('style')
+                    .replace(OKLCH_RE, '#0a0a0a')
+                    .replace(CSS_COLOR_FN_RE, '#0a0a0a')
+                );
+              }
+            } catch (_) { /* cross-origin or SVG nodes — skip */ }
           });
 
-          // Inject custom print styles directly into the clone
-          const style = clonedDoc.createElement('style');
-          style.textContent = `
-            /* Typography */
-            #print-note-root {
-              font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-              font-size: 12pt !important;
-              line-height: 1.7 !important;
-              color: #1a1a2e !important;
-              background: #ffffff !important;
-              padding: 30px !important;
-            }
+          // Ensure KaTeX SVGs are visible
+          clonedDoc.querySelectorAll('.katex svg').forEach((svg) => {
+            svg.style.setProperty('display', 'inline-block', 'important');
+          });
 
-            /* Headings */
-            #print-note-root h1 {
-              font-size: 24pt !important;
-              font-weight: 700 !important;
-              border-bottom: 2px solid #10b981 !important;
-              padding-bottom: 8px !important;
-              margin: 0 0 16px 0 !important;
-              break-after: avoid !important;
+          // Nuke any <style> blocks in the cloned doc that reference oklch
+          clonedDoc.querySelectorAll('style').forEach((styleEl) => {
+            if (styleEl.textContent.includes('oklch')) {
+              styleEl.textContent = styleEl.textContent
+                .replace(/:\s*oklch\([^)]*\)/g, ': #0a0a0a')
+                .replace(/oklch\([^)]*\)/g, '#0a0a0a');
             }
-            #print-note-root h2 {
-              font-size: 18pt !important;
-              font-weight: 600 !important;
-              border-bottom: 1px solid #10b981 !important;
-              padding-bottom: 6px !important;
-              margin: 28px 0 12px 0 !important;
-              break-after: avoid !important;
-            }
-            #print-note-root h3 {
-              font-size: 14pt !important;
-              font-weight: 600 !important;
-              margin: 24px 0 8px 0 !important;
-              break-after: avoid !important;
-            }
-            #print-note-root h4 {
-              font-size: 12pt !important;
-              font-weight: 600 !important;
-              margin: 16px 0 4px 0 !important;
-              break-after: avoid !important;
-            }
-
-            /* KaTeX math */
-            .katex-display {
-              margin: 18px 0 !important;
-              padding: 4px 0 !important;
-            }
-            .katex-display > .katex {
-              display: block !important;
-              text-align: center !important;
-            }
-            .katex {
-              font-size: 1.1em !important;
-            }
-
-            /* Code blocks */
-            pre {
-              background: #f8fafc !important;
-              border: 1px solid #e2e8f0 !important;
-              border-radius: 6px !important;
-              padding: 16px !important;
-              margin: 16px 0 !important;
-              font-family: 'JetBrains Mono', monospace !important;
-              font-size: 10pt !important;
-              line-height: 1.5 !important;
-              white-space: pre-wrap !important;
-              word-wrap: break-word !important;
-              break-inside: avoid !important;
-            }
-            code {
-              background: #f1f5f9 !important;
-              padding: 2px 6px !important;
-              border-radius: 4px !important;
-              font-family: 'JetBrains Mono', monospace !important;
-              font-size: 0.9em !important;
-            }
-            pre code {
-              background: transparent !important;
-              padding: 0 !important;
-              border-radius: 0 !important;
-            }
-
-            /* Tables */
-            table {
-              width: 100% !important;
-              border-collapse: collapse !important;
-              margin: 16px 0 !important;
-              break-inside: avoid !important;
-            }
-            th {
-              background: #f1f5f9 !important;
-              border: 1px solid #cbd5e1 !important;
-              padding: 10px 12px !important;
-              font-weight: 600 !important;
-              text-align: left !important;
-            }
-            td {
-              border: 1px solid #e2e8f0 !important;
-              padding: 8px 12px !important;
-            }
-
-            /* Blockquotes */
-            blockquote {
-              border-left: 4px solid #10b981 !important;
-              background: #f8fafc !important;
-              padding: 12px 16px !important;
-              margin: 16px 0 !important;
-              color: #475569 !important;
-              break-inside: avoid !important;
-            }
-
-            /* Lists */
-            ul, ol {
-              margin: 8px 0 12px 0 !important;
-              padding-left: 24px !important;
-            }
-            li {
-              margin-bottom: 4px !important;
-            }
-
-            /* Images */
-            img {
-              max-width: 100% !important;
-              height: auto !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
+          });
         },
       },
       jsPDF: {
         unit: 'mm',
         format: 'a4',
         orientation: 'portrait',
+        compress: true,
       },
       pagebreak: {
         mode: ['avoid-all', 'css', 'legacy'],
+        before: '.vai-page-break',
       },
     };
 
     try {
-      await html2pdf().set(options).from(element).save();
-      showStatus('PDF exported successfully!');
+      await html2pdf().set(options).from(wrapper).save();
+      showStatus('PDF exported — beautifully crafted! ✓');
       trackEvent('pdf_exported', {
         route: '/notes',
         note_title: selectedNote.title,
+        topic: selectedNote.topic || 'General',
       });
     } catch (error) {
       console.error('PDF export failed:', error);
       showStatus('Failed to generate PDF. Please try again.', 'error');
     } finally {
+      // ── 7. Tear down off-screen node ────────────────────────────
+      if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
       setIsExporting(false);
     }
-  }, [selectedNote, showStatus, trackEvent]);
+  }, [selectedNote, showStatus]);
 
   // ==================== JSX ====================
   return (
