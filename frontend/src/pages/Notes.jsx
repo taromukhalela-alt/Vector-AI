@@ -7,24 +7,293 @@ import {
   FileText, Search, Plus, Trash2, Edit, Eye, Download,
   Sparkles, Save, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import html2pdf from 'html2pdf.js';
 
-// No global side‑effects – pass options directly to marked.parse
+const PDF_BODY_STYLES = `
+  .vai-pdf-shell, .vai-pdf-shell * {
+    box-sizing: border-box;
+    border-color: #d1fae5;
+    outline-color: #a7f3d0;
+  }
 
-const renderSafeMarkdown = (content) => {
-  return DOMPurify.sanitize(
-    marked.parse(content || '', {
-      breaks: true,
-      gfm: true,
-    }),
-    {
-      ADD_TAGS: ['math', 'semantics', 'annotation'],
-      ADD_ATTR: ['xmlns'],
-    }
-  );
-};
+  .vai-pdf-shell {
+    width: 794px;
+    min-height: 1123px;
+    background: #ffffff;
+    color: #17201c;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  .vai-pdf-document {
+    padding: 34px 40px 42px;
+  }
+
+  .vai-pdf-header {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    align-items: end;
+    padding: 0 0 18px;
+    margin-bottom: 26px;
+    border-bottom: 1px solid #a7f3d0;
+  }
+
+  .vai-pdf-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 152px;
+    height: 3px;
+    background: #10b981;
+    border-radius: 999px;
+  }
+
+  .vai-pdf-kicker {
+    margin: 0 0 7px;
+    color: #047857;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .vai-pdf-title {
+    margin: 0;
+    color: #111827;
+    font-size: 27px;
+    line-height: 1.12;
+    font-weight: 850;
+  }
+
+  .vai-pdf-meta {
+    display: grid;
+    gap: 5px;
+    justify-items: end;
+    color: #475569;
+    font-size: 10.5px;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+
+  .vai-pdf-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 4px 9px;
+    border: 1px solid #a7f3d0;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .vai-pdf-body {
+    color: #1f2937;
+    font-size: 13.2px;
+    line-height: 1.68;
+  }
+
+  .vai-pdf-body > div {
+    max-width: none;
+  }
+
+  .vai-pdf-body h1,
+  .vai-pdf-body h2,
+  .vai-pdf-body h3,
+  .vai-pdf-body h4 {
+    color: #111827;
+    font-weight: 800;
+    line-height: 1.25;
+    page-break-after: avoid;
+  }
+
+  .vai-pdf-body h1 {
+    margin: 28px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #bbf7d0;
+    font-size: 21px;
+  }
+
+  .vai-pdf-body h2 {
+    margin: 25px 0 11px;
+    padding: 7px 0 7px 12px;
+    border-left: 4px solid #10b981;
+    background: #f0fdf4;
+    border-radius: 0 8px 8px 0;
+    font-size: 17px;
+  }
+
+  .vai-pdf-body h3 {
+    margin: 21px 0 8px;
+    color: #047857;
+    font-size: 15px;
+  }
+
+  .vai-pdf-body h4 {
+    margin: 18px 0 7px;
+    color: #065f46;
+    font-size: 13.5px;
+  }
+
+  .vai-pdf-body p,
+  .vai-pdf-body ul,
+  .vai-pdf-body ol {
+    margin: 0 0 12px;
+  }
+
+  .vai-pdf-body ul,
+  .vai-pdf-body ol {
+    padding-left: 22px;
+  }
+
+  .vai-pdf-body li {
+    margin: 3px 0;
+    padding-left: 2px;
+  }
+
+  .vai-pdf-body strong {
+    color: #111827;
+    font-weight: 800;
+  }
+
+  .vai-pdf-body a {
+    color: #047857;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid #6ee7b7;
+  }
+
+  .vai-pdf-body blockquote {
+    margin: 18px 0;
+    padding: 13px 16px;
+    border: 1px solid #a7f3d0;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #334155;
+    font-style: normal;
+  }
+
+  .vai-pdf-body hr {
+    border: 0;
+    border-top: 1px solid #bbf7d0;
+    margin: 24px 0;
+  }
+
+  .vai-pdf-body table {
+    width: 100%;
+    margin: 18px 0 20px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 11.7px;
+    page-break-inside: avoid;
+  }
+
+  .vai-pdf-body th,
+  .vai-pdf-body td {
+    padding: 9px 10px;
+    border-right: 1px solid #d1fae5;
+    border-bottom: 1px solid #d1fae5;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .vai-pdf-body th:last-child,
+  .vai-pdf-body td:last-child {
+    border-right: 0;
+  }
+
+  .vai-pdf-body tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .vai-pdf-body th {
+    background: #047857;
+    color: #ffffff;
+    font-weight: 800;
+  }
+
+  .vai-pdf-body tr:nth-child(even) td {
+    background: #f7fef9;
+  }
+
+  .vai-pdf-body pre {
+    margin: 17px 0 20px;
+    padding: 13px 15px;
+    border: 1px solid #a7f3d0;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.8px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    page-break-inside: avoid;
+  }
+
+  .vai-pdf-body code {
+    padding: 2px 5px;
+    border-radius: 5px;
+    background: #ecfdf5;
+    color: #065f46;
+    font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+  }
+
+  .vai-pdf-body pre code {
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1em;
+  }
+
+  .vai-pdf-body .katex {
+    color: #10231c;
+    font-size: 1.03em;
+  }
+
+  .vai-pdf-body .katex-display {
+    margin: 17px 0 20px !important;
+    padding: 14px 16px;
+    border: 1px solid #a7f3d0;
+    border-left: 4px solid #10b981;
+    border-radius: 9px;
+    background: #f7fef9;
+    text-align: center;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+
+  .vai-pdf-body .katex-display > .katex {
+    max-width: 100%;
+    font-size: 1.04em;
+  }
+
+  .vai-pdf-body img {
+    max-width: 100%;
+    height: auto;
+    margin: 16px 0;
+    border: 1px solid #d1fae5;
+    border-radius: 8px;
+  }
+`;
+
+const waitForNextPaint = () =>
+  new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
 
 const Notes = () => {
   const pdfExportRef = useRef(null);
@@ -269,66 +538,70 @@ const Notes = () => {
       .trim()
       .replace(/\s+/g, '_');
 
-    const options = {
-      margin: [15, 15, 15, 15],
-      filename: `${safeFilename}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        letterRendering: true,
-        onclone: (clonedDoc) => {
-          const OKLCH_RE = /oklch\([^)]*\)/gi;
-          const CSS_COLOR_FN_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
-
-          clonedDoc.querySelectorAll('*').forEach((el) => {
-            el.style.setProperty('color-scheme', 'light', 'important');
-            try {
-              const cloneWin = clonedDoc.defaultView || window;
-              const computed = cloneWin.getComputedStyle(el);
-              const propsToCheck = [
-                'color', 'background-color', 'border-color',
-                'border-top-color', 'border-right-color',
-                'border-bottom-color', 'border-left-color',
-                'outline-color', 'text-decoration-color',
-                'fill', 'stroke', 'caret-color',
-                'box-shadow', 'text-shadow',
-              ];
-
-              propsToCheck.forEach((prop) => {
-                const val = computed.getPropertyValue(prop);
-                if (val && (OKLCH_RE.test(val) || CSS_COLOR_FN_RE.test(val))) {
-                  const isBackground = prop.includes('background');
-                  const isBorder = prop.includes('border') || prop.includes('outline');
-                  const fallback = isBackground ? '#ffffff' : isBorder ? '#e5e7eb' : '#0a0a0a';
-                  el.style.setProperty(prop, fallback, 'important');
-                }
-              });
-
-              if (el.getAttribute('style')) {
-                el.setAttribute(
-                  'style',
-                  el.getAttribute('style')
-                    .replace(OKLCH_RE, '#0a0a0a')
-                    .replace(CSS_COLOR_FN_RE, '#0a0a0a')
-                );
-              }
-            } catch (_) {}
-          });
-
-          clonedDoc.querySelectorAll('style').forEach((styleEl) => {
-            if (styleEl.textContent.includes('oklch')) {
-              styleEl.textContent = styleEl.textContent
-                .replace(/:\s*oklch\([^)]*\)/g, ': #0a0a0a')
-                .replace(/oklch\([^)]*\)/g, '#0a0a0a');
-            }
-          });
-        }
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-    };
-
     try {
+      if (typeof requestAnimationFrame === 'function') {
+        await waitForNextPaint();
+      }
+
+      const options = {
+        margin: [10, 10, 10, 10],
+        filename: `${safeFilename}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc) => {
+            const MODERN_COLOR_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/i;
+            const MODERN_COLOR_RE_GLOBAL = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
+
+            clonedDoc.querySelectorAll('*').forEach((el) => {
+              el.style.setProperty('color-scheme', 'light', 'important');
+              try {
+                const cloneWin = clonedDoc.defaultView || window;
+                const computed = cloneWin.getComputedStyle(el);
+                const propsToCheck = [
+                  'color', 'background-color', 'border-color',
+                  'border-top-color', 'border-right-color',
+                  'border-bottom-color', 'border-left-color',
+                  'outline-color', 'text-decoration-color',
+                  'fill', 'stroke', 'caret-color',
+                  'box-shadow', 'text-shadow',
+                ];
+
+                propsToCheck.forEach((prop) => {
+                  const val = computed.getPropertyValue(prop);
+                  if (val && MODERN_COLOR_RE.test(val)) {
+                    const isBackground = prop.includes('background');
+                    const isBorder = prop.includes('border') || prop.includes('outline');
+                    const fallback = isBackground ? '#ffffff' : isBorder ? '#d1fae5' : '#111827';
+                    el.style.setProperty(prop, fallback, 'important');
+                  }
+                });
+
+                if (el.getAttribute('style')) {
+                  el.setAttribute(
+                    'style',
+                    el.getAttribute('style')
+                      .replace(MODERN_COLOR_RE_GLOBAL, '#111827')
+                  );
+                }
+              } catch (_) {}
+            });
+
+            clonedDoc.querySelectorAll('style').forEach((styleEl) => {
+              if (MODERN_COLOR_RE.test(styleEl.textContent)) {
+                styleEl.textContent = styleEl.textContent
+                  .replace(/:\s*\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi, ': #111827')
+                  .replace(MODERN_COLOR_RE_GLOBAL, '#111827');
+              }
+            });
+          },
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+      };
+
       await html2pdf().set(options).from(pdfExportRef.current).save();
       showStatus('PDF exported — beautifully crafted! ✓');
       trackEvent('pdf_exported', {
@@ -566,41 +839,36 @@ const Notes = () => {
       </div>
 
       {/* Hidden PDF Export Container */}
-      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -9999, opacity: 0, pointerEvents: 'none' }}>
-        <div ref={pdfExportRef} style={{ padding: '20px', fontFamily: 'Inter, system-ui, sans-serif', color: '#121415', width: '794px', background: '#ffffff' }}>
-          {/* Header */}
-          <div style={{ borderBottom: '2px solid #10b981', paddingBottom: '10px', marginBottom: '20px' }}>
-            <h1 style={{ margin: 0, fontSize: '24px', color: '#121415', fontWeight: 800 }}>{selectedNote?.title || 'Study Note'}</h1>
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-              <b>Vector AI</b> &middot; {selectedNote?.topic || 'General'} &middot; {new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
-            </div>
-          </div>
-          
-          {/* Scoped Styles for Body */}
-          <style dangerouslySetInnerHTML={{ __html: `
-            .vai-pdf-body * { box-sizing: border-box; border-color: #e5e7eb; outline-color: #e5e7eb; }
-            .vai-pdf-body h1 { font-size: 20px; font-weight: 800; color: #121415; margin: 24px 0 12px; border-bottom: 2px solid #10b981; padding-bottom: 4px; }
-            .vai-pdf-body h2 { font-size: 18px; font-weight: 700; color: #121415; margin: 20px 0 10px; border-left: 3px solid #10b981; padding-left: 8px; }
-            .vai-pdf-body h3 { font-size: 16px; font-weight: 700; color: #10b981; margin: 16px 0 8px; }
-            .vai-pdf-body h4 { font-size: 14px; font-weight: 700; color: #065f46; margin: 16px 0 8px; }
-            .vai-pdf-body p { margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: #1a1a2e; }
-            .vai-pdf-body ul, .vai-pdf-body ol { margin-bottom: 12px; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #1a1a2e; }
-            .vai-pdf-body pre { background: #f8fafc; border-left: 3px solid #10b981; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: monospace; font-size: 11px; margin-bottom: 16px; white-space: pre-wrap; word-wrap: break-word; }
-            .vai-pdf-body code { background: #ecfdf5; color: #065f46; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
-            .vai-pdf-body pre code { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: 1em; }
-            .vai-pdf-body blockquote { border-left: 4px solid #10b981; background: #f0fdf4; padding: 12px; margin-bottom: 16px; color: #374151; font-style: italic; }
-            .vai-pdf-body table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
-            .vai-pdf-body th, .vai-pdf-body td { border: 1px solid #d1fae5; padding: 8px; text-align: left; vertical-align: top; }
-            .vai-pdf-body th { background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 700; }
-            .vai-pdf-body tr:nth-child(even) td { background: #f0fdf4; }
-            .vai-pdf-body .katex-display { margin: 16px 0 !important; overflow-x: auto; text-align: center; }
-            .vai-pdf-body hr { border: 0; border-top: 1.5px solid #d1fae5; margin: 20px 0; }
-            .vai-pdf-body img { max-width: 100%; height: auto; border-radius: 4px; margin: 12px 0; }
-          `}} />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: '-10000px',
+          width: '794px',
+          pointerEvents: 'none',
+          background: '#ffffff',
+        }}
+      >
+        <div ref={pdfExportRef} className="vai-pdf-shell">
+          <style dangerouslySetInnerHTML={{ __html: PDF_BODY_STYLES }} />
 
-          {/* Body */}
-          <div className="vai-pdf-body">
-            <MarkdownRenderer content={selectedNote?.content || ''} />
+          <div className="vai-pdf-document">
+            <header className="vai-pdf-header">
+              <div>
+                <p className="vai-pdf-kicker">Vector AI Study Notes</p>
+                <h1 className="vai-pdf-title">{selectedNote?.title || 'Study Note'}</h1>
+              </div>
+
+              <div className="vai-pdf-meta">
+                <span className="vai-pdf-badge">{selectedNote?.topic || 'General'}</span>
+                <span>{new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+            </header>
+
+            <main className="vai-pdf-body">
+              <MarkdownRenderer content={selectedNote?.content || ''} />
+            </main>
           </div>
         </div>
       </div>
