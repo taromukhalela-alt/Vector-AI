@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
@@ -27,6 +27,7 @@ const renderSafeMarkdown = (content) => {
 };
 
 const Notes = () => {
+  const pdfExportRef = useRef(null);
   const { csrfToken } = useAuth();
   const { showToast } = useToast();
   const [notes, setNotes] = useState([]);
@@ -260,420 +261,24 @@ const Notes = () => {
 
   // ==================== PDF Export (html2pdf.js) ====================
   const handleDownloadPDF = useCallback(async () => {
-    if (!selectedNote) return;
+    if (!selectedNote || !pdfExportRef.current) return;
     setIsExporting(true);
 
-    // ── 1. Build the note body HTML from markdown ──────────────────
-    const bodyHtml = renderSafeMarkdown(selectedNote.content || '');
-
-    // ── 2. Copy KaTeX CSS link from live <head> so math renders ───
-    const katexLinkHref = (() => {
-      const found = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-        .find((l) => l.href && l.href.includes('katex'));
-      return found ? found.href : '';
-    })();
-
-    // ── 3. Generate cover date string ──────────────────────────────
-    const dateStr = new Date().toLocaleDateString('en-ZA', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-
-    // ── 4. Build off-screen container ─────────────────────────────
-    const wrapper = document.createElement('div');
-    wrapper.id = 'vai-pdf-offscreen';
-    wrapper.style.cssText = [
-      'position:absolute',
-      'left:0',
-      'top:0',
-      'width:794px',      // A4 @ 96 dpi
-      'background:#ffffff',
-      'font-family:Inter,system-ui,sans-serif',
-      'color:#0a0a0a',
-      'font-size:13pt',
-      'line-height:1.75',
-      'z-index:-9999',
-    ].join(';');
-
-    // ── 5. Inline KaTeX stylesheet so math survives html2canvas ───
-    const katexStyle = katexLinkHref
-      ? `<link rel="stylesheet" href="${katexLinkHref}" />`
-      : '';
-
-    wrapper.innerHTML = `
-      ${katexStyle}
-      <style>
-        /* ── Reset ── */
-        #vai-pdf-offscreen * { box-sizing: border-box; margin: 0; padding: 0; border-color: #e5e7eb; outline-color: #e5e7eb; }
-
-        /* ── Cover ── */
-        #vai-pdf-offscreen .vai-cover {
-          background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
-          padding: 36px 40px 28px;
-          border-radius: 0;
-          margin-bottom: 0;
-        }
-        #vai-pdf-offscreen .vai-cover-wordmark {
-          font-size: 11pt;
-          font-weight: 800;
-          letter-spacing: 0.18em;
-          color: rgba(255,255,255,0.75);
-          text-transform: uppercase;
-          margin-bottom: 22px;
-        }
-        #vai-pdf-offscreen .vai-cover-title {
-          font-size: 26pt;
-          font-weight: 800;
-          color: #ffffff;
-          line-height: 1.2;
-          margin-bottom: 14px;
-          letter-spacing: -0.01em;
-        }
-        #vai-pdf-offscreen .vai-cover-meta {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-top: 10px;
-        }
-        #vai-pdf-offscreen .vai-cover-badge {
-          background: rgba(255,255,255,0.22);
-          border: 1px solid rgba(255,255,255,0.35);
-          color: #ffffff;
-          font-size: 8pt;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          padding: 4px 12px;
-          border-radius: 999px;
-        }
-        #vai-pdf-offscreen .vai-cover-date {
-          font-size: 9pt;
-          color: rgba(255,255,255,0.7);
-          font-weight: 500;
-        }
-        #vai-pdf-offscreen .vai-cover-author {
-          font-size: 9pt;
-          color: rgba(255,255,255,0.6);
-          font-style: italic;
-        }
-
-        /* ── Divider ── */
-        #vai-pdf-offscreen .vai-divider {
-          height: 3px;
-          background: linear-gradient(90deg, #10b981 0%, #34d399 50%, transparent 100%);
-          margin-bottom: 32px;
-        }
-
-        /* ── Body ── */
-        #vai-pdf-offscreen .vai-body {
-          padding: 0 40px 40px;
-        }
-
-        /* ── Typography ── */
-        #vai-pdf-offscreen .vai-body h1 {
-          font-size: 22pt;
-          font-weight: 800;
-          color: #0a0a0a;
-          border-bottom: 3px solid #10b981;
-          padding-bottom: 8px;
-          margin: 8px 0 18px;
-          break-after: avoid;
-          letter-spacing: -0.01em;
-        }
-        #vai-pdf-offscreen .vai-body h2 {
-          font-size: 16pt;
-          font-weight: 700;
-          color: #0a0a0a;
-          padding-left: 10px;
-          border-left: 4px solid #10b981;
-          margin: 28px 0 12px;
-          break-after: avoid;
-        }
-        #vai-pdf-offscreen .vai-body h3 {
-          font-size: 13pt;
-          font-weight: 700;
-          color: #059669;
-          margin: 22px 0 8px;
-          break-after: avoid;
-        }
-        #vai-pdf-offscreen .vai-body h4 {
-          font-size: 11pt;
-          font-weight: 700;
-          color: #065f46;
-          margin: 16px 0 6px;
-          break-after: avoid;
-        }
-        #vai-pdf-offscreen .vai-body p {
-          margin: 10px 0;
-          color: #1a1a2e;
-          font-size: 11.5pt;
-          line-height: 1.75;
-        }
-        #vai-pdf-offscreen .vai-body strong { color: #0a0a0a; font-weight: 700; }
-        #vai-pdf-offscreen .vai-body em { color: #374151; }
-
-        /* ── Lists ── */
-        #vai-pdf-offscreen .vai-body ul, #vai-pdf-offscreen .vai-body ol {
-          margin: 8px 0 12px 0;
-          padding-left: 22px;
-        }
-        #vai-pdf-offscreen .vai-body li {
-          margin-bottom: 5px;
-          font-size: 11.5pt;
-          line-height: 1.7;
-          color: #1a1a2e;
-        }
-        #vai-pdf-offscreen .vai-body li::marker { color: #10b981; font-weight: 700; }
-
-        /* ── Blockquote ── */
-        #vai-pdf-offscreen .vai-body blockquote {
-          border-left: 4px solid #10b981;
-          background: #f0fdf4;
-          padding: 14px 18px;
-          margin: 16px 0;
-          color: #374151;
-          font-style: italic;
-          border-radius: 0 6px 6px 0;
-          break-inside: avoid;
-        }
-
-        /* ── Tables ── */
-        #vai-pdf-offscreen .vai-body table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 18px 0;
-          font-size: 10.5pt;
-          break-inside: avoid;
-        }
-        #vai-pdf-offscreen .vai-body thead tr {
-          background: linear-gradient(135deg, #10b981, #059669);
-        }
-        #vai-pdf-offscreen .vai-body th {
-          color: #ffffff;
-          font-weight: 700;
-          padding: 10px 14px;
-          text-align: left;
-          font-size: 9.5pt;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          border: 1px solid #059669;
-        }
-        #vai-pdf-offscreen .vai-body td {
-          border: 1px solid #d1fae5;
-          padding: 9px 14px;
-          color: #1a1a2e;
-          vertical-align: top;
-        }
-        #vai-pdf-offscreen .vai-body tbody tr:nth-child(even) td {
-          background: #f0fdf4;
-        }
-        #vai-pdf-offscreen .vai-body tbody tr:nth-child(odd) td {
-          background: #ffffff;
-        }
-
-        /* ── Code ── */
-        #vai-pdf-offscreen .vai-body pre {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-left: 3px solid #10b981;
-          border-radius: 6px;
-          padding: 16px 18px;
-          margin: 16px 0;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace;
-          font-size: 9.5pt;
-          line-height: 1.6;
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          break-inside: avoid;
-          color: #1e293b;
-        }
-        #vai-pdf-offscreen .vai-body code {
-          background: #ecfdf5;
-          color: #065f46;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace;
-          font-size: 0.88em;
-          font-weight: 500;
-        }
-        #vai-pdf-offscreen .vai-body pre code {
-          background: transparent;
-          color: inherit;
-          padding: 0;
-          border-radius: 0;
-          font-weight: 400;
-        }
-
-        /* ── KaTeX math ── */
-        #vai-pdf-offscreen .katex-display {
-          margin: 20px 0 !important;
-          overflow-x: auto;
-        }
-        #vai-pdf-offscreen .katex-display > .katex {
-          display: block;
-          text-align: center;
-        }
-        #vai-pdf-offscreen .katex { font-size: 1.1em; }
-
-        /* ── Horizontal rule ── */
-        #vai-pdf-offscreen .vai-body hr {
-          border: none;
-          border-top: 1.5px solid #d1fae5;
-          margin: 24px 0;
-        }
-
-        /* ── Images ── */
-        #vai-pdf-offscreen .vai-body img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 6px;
-          margin: 12px 0;
-        }
-
-        /* ── Footer ── */
-        #vai-pdf-offscreen .vai-footer {
-          margin: 36px 40px 0;
-          padding-top: 10px;
-          border-top: 1.5px solid #d1fae5;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 8pt;
-          color: #6b7280;
-          break-inside: avoid;
-        }
-        #vai-pdf-offscreen .vai-footer-brand {
-          font-weight: 700;
-          color: #10b981;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-        }
-        #vai-pdf-offscreen .vai-footer-right {
-          text-align: right;
-        }
-      </style>
-
-      <!-- Cover -->
-      <div class="vai-cover">
-        <div class="vai-cover-wordmark">⬡ Vector AI · STEM OS</div>
-        <div class="vai-cover-title">${selectedNote.title || 'Study Note'}</div>
-        <div class="vai-cover-meta">
-          <span class="vai-cover-badge">${selectedNote.topic || 'General'}</span>
-          <span class="vai-cover-date">${dateStr}</span>
-          <span class="vai-cover-author">by Taro</span>
-        </div>
-      </div>
-
-      <!-- Emerald gradient divider -->
-      <div class="vai-divider"></div>
-
-      <!-- Note body -->
-      <div class="vai-body">${bodyHtml}</div>
-
-      <!-- Footer -->
-      <div class="vai-footer">
-        <span class="vai-footer-brand">Vector AI</span>
-        <span class="vai-footer-right">Generated by Vector AI · Taro · ${dateStr}</span>
-      </div>
-    `;
-
-    // ── 6. html2pdf options ────────────────────────────────────────
     const safeFilename = (selectedNote.title || 'study_note')
       .replace(/[^a-zA-Z0-9_\- ]/g, '')
       .trim()
       .replace(/\s+/g, '_');
 
     const options = {
-      margin: [10, 0, 10, 0],
+      margin: [15, 15, 15, 15],
       filename: `${safeFilename}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (clonedDoc) => {
-          // Strip oklch() and other unsupported CSS color functions
-          // html2canvas (bundled in html2pdf) crashes on oklch — replace with safe values
-          const OKLCH_RE = /oklch\([^)]*\)/gi;
-          const CSS_COLOR_FN_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
-
-          clonedDoc.querySelectorAll('*').forEach((el) => {
-            // Force light colour-scheme
-            el.style.setProperty('color-scheme', 'light', 'important');
-
-            // Pull computed styles and overwrite any that contain oklch
-            try {
-              const cloneWin = clonedDoc.defaultView || window;
-              const computed = cloneWin.getComputedStyle(el);
-              const propsToCheck = [
-                'color', 'background-color', 'border-color',
-                'border-top-color', 'border-right-color',
-                'border-bottom-color', 'border-left-color',
-                'outline-color', 'text-decoration-color',
-                'fill', 'stroke', 'caret-color',
-                'box-shadow', 'text-shadow',
-              ];
-
-              propsToCheck.forEach((prop) => {
-                const val = computed.getPropertyValue(prop);
-                if (val && (OKLCH_RE.test(val) || CSS_COLOR_FN_RE.test(val))) {
-                  // Map common semantic roles to safe fallbacks
-                  const isBackground = prop.includes('background');
-                  const isBorder = prop.includes('border') || prop.includes('outline');
-                  const fallback = isBackground ? '#ffffff'
-                    : isBorder ? '#e5e7eb'
-                    : '#0a0a0a';
-                  el.style.setProperty(prop, fallback, 'important');
-                }
-              });
-
-              // Also scrub inline style attribute for any oklch refs
-              if (el.getAttribute('style')) {
-                el.setAttribute(
-                  'style',
-                  el.getAttribute('style')
-                    .replace(OKLCH_RE, '#0a0a0a')
-                    .replace(CSS_COLOR_FN_RE, '#0a0a0a')
-                );
-              }
-            } catch (_) { /* cross-origin or SVG nodes — skip */ }
-          });
-
-          // Ensure KaTeX SVGs are visible
-          clonedDoc.querySelectorAll('.katex svg').forEach((svg) => {
-            svg.style.setProperty('display', 'inline-block', 'important');
-          });
-
-          // Nuke any <style> blocks in the cloned doc that reference oklch
-          clonedDoc.querySelectorAll('style').forEach((styleEl) => {
-            if (styleEl.textContent.includes('oklch')) {
-              styleEl.textContent = styleEl.textContent
-                .replace(/:\s*oklch\([^)]*\)/g, ': #0a0a0a')
-                .replace(/oklch\([^)]*\)/g, '#0a0a0a');
-            }
-          });
-        },
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-        compress: true,
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy'],
-        before: '.vai-page-break',
-      },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
     };
 
     try {
-      await html2pdf().set(options).from(wrapper).save();
+      await html2pdf().set(options).from(pdfExportRef.current).save();
       showStatus('PDF exported — beautifully crafted! ✓');
       trackEvent('pdf_exported', {
         route: '/notes',
@@ -907,6 +512,47 @@ const Notes = () => {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Hidden PDF Export Container */}
+      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -9999, opacity: 0, pointerEvents: 'none' }}>
+        <div ref={pdfExportRef} style={{ padding: '20px', fontFamily: 'Inter, system-ui, sans-serif', color: '#121415', width: '794px', background: '#ffffff' }}>
+          {/* Header */}
+          <div style={{ borderBottom: '2px solid #10b981', paddingBottom: '10px', marginBottom: '20px' }}>
+            <h1 style={{ margin: 0, fontSize: '24px', color: '#121415', fontWeight: 800 }}>{selectedNote?.title || 'Study Note'}</h1>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              <b>Vector AI</b> &middot; {selectedNote?.topic || 'General'} &middot; {new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+            </div>
+          </div>
+          
+          {/* Scoped Styles for Body */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            .vai-pdf-body * { box-sizing: border-box; border-color: #e5e7eb; outline-color: #e5e7eb; }
+            .vai-pdf-body h1 { font-size: 20px; font-weight: 800; color: #121415; margin: 24px 0 12px; border-bottom: 2px solid #10b981; padding-bottom: 4px; }
+            .vai-pdf-body h2 { font-size: 18px; font-weight: 700; color: #121415; margin: 20px 0 10px; border-left: 3px solid #10b981; padding-left: 8px; }
+            .vai-pdf-body h3 { font-size: 16px; font-weight: 700; color: #10b981; margin: 16px 0 8px; }
+            .vai-pdf-body h4 { font-size: 14px; font-weight: 700; color: #065f46; margin: 16px 0 8px; }
+            .vai-pdf-body p { margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: #1a1a2e; }
+            .vai-pdf-body ul, .vai-pdf-body ol { margin-bottom: 12px; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #1a1a2e; }
+            .vai-pdf-body pre { background: #f8fafc; border-left: 3px solid #10b981; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: monospace; font-size: 11px; margin-bottom: 16px; white-space: pre-wrap; word-wrap: break-word; }
+            .vai-pdf-body code { background: #ecfdf5; color: #065f46; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+            .vai-pdf-body pre code { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: 1em; }
+            .vai-pdf-body blockquote { border-left: 4px solid #10b981; background: #f0fdf4; padding: 12px; margin-bottom: 16px; color: #374151; font-style: italic; }
+            .vai-pdf-body table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+            .vai-pdf-body th, .vai-pdf-body td { border: 1px solid #d1fae5; padding: 8px; text-align: left; vertical-align: top; }
+            .vai-pdf-body th { background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 700; }
+            .vai-pdf-body tr:nth-child(even) td { background: #f0fdf4; }
+            .vai-pdf-body .katex-display { margin: 16px 0 !important; overflow-x: auto; text-align: center; }
+            .vai-pdf-body hr { border: 0; border-top: 1.5px solid #d1fae5; margin: 20px 0; }
+            .vai-pdf-body img { max-width: 100%; height: auto; border-radius: 4px; margin: 12px 0; }
+          `}} />
+
+          {/* Body */}
+          <div 
+            className="vai-pdf-body" 
+            dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(selectedNote?.content) }} 
+          />
+        </div>
       </div>
     </div>
   );
