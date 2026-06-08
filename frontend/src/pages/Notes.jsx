@@ -926,7 +926,7 @@ const Notes = () => {
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-              Vault Notes
+              Notes
             </span>
             <button
               onClick={handleCreateNote}
@@ -964,7 +964,7 @@ const Notes = () => {
 
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 space-y-2">
           <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">
-            AI Guide Generator
+            Study Guide Generator
           </div>
 
           <div className="relative">
@@ -1134,7 +1134,7 @@ const Notes = () => {
           <div className="vai-pdf-document">
             <header className="vai-pdf-header">
               <div>
-                <p className="vai-pdf-kicker">Vector AI · Physical Science</p>
+                <p className="vai-pdf-kicker">Vector AI · Physical Science by TJ Mukhalela</p>
                 <h1 className="vai-pdf-title">{selectedNote?.title || 'Study Note'}</h1>
               </div>
 
