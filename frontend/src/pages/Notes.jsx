@@ -39,10 +39,12 @@ const PDF_BODY_STYLES = `
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;
+    overflow: hidden; /* safety net for any unforeseen overflow */
   }
 
   .vai-pdf-document {
     padding: 34px 40px 42px;
+    max-width: 100%; /* ensure no child exceeds the shell’s content area */
   }
 
   .vai-pdf-header {
@@ -54,6 +56,7 @@ const PDF_BODY_STYLES = `
     padding: 0 0 18px;
     margin-bottom: 26px;
     border-bottom: 1px solid #a7f3d0;
+    min-width: 0; /* allow the grid to shrink below content size if needed */
   }
 
   .vai-pdf-header::before {
@@ -82,6 +85,7 @@ const PDF_BODY_STYLES = `
     font-size: 27px;
     line-height: 1.12;
     font-weight: 850;
+    word-break: break-word;   /* prevent long unbroken words from overflowing */
   }
 
   .vai-pdf-meta {
@@ -91,7 +95,10 @@ const PDF_BODY_STYLES = `
     color: #475569;
     font-size: 10.5px;
     line-height: 1.35;
-    white-space: nowrap;
+    /* removed white-space: nowrap */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;          /* respect the grid column’s maximum */
   }
 
   .vai-pdf-badge {
@@ -107,6 +114,10 @@ const PDF_BODY_STYLES = `
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    max-width: 100%;          /* prevent badge from overflowing */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .vai-pdf-body {
@@ -116,7 +127,8 @@ const PDF_BODY_STYLES = `
   }
 
   .vai-pdf-body > div {
-    max-width: none;
+    max-width: 100%;          /* changed from “none” to respect the document width */
+    overflow-wrap: break-word;
   }
 
   .vai-pdf-body h1,
@@ -128,6 +140,8 @@ const PDF_BODY_STYLES = `
     line-height: 1.25;
     break-after: avoid;
     page-break-after: avoid;
+    max-width: 100%;
+    word-break: break-word;
   }
 
   .vai-pdf-body p,
@@ -156,6 +170,9 @@ const PDF_BODY_STYLES = `
     background: #f0fdf4;
     border-radius: 0 8px 8px 0;
     font-size: 17px;
+    display: flex;            /* vertically center the text against the green bar */
+    align-items: center;
+    min-height: 0;            /* flex fix */
   }
 
   .vai-pdf-body h3 {
@@ -209,6 +226,7 @@ const PDF_BODY_STYLES = `
     background: #f0fdf4;
     color: #334155;
     font-style: normal;
+    max-width: 100%;
   }
 
   .vai-pdf-body hr {
@@ -227,6 +245,7 @@ const PDF_BODY_STYLES = `
     overflow: hidden;
     font-size: 11.7px;
     page-break-inside: avoid;
+    table-layout: fixed;      /* prevent columns from forcing table wider than 100% */
   }
 
   .vai-pdf-body th,
@@ -236,6 +255,8 @@ const PDF_BODY_STYLES = `
     border-bottom: 1px solid #d1fae5;
     text-align: left;
     vertical-align: top;
+    word-break: break-word;   /* force break inside cells */
+    overflow-wrap: anywhere;
   }
 
   .vai-pdf-body th:last-child,
@@ -271,6 +292,7 @@ const PDF_BODY_STYLES = `
     white-space: pre-wrap;
     word-break: break-word;
     page-break-inside: avoid;
+    max-width: 100%;
   }
 
   .vai-pdf-body code {
@@ -280,6 +302,7 @@ const PDF_BODY_STYLES = `
     color: #065f46;
     font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.9em;
+    word-break: break-word;
   }
 
   .vai-pdf-body pre code {
@@ -312,6 +335,8 @@ const PDF_BODY_STYLES = `
     display: inline-block;
     max-width: 100%;
     font-size: 1.04em;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .vai-pdf-body .katex .base {
