@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import {
   MessageSquare, FlaskConical, BookOpen, History as HistoryIcon,
-  Mic, FileText, LogOut, Menu, X, User, Zap, ChevronDown, Gauge,
+  Mic, FileText, LogOut, Menu, X, User, ChevronDown, Gauge,
 } from 'lucide-react';
 
 const tabs = [
@@ -16,6 +16,13 @@ const tabs = [
   { path: '/history', label: 'History',      shortLabel: 'History',  icon: HistoryIcon },
   { path: '/topics',  label: 'CAPS Syllabus', shortLabel: 'CAPS',   icon: BookOpen },
 ];
+
+const BrandLogo = ({ className }) => (
+  <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vector AI logo">
+    <rect width="64" height="64" rx="16" fill="#09090b" />
+    <path d="M24 12 L40 12 L28 32 H44 L18 60 L26 36 H12 L24 12 Z" fill="#10b981" />
+  </svg>
+);
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -48,8 +55,8 @@ const Layout = ({ children }) => {
 
           {/* Brand */}
           <div className="flex shrink-0 items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25 anim-glow">
-              <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
+            <div className="w-8 h-8 rounded-2xl bg-[#09090b] flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <BrandLogo className="h-6 w-6" />
             </div>
             <div className="hidden sm:block">
               <span className="block text-sm font-extrabold leading-none tracking-tight text-zinc-50">Vector AI</span>

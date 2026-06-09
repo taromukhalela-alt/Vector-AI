@@ -32,17 +32,17 @@ const PDF_BODY_STYLES = `
   }
 
   .vai-pdf-shell {
-    width: 794px;
+    width: 210mm;
     background: #ffffff;
     color: #17201c;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;
-    overflow: clip;
+    overflow: visible;
   }
 
   .vai-pdf-document {
-    padding: 36px 46px 46px;
+    padding: 15mm 12mm 15mm;
     max-width: 100%;
   }
 
@@ -57,6 +57,7 @@ const PDF_BODY_STYLES = `
     margin-bottom: 30px;
     border-bottom: 1px solid #d1fae5;
     min-width: 0;
+    overflow: visible;
   }
 
   .vai-pdf-header::before {
@@ -96,10 +97,10 @@ const PDF_BODY_STYLES = `
     color: #64748b;
     font-size: 10px;
     line-height: 1.4;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     word-break: break-word;
-    min-width: 110px;
-    max-width: 150px;
+    min-width: auto;
+    max-width: 200px;
   }
 
   .vai-pdf-badge {
@@ -131,6 +132,7 @@ const PDF_BODY_STYLES = `
   .vai-pdf-body > div {
     max-width: 100%;
     overflow-wrap: break-word;
+    overflow: visible;
   }
 
   .vai-pdf-body h1,
@@ -299,6 +301,9 @@ const PDF_BODY_STYLES = `
     word-break: break-word;
     page-break-inside: avoid;
     max-width: 100%;
+    overflow-x: auto;
+  }
+    max-width: 100%;
   }
 
   .vai-pdf-body code {
@@ -359,6 +364,8 @@ const PDF_BODY_STYLES = `
     margin: 18px 0;
     border: 1px solid #d1fae5;
     border-radius: 8px;
+    display: block;
+    page-break-inside: avoid;
   }
 
   /* ── Footer ──────────────────────────────────────────── */
@@ -787,7 +794,7 @@ const Notes = () => {
       await waitForPdfAssets(pdfExportRef.current);
 
       const options = {
-        margin: [10, 10, 10, 10],
+        margin: [12, 12, 12, 12],
         filename: `${safeFilename}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         pagebreak: {
