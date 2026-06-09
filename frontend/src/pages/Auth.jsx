@@ -62,7 +62,7 @@ const Auth = ({ onNavigate }) => {
         {/* Top Header */}
         <div className="text-center mb-8">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25 anim-glow">
-              <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.5} />
+              V
             </div>
           <h2 className="font-extrabold text-xl uppercase tracking-wider">
             {isRegister ? 'Create Account' : 'Welcome Back'}
