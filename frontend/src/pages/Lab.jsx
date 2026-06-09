@@ -66,16 +66,10 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950">
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 light:bg-zinc-50 light:text-zinc-950">
       
       {/* ── Simulation Selector Sidebar ── */}
-      <aside className="hidden w-56 shrink-0 flex-col sm:flex z-20"
-        style={{
-          background: 'rgba(11,11,13,0.97)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
+      <aside className="hidden w-56 shrink-0 flex-col sm:flex z-20 bg-zinc-950/95 border-r border-zinc-800/40 backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30">
         <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Visual Labs</h2>
         </div>
@@ -112,37 +106,23 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950 sci-grid-sm">
         
         {/* Ambient Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none"
+          style={{ width: 'min(600px, 90vw)', height: 'min(600px, 90vw)' }}
+        />
 
         {/* HUD Display (floating top-left) */}
-        <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-xl sm:left-4 sm:top-4 sm:max-w-md anim-fade-in"
-          style={{
-            background: 'rgba(24,24,27,0.85)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-            padding: '12px 16px',
-          }}
-        >
-          <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Interactive HUD
+        <div className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-1rem)] rounded-lg sm:left-4 sm:top-4 sm:max-w-md sm:rounded-xl anim-fade-in bg-zinc-950/90 border border-zinc-800/40 p-2.5 sm:p-4 shadow-xl backdrop-blur-md dark:bg-zinc-950/90 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30">
+          <div className="text-[8px] sm:text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1 sm:mb-1.5 flex items-center gap-1">
+            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            HUD
           </div>
-          <h3 className="font-extrabold text-sm sm:text-base uppercase tracking-wider text-zinc-100 leading-tight">{hudTitle}</h3>
-          <p className="mt-1 max-w-full truncate font-mono text-[10px] sm:text-[11px] leading-relaxed text-zinc-400 sm:whitespace-normal font-semibold">{hudFormula}</p>
+          <h3 className="font-extrabold text-xs sm:text-base uppercase tracking-wider text-zinc-100 leading-tight">{hudTitle}</h3>
+          <p className="mt-0.5 sm:mt-1 max-w-full truncate font-mono text-[8px] sm:text-[11px] leading-relaxed text-zinc-400 sm:whitespace-normal font-semibold">{hudFormula}</p>
         </div>
 
         {/* Readout stats box (floating top-right) */}
         {Object.keys(readout).length > 0 && (
-          <div className="absolute top-4 right-4 z-20 pointer-events-none p-4 rounded-xl hidden sm:block anim-fade-in"
-            style={{
-              background: 'rgba(24,24,27,0.85)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(16px)',
-              minWidth: '160px',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-            }}
-          >
+          <div className="absolute top-4 right-4 z-20 pointer-events-none p-4 rounded-xl hidden sm:block anim-fade-in bg-zinc-950/90 border border-zinc-800/40 min-w-[160px] shadow-xl backdrop-blur-md dark:bg-zinc-950/90 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30">
             <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 leading-none">Telemetry Readout</div>
             <div className="space-y-2 font-mono text-[10px] font-bold tracking-wide">
               {Object.entries(readout).map(([key, val]) => (
@@ -171,25 +151,12 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
         </div>
 
         {/* ── Controls Overlay Panel (bottom) ── */}
-        <div className="relative z-20 max-h-[45%] shrink-0 overflow-y-auto anim-fade-up"
-          style={{
-            background: 'rgba(14,14,16,0.95)',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)',
-            padding: '16px',
-            boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
-          }}
-        >
-          <div className="mx-auto flex max-w-4xl flex-col gap-4">
+        <div className="relative z-20 max-h-[40%] sm:max-h-[45%] shrink-0 overflow-y-auto anim-fade-up bg-zinc-950/95 border-t border-zinc-800/40 p-3 sm:p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30">
+          <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:gap-4">
             <select
               value={activeAnim}
               onChange={(e) => onAnimChange(e.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider focus:outline-none sm:hidden"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#e4e4e7',
-              }}
+              className="w-full rounded-lg sm:rounded-xl border border-zinc-800/40 bg-zinc-950/80 px-3 py-2 sm:py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider focus:outline-none sm:hidden dark:border-zinc-800/40 dark:bg-zinc-950/80 light:border-zinc-200/40 light:bg-zinc-100 light:text-zinc-950"
             >
               {labs.map((lab) => (
                 <option key={lab.id} value={lab.id}>{lab.label}</option>
@@ -197,80 +164,80 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
             </select>
             
             {/* Simulation specific controls */}
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            <div className="flex flex-col sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 sm:justify-center">
               {activeAnim === 'projectile' && (
                 <>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Angle ({params.angle}°)</label>
-                    <input type="range" min="10" max="80" step="1" value={params.angle} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 sm:w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Angle ({params.angle}°)</label>
+                    <input type="range" min="10" max="80" step="1" value={params.angle} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-24 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Vel ({params.velocity} m/s)</label>
-                    <input type="range" min="5" max="25" step="0.5" value={params.velocity} onChange={(e) => handleParamChange('velocity', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 sm:w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Vel ({params.velocity}m/s)</label>
+                    <input type="range" min="5" max="25" step="0.5" value={params.velocity} onChange={(e) => handleParamChange('velocity', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-24 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Bounce ({params.bounciness})</label>
-                    <input type="range" min="0" max="0.9" step="0.05" value={params.bounciness} onChange={(e) => handleParamChange('bounciness', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Bounce ({(params.bounciness).toFixed(2)})</label>
+                    <input type="range" min="0" max="0.9" step="0.05" value={params.bounciness} onChange={(e) => handleParamChange('bounciness', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-24 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Height ({params.height}m)</label>
-                    <input type="range" min="0" max="5" step="0.5" value={params.height} onChange={(e) => handleParamChange('height', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-24 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Height ({params.height}m)</label>
+                    <input type="range" min="0" max="5" step="0.5" value={params.height} onChange={(e) => handleParamChange('height', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-24 cursor-pointer" />
                   </div>
-                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'wave' && (
                 <>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Freq ({params.frequency} Hz)</label>
-                    <input type="range" min="0.5" max="3.0" step="0.1" value={params.frequency} onChange={(e) => handleParamChange('frequency', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Freq ({params.frequency} Hz)</label>
+                    <input type="range" min="0.5" max="3.0" step="0.1" value={params.frequency} onChange={(e) => handleParamChange('frequency', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Amp ({params.amplitude}m)</label>
-                    <input type="range" min="0.5" max="2.5" step="0.1" value={params.amplitude} onChange={(e) => handleParamChange('amplitude', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Amp ({params.amplitude}m)</label>
+                    <input type="range" min="0.5" max="2.5" step="0.1" value={params.amplitude} onChange={(e) => handleParamChange('amplitude', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-32 cursor-pointer" />
                   </div>
-                  <button onClick={() => handleParamChange('superposition', !params.superposition)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.superposition ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Superposition</button>
+                  <button onClick={() => handleParamChange('superposition', !params.superposition)} className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.superposition ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Superposition</button>
                 </>
               )}
 
               {activeAnim === 'pendulum' && (
                 <>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Length ({params.length}m)</label>
-                    <input type="range" min="2" max="8" step="0.2" value={params.length} onChange={(e) => handleParamChange('length', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Length ({params.length}m)</label>
+                    <input type="range" min="2" max="8" step="0.2" value={params.length} onChange={(e) => handleParamChange('length', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Angle ({params.angle ?? 30}°)</label>
-                    <input type="range" min="10" max="75" step="1" value={params.angle ?? 30} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Angle ({params.angle ?? 30}°)</label>
+                    <input type="range" min="10" max="75" step="1" value={params.angle ?? 30} onChange={(e) => handleParamChange('angle', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-32 cursor-pointer" />
                   </div>
-                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'forces' && (
                 <>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-28 text-right">Force ({params.applied} N)</label>
-                    <input type="range" min="-50" max="50" step="1" value={params.applied} onChange={(e) => handleParamChange('applied', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-32 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Force ({params.applied} N)</label>
+                    <input type="range" min="-50" max="50" step="1" value={params.applied} onChange={(e) => handleParamChange('applied', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-32 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Fric μ ({params.mu})</label>
-                    <input type="range" min="0" max="0.8" step="0.05" value={params.mu} onChange={(e) => handleParamChange('mu', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">μ ({params.mu.toFixed(2)})</label>
+                    <input type="range" min="0" max="0.8" step="0.05" value={params.mu} onChange={(e) => handleParamChange('mu', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-28 cursor-pointer" />
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Mass ({params.mass} kg)</label>
-                    <input type="range" min="1" max="20" step="0.5" value={params.mass} onChange={(e) => handleParamChange('mass', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-20 text-right">Mass ({params.mass} kg)</label>
+                    <input type="range" min="1" max="20" step="0.5" value={params.mass} onChange={(e) => handleParamChange('mass', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-28 cursor-pointer" />
                   </div>
-                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
+                  <button onClick={() => handleParamChange('vectors', !params.vectors)} className={`px-3 sm:px-4 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${params.vectors ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-400'}`}>Vectors</button>
                 </>
               )}
 
               {activeAnim === 'collision' && (
                 <>
-                  <div className="flex items-center gap-2.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Mass A ({params.mass1} kg)</label>
-                    <input type="range" min="1" max="10" step="0.5" value={params.mass1} onChange={(e) => handleParamChange('mass1', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 w-28 cursor-pointer" />
+                  <div className="flex items-center gap-2 sm:gap-2.5">
+                    <label className="text-[9px] sm:text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Mass A ({params.mass1} kg)</label>
+                    <input type="range" min="1" max="10" step="0.5" value={params.mass1} onChange={(e) => handleParamChange('mass1', parseFloat(e.target.value))} className="accent-emerald-500 h-1.5 rounded-full bg-zinc-800 flex-1 sm:w-28 cursor-pointer" />
                   </div>
                   <div className="flex items-center gap-2.5">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider w-24 text-right">Mass B ({params.mass2} kg)</label>

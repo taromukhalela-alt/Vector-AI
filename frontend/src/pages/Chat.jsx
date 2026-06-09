@@ -357,7 +357,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden" style={{ background: '#09090b' }}>
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 light:bg-zinc-50 light:text-zinc-950">
 
       {/* Sidebar mobile overlay */}
       {sidebarVisible && !isDesktop && (
@@ -369,13 +369,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         sidebarVisible
           ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
           : 'hidden'
-      }`}
-        style={{
-          background: 'rgba(11,11,13,0.97)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
+      } bg-zinc-950/95 border-r border-zinc-800/40 backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30`}>
         {/* Sidebar Header */}
         <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <h2 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 text-zinc-400">
@@ -434,7 +428,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* Voice Settings */}
-        <div className="p-3 space-y-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.015)' }}>
+        <div className="p-3 space-y-3 border-t border-zinc-800/50 bg-zinc-950/80 dark:border-zinc-800/50 dark:bg-zinc-950/80 light:border-zinc-200/30 light:bg-white/80">
           <div>
             <label className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mb-1.5">Voice Synth</label>
             <select value={ttsProvider} onChange={e => setTtsProvider(e.target.value)} style={selectStyle}>
@@ -456,9 +450,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Toolbar */}
-        <div className="flex h-11 shrink-0 items-center justify-between px-4"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.90)' }}
-        >
+        <div className="flex h-11 shrink-0 items-center justify-between px-4 border-b border-zinc-800/40 bg-zinc-950/90 dark:border-zinc-800/40 dark:bg-zinc-950/90 light:border-zinc-200/30 light:bg-white/90">
           <button
             id="toggle-sidebar-btn"
             onClick={toggleSidebar}
@@ -487,67 +479,50 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 bg-zinc-950 dark:bg-zinc-950 light:bg-zinc-50">
           {messages.length === 0 ? (
             /* Empty State */
-            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-10 text-center">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
+            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-8 sm:py-10 text-center px-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center mb-4 sm:mb-6"
                 style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))', border: '1px solid rgba(16,185,129,0.18)' }}
               >
-                <Zap className="w-7 h-7 text-emerald-400" strokeWidth={1.8} />
+                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400" strokeWidth={1.8} />
               </div>
-              <h3 className="font-extrabold text-lg tracking-tight text-zinc-100 mb-2">Vector AI Tutor</h3>
-              <p className="text-zinc-500 text-sm leading-relaxed mb-8 max-w-md">
-                Ask any Physical Sciences or Chemistry question. Simulations auto-match in the Visual Lab.
+              <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-zinc-100 mb-1 sm:mb-2 dark:text-zinc-100 light:text-zinc-950">Vector AI</h3>
+              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6 sm:mb-8 max-w-xs dark:text-zinc-500 light:text-zinc-600">
+                Ask questions about CAPS Physical Sciences or Chemistry.
               </p>
 
               {/* Prompt chips */}
-              <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="flex flex-col w-full gap-2">
                 {promptChips.map((chip, idx) => (
                   <button
                     key={idx}
                     id={`chip-${idx}`}
                     onClick={() => handleSendMessage(chip)}
-                    className="rounded-xl p-4 text-left text-xs font-medium text-zinc-400 transition-all cursor-pointer hover-lift"
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(16,185,129,0.22)'; e.currentTarget.style.color = '#d4d4d8'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = '#71717a'; }}
+                    className="rounded-lg p-3 sm:p-4 text-left text-xs sm:text-sm font-medium text-zinc-400 transition-all cursor-pointer hover:bg-zinc-800/70 hover:text-zinc-100 bg-zinc-950/70 border border-zinc-800/40 dark:bg-zinc-950/70 dark:border-zinc-800/40 light:bg-zinc-100 light:border-zinc-200/60 light:text-zinc-900 active:scale-95"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-500 mb-2" />
-                    {chip}
+                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 mb-1.5" />
+                    <div className="font-medium text-xs sm:text-sm leading-snug">{chip}</div>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
             /* Messages */
-            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-2 sm:gap-4">
               {messages.map((msg, index) => (
                 <div
                   key={index}
-                  className="flex flex-col max-w-[90%] sm:max-w-[84%]"
-                  style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start' }}
+                  className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className="rounded-2xl p-4 text-sm leading-relaxed break-words"
-                    style={msg.role === 'user' ? {
-                      background: 'linear-gradient(135deg, rgba(16,185,129,0.16), rgba(45,212,191,0.09))',
-                      border: '1px solid rgba(16,185,129,0.22)',
-                      color: '#e4e4e7',
-                      borderTopRightRadius: '4px',
-                    } : {
-                      background: 'rgba(24,24,27,0.85)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      color: '#d4d4d8',
-                      borderTopLeftRadius: '4px',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
-                    }}
+                    className={
+                      `rounded-2xl p-3 sm:p-4 text-xs sm:text-sm leading-relaxed break-words max-w-[95%] sm:max-w-[80%] ${msg.role === 'user' ? 'rounded-br-none bg-gradient-to-br from-emerald-500/15 to-teal-500/10 border border-emerald-500/20 text-zinc-950' : 'rounded-bl-none bg-zinc-950/70 border border-zinc-800/40 text-zinc-100 shadow-sm light:bg-white/85 light:border-zinc-200/30 light:text-zinc-950'}`
+                    }
                   >
-                    <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-2">
-                      {msg.role === 'user' ? 'Student' : 'AI Tutor'}
+                    <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-1 sm:mb-2">
+                      {msg.role === 'user' ? 'You' : 'AI'}
                     </div>
                     {msg.role === 'user' ? (
                       <p className="whitespace-pre-line font-medium text-xs sm:text-sm">{msg.content}</p>
@@ -556,7 +531,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                         <MarkdownRenderer content={msg.content} />
                         <button
                           onClick={() => handleSaveAsNote(msg.content)}
-                          className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-lg px-2.5 py-1"
+                          className="mt-2 sm:mt-3 inline-flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-md px-2 py-1"
                           style={{
                             color: '#52525b',
                             border: '1px solid rgba(255,255,255,0.07)',
@@ -566,7 +541,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                           onMouseLeave={e => { e.currentTarget.style.color = '#52525b'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
                         >
                           <Bookmark className="w-3 h-3" />
-                          Save as Note
+                          Save
                         </button>
                       </div>
                     )}
@@ -577,16 +552,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               {/* Typing indicator */}
               {isSending && (
                 <div className="flex flex-col self-start max-w-[140px]">
-                  <div className="rounded-2xl rounded-tl-[4px] p-4"
-                    style={{
-                      background: 'rgba(24,24,27,0.85)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                    }}
-                  >
-                    <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-2.5">AI Tutor</div>
-                    <div className="flex gap-1.5 items-center">
+                  <div className="rounded-2xl rounded-bl-none p-3 sm:p-4 bg-zinc-950/70 border border-zinc-800/40 dark:bg-zinc-950/70 dark:border-zinc-800/40 light:bg-white/85 light:border-zinc-200/30">
+                    <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-1.5">AI</div>
+                    <div className="flex gap-1 items-center">
                       {[0,1,2].map(i => (
-                        <span key={i} className="typing-dot w-2 h-2 rounded-full"
+                        <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full"
                           style={{ background: '#10b981' }}
                         />
                       ))}
@@ -600,61 +570,52 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* ── Input Bar ── */}
-        <div className="shrink-0 p-4 sm:p-5"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(9,9,11,0.95)' }}
-        >
-          <div className="mx-auto flex max-w-3xl items-end gap-3">
-            <textarea
-              ref={textareaRef}
-              id="chat-input"
-              rows={1}
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
-              }}
-              placeholder="Ask a scientific inquiry..."
-              className="flex-1 resize-none max-h-32 text-sm py-3 px-4 rounded-xl transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                color: '#e4e4e7',
-                outline: 'none',
-                fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
-              }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.35)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.06)'; }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none'; }}
-            />
-            <button
-              id="dictate-btn"
-              onClick={toggleDictation}
-              disabled={isProcessingAudio}
-              className={`p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 ${
-                isRecording ? 'bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse' : 'bg-zinc-800/50 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800'
-              }`}
-              style={{
-                border: !isRecording ? '1px solid rgba(255,255,255,0.09)' : undefined
-              }}
-              title="Dictate with Whisper"
-            >
-              {isProcessingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
-            <button
-              id="send-btn"
-              onClick={() => handleSendMessage()}
-              disabled={isSending || !inputValue.trim()}
-              className="p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0"
-              style={{
-                background: (!isSending && inputValue.trim()) ? 'linear-gradient(135deg, #10b981, #2dd4bf)' : 'rgba(255,255,255,0.05)',
-                color: (!isSending && inputValue.trim()) ? '#09090b' : '#3f3f46',
-                boxShadow: (!isSending && inputValue.trim()) ? '0 4px 16px rgba(16,185,129,0.25)' : 'none',
-              }}
-              aria-label="Send message"
-            >
-              <Send className="w-4 h-4 fill-current" />
-            </button>
+        <div className="shrink-0 p-3 sm:p-4 border-t border-zinc-800/40 bg-zinc-950/95 dark:border-zinc-800/40 dark:bg-zinc-950/95 light:border-zinc-200/30 light:bg-white/90">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:gap-3">
+            <div className="flex items-end gap-2 sm:gap-3">
+              <textarea
+                ref={textareaRef}
+                id="chat-input"
+                rows={1}
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+                }}
+                placeholder="Ask something..."
+                className="flex-1 resize-none max-h-24 text-xs sm:text-sm py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all bg-zinc-950/70 border border-zinc-800/40 text-zinc-100 outline-none font-sans dark:bg-zinc-950/70 dark:border-zinc-800/40 dark:text-zinc-100 light:bg-zinc-100 light:border-zinc-200 light:text-zinc-950"
+                onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.35)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.06)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none'; }}
+              />
+              <button
+                id="dictate-btn"
+                onClick={toggleDictation}
+                disabled={isProcessingAudio}
+                className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 active:scale-95 ${
+                  isRecording ? 'bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse' : 'bg-zinc-800/50 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 border border-zinc-800/60'
+                }`}
+                title="Voice input"
+                aria-label="Record voice"
+              >
+                {isProcessingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <button
+                id="send-btn"
+                onClick={() => handleSendMessage()}
+                disabled={isSending || !inputValue.trim()}
+                className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 active:scale-95"
+                style={{
+                  background: (!isSending && inputValue.trim()) ? 'linear-gradient(135deg, #10b981, #2dd4bf)' : 'rgba(255,255,255,0.05)',
+                  color: (!isSending && inputValue.trim()) ? '#09090b' : '#3f3f46',
+                  boxShadow: (!isSending && inputValue.trim()) ? '0 4px 16px rgba(16,185,129,0.25)' : 'none',
+                }}
+                aria-label="Send message"
+              >
+                <Send className="w-4 h-4 fill-current" />
+              </button>
+            </div>
+            <p className="text-center text-[9px] sm:text-[10px] text-zinc-700 font-medium dark:text-zinc-700 light:text-zinc-400">Enter to send · Shift+Enter for newline</p>
           </div>
-          <p className="text-center text-[10px] text-zinc-700 mt-2 font-medium">Enter ↵ to send · Shift+Enter for newline</p>
         </div>
       </div>
     </div>
