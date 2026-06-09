@@ -98,22 +98,23 @@ const PDF_BODY_STYLES = `
     line-height: 1.4;
     overflow-wrap: anywhere;
     word-break: break-word;
-    max-width: 100%;
+    min-width: 110px;
+    max-width: 150px;
   }
 
   .vai-pdf-badge {
     display: inline-flex;
     align-items: center;
-    min-height: 22px;
-    padding: 3px 10px;
+    min-height: 20px;
+    padding: 3px 8px;
     border: 1.5px solid #10b981;
     border-radius: 999px;
     background: #ecfdf5;
     color: #047857;
-    font-size: 9px;
+    font-size: 7.5px;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     max-width: 100%;
     white-space: nowrap;
     overflow: hidden;
@@ -403,15 +404,29 @@ const waitForPdfAssets = async (rootEl) => {
   if (typeof document !== 'undefined' && document.fonts) {
     await document.fonts.ready;
 
+    // Load all KaTeX font families across weights/sizes so html2canvas
+    // captures them with correct glyphs instead of falling back.
+    const katexFamilies = [
+      'KaTeX_Main', 'KaTeX_Math', 'KaTeX_AMS',
+      'KaTeX_Caligraphic', 'KaTeX_Fraktur', 'KaTeX_SansSerif',
+      'KaTeX_Script', 'KaTeX_Size1', 'KaTeX_Size2',
+      'KaTeX_Size3', 'KaTeX_Size4', 'KaTeX_Typewriter',
+    ];
+    const sizes   = ['12px', '16px', '24px'];
+    const weights = ['normal', 'italic', 'bold'];
+
     await Promise.allSettled([
       document.fonts.load('16px Inter'),
-      document.fonts.load('16px KaTeX_Main'),
-      document.fonts.load('16px KaTeX_Math'),
-      document.fonts.load('16px KaTeX_Size1'),
-      document.fonts.load('16px KaTeX_Size2'),
-      document.fonts.load('16px KaTeX_Size3'),
-      document.fonts.load('16px KaTeX_Size4'),
+      ...katexFamilies.flatMap((family) =>
+        sizes.flatMap((size) =>
+          weights.map((weight) => document.fonts.load(`${weight} ${size} ${family}`))
+        )
+      ),
     ]);
+
+    // Give the browser an extra turn to finish glyph rasterisation before
+    // html2canvas captures the element.
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
   if (rootEl) {
@@ -926,7 +941,7 @@ const Notes = () => {
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-              Notes
+              Vault Notes
             </span>
             <button
               onClick={handleCreateNote}
@@ -964,7 +979,7 @@ const Notes = () => {
 
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 space-y-2">
           <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">
-            Study Guide Generator
+            AI Guide Generator
           </div>
 
           <div className="relative">
@@ -1134,7 +1149,7 @@ const Notes = () => {
           <div className="vai-pdf-document">
             <header className="vai-pdf-header">
               <div>
-                <p className="vai-pdf-kicker">Vector AI · Physical Science by TJ Mukhalela</p>
+                <p className="vai-pdf-kicker">Vector AI · Physical Science</p>
                 <h1 className="vai-pdf-title">{selectedNote?.title || 'Study Note'}</h1>
               </div>
 
