@@ -494,7 +494,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
                 style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))', border: '1px solid rgba(16,185,129,0.18)' }}
               >
-                <Atom className="w-7 h-7 text-emerald-400" strokeWidth={1.8} />
+                <Zap className="w-7 h-7 text-emerald-400" strokeWidth={1.8} />
               </div>
               <h3 className="font-extrabold text-lg tracking-tight text-zinc-100 mb-2">Vector AI Tutor</h3>
               <p className="text-zinc-500 text-sm leading-relaxed mb-8 max-w-md">
