@@ -21,6 +21,8 @@ const PhysicsCanvas = ({
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
 
     let frameId = null;
     let lastFrame = 0;
@@ -117,10 +119,11 @@ const PhysicsCanvas = ({
       }
     };
 
-    // Particle pool for Idle
+    // Particle pool for Idle (responsive count)
     const idleParticles = [];
     const colorOptions = ['green', 'aqua', 'yellow', 'orange', 'blue'];
-    for (let i = 0; i < 100; i++) {
+    const particleCount = Math.min(100, Math.max(45, Math.round((canvas.width / (window.devicePixelRatio || 1)) / 12)));
+    for (let i = 0; i < particleCount; i++) {
       idleParticles.push({
         angle: Math.random() * Math.PI * 2,
         radius: 2 + Math.random() * 8,
@@ -611,8 +614,9 @@ const PhysicsCanvas = ({
         // Render field lines
         ctx.strokeStyle = colors.dim;
         ctx.lineWidth = 0.03;
-        for (let i = 0; i < 12; i++) {
-          const angle = (i / 12) * Math.PI * 2;
+        const fieldLineCount = canvas.width < 720 ? 8 : 12;
+        for (let i = 0; i < fieldLineCount; i++) {
+          const angle = (i / fieldLineCount) * Math.PI * 2;
           ctx.beginPath();
           let px = x1 + 0.3 * Math.cos(angle);
           let py = 0.3 * Math.sin(angle);

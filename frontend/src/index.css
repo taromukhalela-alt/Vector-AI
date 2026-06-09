@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
 
 /* ============================================================
    VECTOR AI – STEM OS  |  Design System v2.0
@@ -94,6 +95,89 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+}
+
+html.light {
+  color-scheme: light;
+}
+html.light body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+html.light .glass {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(148,163,184,0.22);
+}
+html.light .glass-surface {
+  background: rgba(255,255,255,0.94);
+  border-color: rgba(148,163,184,0.16);
+}
+html.light .card {
+  background: rgba(255,255,255,0.92);
+  border-color: rgba(148,163,184,0.18);
+  box-shadow: 0 14px 28px rgba(15,23,42,0.08);
+}
+html.light .tag {
+  background: rgba(15,23,42,0.04);
+  color: #0f172a;
+  border-color: rgba(148,163,184,0.18);
+}
+html.light .toast {
+  box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+}
+html.light [class*="bg-zinc-950"] {
+  background-color: #f8fafc !important;
+}
+html.light [class*="bg-zinc-900"] {
+  background-color: #f1f5f9 !important;
+}
+html.light [class*="bg-zinc-800"] {
+  background-color: #e2e8f0 !important;
+}
+html.light [class*="bg-zinc-700"] {
+  background-color: #cbd5e1 !important;
+}
+html.light [class*="bg-zinc-50"] {
+  background-color: #f8fafc !important;
+}
+html.light [class*="text-zinc-100"] {
+  color: #0f172a !important;
+}
+html.light [class*="text-zinc-200"] {
+  color: #475569 !important;
+}
+html.light [class*="text-zinc-300"] {
+  color: #64748b !important;
+}
+html.light [class*="text-zinc-400"] {
+  color: #475569 !important;
+}
+html.light [class*="text-zinc-500"] {
+  color: #475569 !important;
+}
+html.light [class*="text-zinc-600"] {
+  color: #334155 !important;
+}
+html.light [class*="text-zinc-700"] {
+  color: #283044 !important;
+}
+html.light [class*="text-zinc-800"] {
+  color: #0f172a !important;
+}
+html.light [class*="text-zinc-900"] {
+  color: #0f172a !important;
+}
+html.light [class*="border-zinc-200"] {
+  border-color: rgba(148,163,184,0.35) !important;
+}
+html.light [class*="border-zinc-800"] {
+  border-color: rgba(148,163,184,0.18) !important;
+}
+html.light [class*="bg-black"] {
+  background-color: rgba(248,250,252,0.95) !important;
+}
+html.light [class*="text-white"] {
+  color: #0f172a !important;
 }
 
 /* ─── Keyframes ─── */

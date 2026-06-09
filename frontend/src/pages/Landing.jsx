@@ -168,7 +168,7 @@ const Landing = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-zinc-950 text-zinc-100 font-sans select-none">
+    <div className="relative min-h-dvh overflow-x-hidden bg-zinc-950 text-zinc-100 font-sans select-none dark:bg-zinc-950 dark:text-zinc-100 light:bg-zinc-50 light:text-zinc-950">
 
       {/* ── Ambient Background ── */}
       <div className="absolute inset-0 pointer-events-none z-0 sci-grid opacity-60"
