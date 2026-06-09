@@ -12,6 +12,7 @@ import Lab from './pages/Lab';
 import Notes from './pages/Notes';
 import History from './pages/History';
 import Topics from './pages/Topics';
+import Dashboard from './pages/Dashboard';
 
 const ScreenReaderTitle = ({ children }) => (
   <h1 className="sr-only">{children}</h1>
@@ -129,6 +130,15 @@ function App() {
               <>
                 <ScreenReaderTitle>Vector AI CAPS Syllabus Topics</ScreenReaderTitle>
                 <Topics onSelectTopic={handleSelectTopic} />
+              </>
+            )}
+          />
+          <Route
+            path="/dashboard"
+            element={(
+              <>
+                <ScreenReaderTitle>Vector AI Dashboard</ScreenReaderTitle>
+                <Dashboard />
               </>
             )}
           />

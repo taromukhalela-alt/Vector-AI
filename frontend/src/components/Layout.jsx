@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import {
   MessageSquare, FlaskConical, BookOpen, History as HistoryIcon,
-  Mic, FileText, LogOut, Menu, X, User, Zap, ChevronDown,
+  Mic, FileText, LogOut, Menu, X, User, Zap, ChevronDown, Gauge,
 } from 'lucide-react';
 
 const tabs = [
+  { path: '/dashboard', label: 'Dashboard',    shortLabel: 'Dashboard', icon: Gauge },
   { path: '/chat',    label: 'AI Tutor',     shortLabel: 'Tutor',    icon: MessageSquare },
   { path: '/lab',     label: 'Visual Lab',   shortLabel: 'Lab',      icon: FlaskConical },
   { path: '/notes',   label: 'Study Notes',  shortLabel: 'Notes',    icon: FileText },

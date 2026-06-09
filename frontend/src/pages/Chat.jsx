@@ -5,7 +5,7 @@ import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
 import {
   Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, X, Atom, Sparkles, Mic, MicOff, Loader2
+  ChevronLeft, ChevronRight, Bookmark, X, Atom, Sparkles, Mic, MicOff, Loader2, Zap
 } from 'lucide-react';
 
 const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
