@@ -211,7 +211,10 @@ const Layout = ({ children }) => {
       {/* ── Page Content ── */}
       <main
         className="flex min-h-0 flex-1 flex-col overflow-hidden md:pb-0"
-        style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+        style={{ 
+          paddingTop: 'calc(var(--navbar-h) + var(--float-gap) * 2)',
+          paddingBottom: 'calc(80px + env(safe-area-inset-bottom))'
+        }}
       >
         <div className="anim-fade-in d-100 min-h-0 flex-1">{children}</div>
       </main>
