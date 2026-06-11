@@ -49,23 +49,34 @@ const S = StyleSheet.create({
     fontSize: 10.5,
     lineHeight: 1.65,
     color: C.bodyText,
-    paddingTop: 36,
-    paddingBottom: 54,
+    paddingTop: 48,
+    paddingBottom: 62,
     paddingHorizontal: 44,
     backgroundColor: C.white,
+  },
+  pageTopAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 8,
+    backgroundColor: C.emerald,
   },
 
   // ── Header ─────────────────────────────────────────────
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingBottom: 12,
-    marginBottom: 22,
-    borderBottomWidth: 1.5,
-    borderBottomColor: C.emerald,
+    alignItems: 'stretch',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: C.borderGreen2,
+    borderRadius: 10,
+    backgroundColor: C.bgGreenSoft,
   },
-  headerLeft:  { flex: 1, paddingRight: 14 },
+  headerLeft:  { flex: 1, paddingRight: 18, justifyContent: 'space-between' },
   kicker: {
     fontSize: 6.5,
     fontFamily: 'Helvetica-Bold',
@@ -80,23 +91,28 @@ const S = StyleSheet.create({
     color: C.headText,
     lineHeight: 1.15,
   },
-  headerRight: { alignItems: 'flex-end', minWidth: 90, maxWidth: 130 },
+  headerRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    minWidth: 104,
+    maxWidth: 146,
+  },
   badge: {
     fontSize: 6.5,
     fontFamily: 'Helvetica-Bold',
     color: C.darkEmerald,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
-    backgroundColor: '#ecfdf5',
+    backgroundColor: C.white,
     borderWidth: 1,
     borderColor: C.emerald,
     borderRadius: 99,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    marginBottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 8,
     alignSelf: 'flex-end',
   },
-  headerDate: { fontSize: 8, color: C.mutedText },
+  headerDate: { fontSize: 8, color: C.mutedText, textAlign: 'right' },
 
   // ── Footer (fixed, absolute) ────────────────────────────
   footer: {
@@ -106,9 +122,10 @@ const S = StyleSheet.create({
     right: 44,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#d1fae5',
-    paddingTop: 6,
+    paddingTop: 8,
   },
   footerBrand: {
     fontSize: 7,
@@ -118,6 +135,7 @@ const S = StyleSheet.create({
     letterSpacing: 1.2,
   },
   footerInfo: { fontSize: 7, color: C.mutedText },
+  pageNumber: { minWidth: 74, textAlign: 'right' },
 
   // ── Headings ────────────────────────────────────────────
   h1: {
@@ -206,6 +224,8 @@ const S = StyleSheet.create({
     borderTopColor: C.borderGreen,
     borderBottomColor: C.borderGreen,
     borderRightColor: C.borderGreen,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
     backgroundColor: C.bgGreenSoft,
   },
 
@@ -221,6 +241,8 @@ const S = StyleSheet.create({
     borderTopColor: C.borderGreen,
     borderBottomColor: C.borderGreen,
     borderRightColor: C.borderGreen,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
     backgroundColor: '#f8fafc',
   },
   codeBodyText: {
@@ -244,6 +266,8 @@ const S = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: C.borderGreen,
+    borderRadius: 6,
+    overflow: 'hidden',
   },
   tableHeaderRow: {
     flexDirection: 'row',
@@ -276,6 +300,8 @@ const S = StyleSheet.create({
     borderTopColor: C.borderGreen,
     borderBottomColor: C.borderGreen,
     borderRightColor: C.borderGreen,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
     backgroundColor: C.bgGreenSoft,
   },
   mathFallback: {
@@ -638,6 +664,7 @@ export default function NotesPdfDocument({ note, mathImages = {} }) {
       keywords={`physical science, study notes, ${topic}`}
     >
       <Page size="A4" style={S.page}>
+        <View fixed style={S.pageTopAccent} />
 
         {/* ── Page header (first page only) ── */}
         <View style={S.headerRow}>
@@ -658,7 +685,10 @@ export default function NotesPdfDocument({ note, mathImages = {} }) {
         <View fixed style={S.footer}>
           <Text style={S.footerInfo}>By Taro Mukhalela</Text>
           <Text style={S.footerBrand}>Vector AI</Text>
-          <Text style={S.footerInfo}>{topic} · Study Notes</Text>
+          <Text
+            style={[S.footerInfo, S.pageNumber]}
+            render={({ pageNumber, totalPages }) => `${topic} · ${pageNumber}/${totalPages}`}
+          />
         </View>
 
       </Page>

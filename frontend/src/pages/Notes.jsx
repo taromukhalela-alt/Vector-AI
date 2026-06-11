@@ -63,93 +63,132 @@ const preprocessContent = (content) => {
   return { processed: md, mathMap };
 };
 
+const UNSUPPORTED_COLOR_FUNCTION_RE = /\b(?:oklch|lch|lab|color)\(/i;
+
+const fallbackCssValue = (propName, displayMode) => {
+  const prop = String(propName || '').toLowerCase();
+
+  if (prop === 'color' || prop.endsWith('color') || prop === 'fill' || prop === 'stroke') {
+    return '#1e293b';
+  }
+
+  if (prop.startsWith('background')) {
+    return displayMode ? '#f7fef9' : 'transparent';
+  }
+
+  if (prop.includes('shadow')) {
+    return 'none';
+  }
+
+  return '';
+};
+
+const sanitizeCssValue = (propName, value, displayMode) => {
+  if (!value) return value;
+  return UNSUPPORTED_COLOR_FUNCTION_RE.test(value)
+    ? fallbackCssValue(propName, displayMode)
+    : value;
+};
+
+const snapshotInlineStyles = (root, displayMode) => {
+  if (!root || typeof window === 'undefined') return;
+
+  const apply = (el) => {
+    if (!(el instanceof Element)) return;
+
+    const computed = window.getComputedStyle(el);
+    for (const prop of Array.from(computed)) {
+      if (!prop || prop.startsWith('--')) continue;
+
+      const rawValue = computed.getPropertyValue(prop);
+      if (!rawValue) continue;
+
+      const safeValue = sanitizeCssValue(prop, rawValue, displayMode);
+      if (!safeValue && safeValue !== '0') continue;
+
+      try {
+        el.style.setProperty(prop, safeValue);
+      } catch {
+        // Ignore inline CSS declarations the browser will not accept.
+      }
+    }
+
+    Array.from(el.children).forEach((child) => apply(child));
+  };
+
+  apply(root);
+};
+
 /**
  * Renders a single LaTeX expression into a PNG data-URL using KaTeX + html2canvas.
  * Returns { dataUrl, width, height } or null on failure.
- * 
- * Uses isolated CSS to prevent oklch color values and Tailwind styles from interfering.
- * Applies aggressive style resets and color overrides.
+ *
+ * Snapshots computed KaTeX styles inline, strips cloned stylesheets, and sanitizes
+ * unsupported CSS color functions (like oklch) before html2canvas paints.
  */
 const renderMathToPng = async (latex, displayMode) => {
-  // Create wrapper with complete CSS isolation
+  const backgroundColor = displayMode ? '#f7fef9' : '#ffffff';
+  const foregroundColor = '#1e293b';
+
   const wrap = document.createElement('div');
   wrap.setAttribute('data-math-isolated', 'true');
-  
-  // Set inline styles with explicit hex/rgb colors only (no CSS variables, no oklch)
+  wrap.setAttribute('aria-hidden', 'true');
+
   Object.assign(wrap.style, {
     position: 'fixed',
     top: '0px',
-    left: '-9999px',
+    left: '-10000px',
     display: 'inline-block',
     width: 'auto',
     height: 'auto',
-    // Explicit colors - hex/rgb only, no oklch, no CSS variables
-    backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
-    color: '#1e293b',
+    backgroundColor,
+    color: foregroundColor,
     padding: displayMode ? '12px 20px' : '3px 6px',
     fontSize: '16px',
     lineHeight: '1.4',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    // Isolate from all external styles
     zIndex: '-9999',
-    visibility: 'hidden',
+    opacity: '0',
+    pointerEvents: 'none',
     margin: '0',
     border: 'none',
     boxSizing: 'border-box',
+    contain: 'layout style paint',
   });
-  
-  // Create inner container for KaTeX
+
   const container = document.createElement('div');
+  container.setAttribute('data-math-container', 'true');
   Object.assign(container.style, {
     display: 'inline-block',
-    color: '#1e293b',
+    color: foregroundColor,
+    backgroundColor: 'transparent',
   });
   wrap.appendChild(container);
-  
-  // Create and inject CSS reset stylesheet to prevent Tailwind oklch interference
+
   const styleReset = document.createElement('style');
   styleReset.setAttribute('data-math-reset', 'true');
   styleReset.textContent = `
+    [data-math-isolated], [data-math-isolated] * {
+      box-sizing: border-box !important;
+      color: ${foregroundColor} !important;
+      border-color: #94a3b8 !important;
+      caret-color: ${foregroundColor} !important;
+    }
     [data-math-isolated] {
-      all: unset !important;
-      position: fixed !important;
-      top: 0px !important;
-      left: -9999px !important;
-      display: inline-block !important;
-      background-color: ${displayMode ? '#f7fef9' : '#ffffff'} !important;
-      color: #1e293b !important;
-      padding: ${displayMode ? '12px 20px' : '3px 6px'} !important;
-      font-size: 16px !important;
-      line-height: 1.4 !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-      z-index: -9999 !important;
-      visibility: hidden !important;
-      margin: 0 !important;
-      border: none !important;
+      background: ${backgroundColor} !important;
+      isolation: isolate !important;
     }
-    [data-math-isolated] * {
-      all: revert !important;
-      background-color: transparent !important;
-      border-color: #999999 !important;
-    }
-    [data-math-isolated] .katex {
-      color: #1e293b !important;
-      font-size: 16px !important;
-      background: transparent !important;
-    }
-    [data-math-isolated] .katex-html {
+    [data-math-isolated] .katex,
+    [data-math-isolated] .katex * {
+      color: ${foregroundColor} !important;
       background: transparent !important;
     }
     [data-math-isolated] .katex-mathml {
       display: none !important;
     }
-    /* Override any oklch or CSS variable colors */
-    [data-math-isolated] * {
-      color: #1e293b !important;
-    }
   `;
   wrap.appendChild(styleReset);
-  
+
   document.body.appendChild(wrap);
 
   try {
@@ -158,43 +197,56 @@ const renderMathToPng = async (latex, displayMode) => {
       throwOnError: false,
       strict: false,
       output: 'html',
+      trust: false,
     });
 
-    // Brief settle for font paint and rendering
-    await new Promise((r) => setTimeout(r, 150));
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise((r) => setTimeout(r, 120));
 
-    // Render to canvas with aggressive settings to avoid oklch issues
+    snapshotInlineStyles(wrap, displayMode);
+
     const canvas = await html2canvas(wrap, {
       scale: 3,
-      backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
+      backgroundColor,
       useCORS: true,
       logging: false,
       allowTaint: true,
-      removeContainer: false,
-      ignoreElements: () => false,
+      removeContainer: true,
+      foreignObjectRendering: false,
       onclone: (clonedDoc) => {
-        // Apply color fixes in cloned document context
-        const mathResets = clonedDoc.querySelectorAll('[data-math-isolated]');
-        mathResets.forEach((el) => {
-          el.style.backgroundColor = displayMode ? '#f7fef9' : '#ffffff';
-          el.style.color = '#1e293b';
-        });
-        
-        // Force fix all colors to hex/rgb in the cloned tree
-        const allElements = clonedDoc.querySelectorAll('[data-math-isolated] *');
-        allElements.forEach((el) => {
-          const computed = clonedDoc.defaultView?.getComputedStyle(el);
-          if (computed) {
-            // Fix background colors
-            const bgColor = computed.backgroundColor;
-            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-              el.style.backgroundColor = bgColor;
+        clonedDoc
+          .querySelectorAll('link[rel="stylesheet"], style:not([data-math-reset])')
+          .forEach((node) => node.remove());
+
+        const clonedWrap = clonedDoc.querySelector('[data-math-isolated="true"]');
+        if (!clonedWrap) return;
+
+        clonedDoc.documentElement.style.backgroundColor = 'transparent';
+        clonedDoc.body.style.backgroundColor = 'transparent';
+        clonedDoc.body.style.margin = '0';
+
+        clonedWrap.style.opacity = '1';
+        clonedWrap.style.visibility = 'visible';
+        clonedWrap.style.left = '0px';
+        clonedWrap.style.top = '0px';
+        clonedWrap.style.pointerEvents = 'none';
+        clonedWrap.style.backgroundColor = backgroundColor;
+        clonedWrap.style.color = foregroundColor;
+
+        const nodes = [clonedWrap, ...clonedWrap.querySelectorAll('*')];
+        nodes.forEach((el) => {
+          Array.from(el.style).forEach((prop) => {
+            const value = el.style.getPropertyValue(prop);
+            const safeValue = sanitizeCssValue(prop, value, displayMode);
+
+            if (safeValue || safeValue === '0') {
+              el.style.setProperty(prop, safeValue);
             } else {
-              el.style.backgroundColor = 'transparent';
+              el.style.removeProperty(prop);
             }
-            // Fix text colors
-            el.style.color = computed.color || '#1e293b';
-          }
+          });
         });
       },
     });
@@ -208,7 +260,9 @@ const renderMathToPng = async (latex, displayMode) => {
     console.warn('[Vector AI] Math render failed:', latex, err);
     return null;
   } finally {
-    document.body.removeChild(wrap);
+    if (wrap.parentNode) {
+      wrap.parentNode.removeChild(wrap);
+    }
   }
 };
 
@@ -222,16 +276,21 @@ const prerenderMathImages = async (mathMap) => {
   if (!entries.length) return images;
 
   // Prime KaTeX fonts before bulk rendering
-  await document.fonts.ready;
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
   const katexFamilies = [
     'KaTeX_Main', 'KaTeX_Math', 'KaTeX_AMS',
     'KaTeX_Size1', 'KaTeX_Size2', 'KaTeX_Size3', 'KaTeX_Size4',
   ];
-  await Promise.allSettled(
-    katexFamilies.flatMap((f) =>
-      ['12px', '16px', '24px'].map((s) => document.fonts.load(`${s} ${f}`)),
-    ),
-  );
+  if (document.fonts?.load) {
+    await Promise.allSettled(
+      katexFamilies.flatMap((f) =>
+        ['12px', '16px', '24px'].map((s) => document.fonts.load(`${s} ${f}`)),
+      ),
+    );
+  }
   await new Promise((r) => setTimeout(r, 200));
 
   // Render all expressions (sequentially to avoid DOM thrashing)
