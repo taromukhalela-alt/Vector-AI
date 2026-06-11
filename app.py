@@ -1384,7 +1384,7 @@ def summarize_content(text):
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-3.5-flash",
             contents=f"Summarize the following content concisely for a chat context:\n\n{text}",
         )
         return response.text

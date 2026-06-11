@@ -420,8 +420,7 @@ function getInlineElements(tokens = [], mathImages = {}, textStyle = {}, keyPref
   return elems;
 }
 
-// ── Block renderers ───────────────────────────────────────────────────────────
-
+// ── Block renderers ──
 function renderHeading(token, key) {
   const text = getPlainText(token.tokens || [{ type: 'text', text: token.text || '' }]);
   if (token.depth === 1) return <Text key={key} style={S.h1}>{text}</Text>;
@@ -657,6 +656,7 @@ export default function NotesPdfDocument({ note, mathImages = {} }) {
 
         {/* ── Footer (repeats on every page) ── */}
         <View fixed style={S.footer}>
+          <Text style={S.footerInfo}>By Taro Mukhalela</Text>
           <Text style={S.footerBrand}>Vector AI</Text>
           <Text style={S.footerInfo}>{topic} · Study Notes</Text>
         </View>

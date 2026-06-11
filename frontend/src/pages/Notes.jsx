@@ -66,39 +66,137 @@ const preprocessContent = (content) => {
 /**
  * Renders a single LaTeX expression into a PNG data-URL using KaTeX + html2canvas.
  * Returns { dataUrl, width, height } or null on failure.
+ * 
+ * Uses isolated CSS to prevent oklch color values and Tailwind styles from interfering.
+ * Applies aggressive style resets and color overrides.
  */
 const renderMathToPng = async (latex, displayMode) => {
+  // Create wrapper with complete CSS isolation
   const wrap = document.createElement('div');
+  wrap.setAttribute('data-math-isolated', 'true');
+  
+  // Set inline styles with explicit hex/rgb colors only (no CSS variables, no oklch)
   Object.assign(wrap.style, {
     position: 'fixed',
     top: '0px',
     left: '-9999px',
     display: 'inline-block',
+    width: 'auto',
+    height: 'auto',
+    // Explicit colors - hex/rgb only, no oklch, no CSS variables
     backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
+    color: '#1e293b',
     padding: displayMode ? '12px 20px' : '3px 6px',
     fontSize: '16px',
     lineHeight: '1.4',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    // Isolate from all external styles
     zIndex: '-9999',
     visibility: 'hidden',
+    margin: '0',
+    border: 'none',
+    boxSizing: 'border-box',
   });
+  
+  // Create inner container for KaTeX
+  const container = document.createElement('div');
+  Object.assign(container.style, {
+    display: 'inline-block',
+    color: '#1e293b',
+  });
+  wrap.appendChild(container);
+  
+  // Create and inject CSS reset stylesheet to prevent Tailwind oklch interference
+  const styleReset = document.createElement('style');
+  styleReset.setAttribute('data-math-reset', 'true');
+  styleReset.textContent = `
+    [data-math-isolated] {
+      all: unset !important;
+      position: fixed !important;
+      top: 0px !important;
+      left: -9999px !important;
+      display: inline-block !important;
+      background-color: ${displayMode ? '#f7fef9' : '#ffffff'} !important;
+      color: #1e293b !important;
+      padding: ${displayMode ? '12px 20px' : '3px 6px'} !important;
+      font-size: 16px !important;
+      line-height: 1.4 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+      z-index: -9999 !important;
+      visibility: hidden !important;
+      margin: 0 !important;
+      border: none !important;
+    }
+    [data-math-isolated] * {
+      all: revert !important;
+      background-color: transparent !important;
+      border-color: #999999 !important;
+    }
+    [data-math-isolated] .katex {
+      color: #1e293b !important;
+      font-size: 16px !important;
+      background: transparent !important;
+    }
+    [data-math-isolated] .katex-html {
+      background: transparent !important;
+    }
+    [data-math-isolated] .katex-mathml {
+      display: none !important;
+    }
+    /* Override any oklch or CSS variable colors */
+    [data-math-isolated] * {
+      color: #1e293b !important;
+    }
+  `;
+  wrap.appendChild(styleReset);
+  
   document.body.appendChild(wrap);
 
   try {
-    katex.render(String(latex || '').trim(), wrap, {
+    katex.render(String(latex || '').trim(), container, {
       displayMode,
       throwOnError: false,
       strict: false,
       output: 'html',
     });
 
-    // Brief settle for font paint
-    await new Promise((r) => setTimeout(r, 100));
+    // Brief settle for font paint and rendering
+    await new Promise((r) => setTimeout(r, 150));
 
+    // Render to canvas with aggressive settings to avoid oklch issues
     const canvas = await html2canvas(wrap, {
       scale: 3,
       backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
       useCORS: true,
       logging: false,
+      allowTaint: true,
+      removeContainer: false,
+      ignoreElements: () => false,
+      onclone: (clonedDoc) => {
+        // Apply color fixes in cloned document context
+        const mathResets = clonedDoc.querySelectorAll('[data-math-isolated]');
+        mathResets.forEach((el) => {
+          el.style.backgroundColor = displayMode ? '#f7fef9' : '#ffffff';
+          el.style.color = '#1e293b';
+        });
+        
+        // Force fix all colors to hex/rgb in the cloned tree
+        const allElements = clonedDoc.querySelectorAll('[data-math-isolated] *');
+        allElements.forEach((el) => {
+          const computed = clonedDoc.defaultView?.getComputedStyle(el);
+          if (computed) {
+            // Fix background colors
+            const bgColor = computed.backgroundColor;
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+              el.style.backgroundColor = bgColor;
+            } else {
+              el.style.backgroundColor = 'transparent';
+            }
+            // Fix text colors
+            el.style.color = computed.color || '#1e293b';
+          }
+        });
+      },
     });
 
     return {
