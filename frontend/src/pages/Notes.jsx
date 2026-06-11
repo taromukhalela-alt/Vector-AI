@@ -53,10 +53,10 @@ const preprocessContent = (content) => {
   };
 
   md = md
-    .replace(/\\\[([\s\S]*?)\\\]/g,               (_, m) => tok(m, true))
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => tok(m, true))
     .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_, m) => tok(m, true))
-    .replace(/\\\(([\s\S]*?)\\\)/g,               (_, m) => tok(m, false))
-    .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g,      (_, m) => tok(m, false));
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => tok(m, false))
+    .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g, (_, m) => tok(m, false));
   // Step 3: restore code blocks
   md = md.replace(/__CODE_(\d+)__/g, (_, i) => codeStore[+i]);
 
@@ -70,16 +70,16 @@ const preprocessContent = (content) => {
 const renderMathToPng = async (latex, displayMode) => {
   const wrap = document.createElement('div');
   Object.assign(wrap.style, {
-    position:        'fixed',
-    top:             '0px',
-    left:            '-9999px',
-    display:         'inline-block',
+    position: 'fixed',
+    top: '0px',
+    left: '-9999px',
+    display: 'inline-block',
     backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
-    padding:         displayMode ? '12px 20px' : '3px 6px',
-    fontSize:        '16px',
-    lineHeight:      '1.4',
-    zIndex:          '-9999',
-    visibility:      'hidden',
+    padding: displayMode ? '12px 20px' : '3px 6px',
+    fontSize: '16px',
+    lineHeight: '1.4',
+    zIndex: '-9999',
+    visibility: 'hidden',
   });
   document.body.appendChild(wrap);
 
@@ -95,16 +95,16 @@ const renderMathToPng = async (latex, displayMode) => {
     await new Promise((r) => setTimeout(r, 100));
 
     const canvas = await html2canvas(wrap, {
-      scale:           3,
+      scale: 3,
       backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
-      useCORS:         true,
-      logging:         false,
+      useCORS: true,
+      logging: false,
     });
 
     return {
       dataUrl: canvas.toDataURL('image/png'),
-      width:   canvas.width  / 3,
-      height:  canvas.height / 3,
+      width: canvas.width / 3,
+      height: canvas.height / 3,
     };
   } catch (err) {
     console.warn('[Vector AI] Math render failed:', latex, err);
@@ -224,6 +224,12 @@ const Notes = () => {
   const fetchNotes = async (query = '') => {
     try {
       const res = await fetch(`/api/notes${query ? `?q=${encodeURIComponent(query)}` : ''}`);
+
+      if (!res.ok) {
+        console.error('Fetch notes failed:', res.status, res.statusText);
+        return;
+      }
+
       const data = await res.json();
 
       if (data.success && Array.isArray(data.notes)) {
@@ -435,9 +441,9 @@ const Notes = () => {
       const blob = await pdf(doc).toBlob();
 
       // 5. Trigger browser download
-      const url  = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href     = url;
+      link.href = url;
       link.download = `${safeFilename}.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -447,9 +453,9 @@ const Notes = () => {
       showStatus('PDF exported successfully ✓');
 
       trackEvent('pdf_exported', {
-        route:      '/notes',
+        route: '/notes',
         note_title: selectedNote.title,
-        topic:      selectedNote.topic || 'General',
+        topic: selectedNote.topic || 'General',
       });
     } catch (error) {
       console.error('PDF export failed:', error);
@@ -469,11 +475,10 @@ const Notes = () => {
       )}
 
       <aside
-        className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${
-          sidebarVisible
+        className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 flex flex-col transition-all duration-300 ${sidebarVisible
             ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
             : 'hidden'
-        }`}
+          }`}
       >
         <div className="space-y-3 border-b border-zinc-200 p-3 dark:border-zinc-800">
           <div className="flex items-center justify-between">
@@ -526,11 +531,10 @@ const Notes = () => {
               <button
                 key={note.id}
                 onClick={() => handleSelectNote(note)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-colors ${
-                  selectedNote?.id === note.id
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold truncate flex items-center justify-between cursor-pointer transition-colors ${selectedNote?.id === note.id
                     ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800/50'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2 truncate">
                   <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -670,7 +674,7 @@ const Notes = () => {
                 />
               ) : (
                 <div id="print-note-root" className="mx-auto max-w-3xl prose max-w-none p-6">
-                  <MarkdownRenderer content={selectedNote.content} />
+                  <MarkdownRenderer content={selectedNote.content || ''} />
                 </div>
               )}
             </div>
@@ -698,7 +702,6 @@ const Notes = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };
