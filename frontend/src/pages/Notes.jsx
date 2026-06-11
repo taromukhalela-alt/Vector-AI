@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
@@ -19,510 +19,134 @@ import {
 } from 'lucide-react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import { pdf } from '@react-pdf/renderer';
+import NotesPdfDocument from '../components/NotesPdfDocument';
 
-const PDF_BODY_STYLES = `
-  .vai-pdf-shell,
-  .vai-pdf-shell * {
-    box-sizing: border-box;
-    border-color: #d1fae5;
-    outline-color: #a7f3d0;
-  }
+// ── Math pre-rendering helpers ───────────────────────────────────────────────
 
-  .vai-pdf-shell {
-    width: 210mm;
-    background: #ffffff;
-    color: #17201c;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: geometricPrecision;
-    overflow: visible;
-  }
+/**
+ * Replaces all math expressions in `content` with unique tokens (__MATH_N__)
+ * so marked.js never processes them. Returns the tokenized string and a map
+ * of { token → { latex, display } }.
+ */
+const preprocessContent = (content) => {
+  const mathMap = {};
+  const codeStore = [];
+  let idx = 0;
 
-  .vai-pdf-document {
-    padding: 15mm 12mm 15mm;
-    max-width: 100%;
-  }
+  // Step 1: protect code blocks / inline code
+  let md = String(content || '').replace(
+    /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,
+    (m) => {
+      const id = `__CODE_${codeStore.length}__`;
+      codeStore.push(m);
+      return id;
+    },
+  );
 
-  /* ── Header ──────────────────────────────────────────── */
-  .vai-pdf-header {
-    position: relative;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 18px;
-    align-items: end;
-    padding: 0 0 22px;
-    margin-bottom: 30px;
-    border-bottom: 1px solid #d1fae5;
-    min-width: 0;
-    overflow: visible;
-  }
+  // Step 2: tokenize math (display first to avoid $$ vs $ ambiguity)
+  const tok = (latex, display) => {
+    const key = `__MATH_${idx++}__`;
+    mathMap[key] = { latex, display };
+    return key;
+  };
 
-  .vai-pdf-header::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -2px;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, #10b981 0%, #10b981 20%, #6ee7b7 55%, transparent 100%);
-    border-radius: 999px;
-  }
+  md = md
+    .replace(/\\\[([\s\S]*?)\\\]/g,               (_, m) => tok(m, true))
+    .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_, m) => tok(m, true))
+    .replace(/\\\(([\s\S]*?)\\\)/g,               (_, m) => tok(m, false))
+    .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g,      (_, m) => tok(m, false));
+  // Step 3: restore code blocks
+  md = md.replace(/__CODE_(\d+)__/g, (_, i) => codeStore[+i]);
 
-  .vai-pdf-kicker {
-    margin: 0 0 8px;
-    color: #10b981;
-    font-size: 9.5px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-  }
-
-  .vai-pdf-title {
-    margin: 0;
-    color: #0a1a12;
-    font-size: 25px;
-    line-height: 1.15;
-    font-weight: 800;
-    letter-spacing: -0.015em;
-    word-break: break-word;
-  }
-
-  .vai-pdf-meta {
-    display: grid;
-    gap: 6px;
-    justify-items: end;
-    color: #64748b;
-    font-size: 10px;
-    line-height: 1.4;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    min-width: auto;
-    max-width: 200px;
-  }
-
-  .vai-pdf-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 20px;
-    padding: 3px 8px;
-    border: 1.5px solid #10b981;
-    border-radius: 999px;
-    background: #ecfdf5;
-    color: #047857;
-    font-size: 7.5px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* ── Body ────────────────────────────────────────────── */
-  .vai-pdf-body {
-    color: #1e2a23;
-    font-size: 13.5px;
-    line-height: 1.74;
-  }
-
-  .vai-pdf-body > div {
-    max-width: 100%;
-    overflow-wrap: break-word;
-    overflow: visible;
-  }
-
-  .vai-pdf-body h1,
-  .vai-pdf-body h2,
-  .vai-pdf-body h3,
-  .vai-pdf-body h4 {
-    color: #0a1a12;
-    font-weight: 800;
-    line-height: 1.25;
-    break-after: avoid;
-    page-break-after: avoid;
-    max-width: 100%;
-    word-break: break-word;
-  }
-
-  .vai-pdf-body p,
-  .vai-pdf-body li,
-  .vai-pdf-body blockquote,
-  .vai-pdf-body pre,
-  .vai-pdf-body table,
-  .vai-pdf-body tr,
-  .vai-pdf-body img,
-  .vai-pdf-body .katex-display {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .vai-pdf-body h1 {
-    margin: 30px 0 13px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #bbf7d0;
-    font-size: 21px;
-  }
-
-  .vai-pdf-body h2 {
-    margin: 26px 0 12px;
-    padding: 9px 14px;
-    border-left: 4px solid #10b981;
-    background: #f0fdf4;
-    border-radius: 0 8px 8px 0;
-    font-size: 17px;
-  }
-
-  .vai-pdf-body h3 {
-    margin: 22px 0 9px;
-    padding-left: 10px;
-    border-left: 2px solid #6ee7b7;
-    color: #065f46;
-    font-size: 15px;
-  }
-
-  .vai-pdf-body h4 {
-    margin: 18px 0 7px;
-    color: #047857;
-    font-size: 13.5px;
-    font-weight: 700;
-  }
-
-  .vai-pdf-body p,
-  .vai-pdf-body ul,
-  .vai-pdf-body ol {
-    margin: 0 0 13px;
-    orphans: 3;
-    widows: 3;
-  }
-
-  .vai-pdf-body ul,
-  .vai-pdf-body ol {
-    padding-left: 22px;
-  }
-
-  .vai-pdf-body li {
-    margin: 4px 0;
-    padding-left: 2px;
-  }
-
-  .vai-pdf-body strong {
-    color: #0a1a12;
-    font-weight: 800;
-  }
-
-  .vai-pdf-body a {
-    color: #047857;
-    font-weight: 700;
-    text-decoration: none;
-    border-bottom: 1px solid #6ee7b7;
-  }
-
-  .vai-pdf-body blockquote {
-    margin: 20px 0;
-    padding: 14px 18px;
-    border: 1px solid #a7f3d0;
-    border-left: 4px solid #10b981;
-    border-radius: 0 10px 10px 0;
-    background: #f7fef9;
-    color: #334155;
-    font-style: italic;
-    max-width: 100%;
-  }
-
-  .vai-pdf-body hr {
-    border: 0;
-    border-top: 1px solid #bbf7d0;
-    margin: 26px 0;
-  }
-
-  /* ── Tables ──────────────────────────────────────────── */
-  .vai-pdf-body table {
-    width: 100%;
-    margin: 18px 0 22px;
-    border-collapse: separate;
-    border-spacing: 0;
-    border: 1px solid #a7f3d0;
-    border-radius: 10px;
-    overflow: hidden;
-    font-size: 11.8px;
-    page-break-inside: avoid;
-    table-layout: fixed;
-  }
-
-  .vai-pdf-body th,
-  .vai-pdf-body td {
-    padding: 9px 12px;
-    border-right: 1px solid #d1fae5;
-    border-bottom: 1px solid #d1fae5;
-    text-align: left;
-    vertical-align: top;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  .vai-pdf-body th:last-child,
-  .vai-pdf-body td:last-child {
-    border-right: 0;
-  }
-
-  .vai-pdf-body tr:last-child td {
-    border-bottom: 0;
-  }
-
-  .vai-pdf-body th {
-    background: #065f46;
-    color: #ecfdf5;
-    font-weight: 800;
-    font-size: 11px;
-    letter-spacing: 0.03em;
-  }
-
-  .vai-pdf-body tr:nth-child(even) td {
-    background: #f7fef9;
-  }
-
-  /* ── Code ────────────────────────────────────────────── */
-  .vai-pdf-body pre {
-    margin: 18px 0 22px;
-    padding: 14px 16px;
-    border: 1px solid #a7f3d0;
-    border-left: 4px solid #10b981;
-    border-radius: 0 9px 9px 0;
-    background: #f8fafc;
-    color: #0f172a;
-    font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-    page-break-inside: avoid;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-    max-width: 100%;
-  }
-
-  .vai-pdf-body code {
-    padding: 2px 6px;
-    border-radius: 5px;
-    background: #ecfdf5;
-    color: #065f46;
-    font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.88em;
-    font-weight: 600;
-    word-break: break-word;
-  }
-
-  .vai-pdf-body pre code {
-    padding: 0;
-    background: transparent;
-    color: inherit;
-    font-size: 1em;
-    font-weight: 400;
-  }
-
-  /* ── KaTeX / Math ─────────────────────────────────────── */
-  .vai-pdf-body .katex {
-    color: #0a1a12;
-    font-size: 1.04em;
-    white-space: normal;
-  }
-
-  .vai-pdf-body .katex-display {
-    margin: 20px 0 24px !important;
-    padding: 16px 22px;
-    border: 1px solid #a7f3d0;
-    border-left: 4px solid #10b981;
-    border-radius: 0 10px 10px 0;
-    background: #f7fef9;
-    text-align: center;
-    overflow: visible;
-    max-width: 100%;
-    page-break-inside: avoid;
-  }
-
-  .vai-pdf-body .katex-display > .katex {
-    display: inline-block;
-    max-width: 100%;
-    font-size: 1.08em;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .vai-pdf-body .katex .base {
-    white-space: nowrap;
-  }
-
-  /* ── Images ──────────────────────────────────────────── */
-  .vai-pdf-body img {
-    max-width: 100%;
-    height: auto;
-    margin: 18px 0;
-    border: 1px solid #d1fae5;
-    border-radius: 8px;
-    display: block;
-    page-break-inside: avoid;
-  }
-
-  /* ── Footer ──────────────────────────────────────────── */
-  .vai-pdf-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 32px;
-    padding-top: 12px;
-    border-top: 1px solid #d1fae5;
-    color: #94a3b8;
-    font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-  }
-
-  .vai-pdf-footer-brand {
-    color: #10b981;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-`;
-
-const waitForNextPaint = () =>
-  new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  });
-
-const escapeHtml = (value) =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const waitForPdfAssets = async (rootEl) => {
-  if (typeof requestAnimationFrame === 'function') {
-    await waitForNextPaint();
-  }
-
-  if (typeof document !== 'undefined' && document.fonts) {
-    await document.fonts.ready;
-
-    // Load all KaTeX font families across weights/sizes so html2canvas
-    // captures them with correct glyphs instead of falling back.
-    const katexFamilies = [
-      'KaTeX_Main', 'KaTeX_Math', 'KaTeX_AMS',
-      'KaTeX_Caligraphic', 'KaTeX_Fraktur', 'KaTeX_SansSerif',
-      'KaTeX_Script', 'KaTeX_Size1', 'KaTeX_Size2',
-      'KaTeX_Size3', 'KaTeX_Size4', 'KaTeX_Typewriter',
-    ];
-    const sizes   = ['12px', '16px', '24px'];
-    const weights = ['normal', 'italic', 'bold'];
-
-    await Promise.allSettled([
-      document.fonts.load('16px Inter'),
-      ...katexFamilies.flatMap((family) =>
-        sizes.flatMap((size) =>
-          weights.map((weight) => document.fonts.load(`${weight} ${size} ${family}`))
-        )
-      ),
-    ]);
-
-    // Give the browser an extra turn to finish glyph rasterisation before
-    // html2canvas captures the element.
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-
-  if (rootEl) {
-    const images = Array.from(rootEl.querySelectorAll('img'));
-    await Promise.allSettled(
-      images.map((img) => {
-        if (img.complete) return Promise.resolve();
-        if (typeof img.decode === 'function') {
-          return img.decode().catch(() => {});
-        }
-        return new Promise((resolve) => {
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-        });
-      })
-    );
-  }
-
-  if (typeof requestAnimationFrame === 'function') {
-    await waitForNextPaint();
-  }
+  return { processed: md, mathMap };
 };
 
-const renderKatex = (source, displayMode) => {
+/**
+ * Renders a single LaTeX expression into a PNG data-URL using KaTeX + html2canvas.
+ * Returns { dataUrl, width, height } or null on failure.
+ */
+const renderMathToPng = async (latex, displayMode) => {
+  const wrap = document.createElement('div');
+  Object.assign(wrap.style, {
+    position:        'fixed',
+    top:             '0px',
+    left:            '-9999px',
+    display:         'inline-block',
+    backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
+    padding:         displayMode ? '12px 20px' : '3px 6px',
+    fontSize:        '16px',
+    lineHeight:      '1.4',
+    zIndex:          '-9999',
+    visibility:      'hidden',
+  });
+  document.body.appendChild(wrap);
+
   try {
-    return katex.renderToString(String(source || '').trim(), {
+    katex.render(String(latex || '').trim(), wrap, {
       displayMode,
       throwOnError: false,
       strict: false,
       output: 'html',
     });
-  } catch (error) {
-    console.warn('KaTeX render failed:', error);
-    const safe = escapeHtml(String(source || ''));
-    return displayMode ? `<pre>${safe}</pre>` : safe;
+
+    // Brief settle for font paint
+    await new Promise((r) => setTimeout(r, 100));
+
+    const canvas = await html2canvas(wrap, {
+      scale:           3,
+      backgroundColor: displayMode ? '#f7fef9' : '#ffffff',
+      useCORS:         true,
+      logging:         false,
+    });
+
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      width:   canvas.width  / 3,
+      height:  canvas.height / 3,
+    };
+  } catch (err) {
+    console.warn('[Vector AI] Math render failed:', latex, err);
+    return null;
+  } finally {
+    document.body.removeChild(wrap);
   }
 };
 
-const renderPdfMarkdownToHtml = (content) => {
-  if (!content) return '';
+/**
+ * Pre-renders every math expression in mathMap to a PNG.
+ * Returns { [token]: { dataUrl, width, height, display, latex } }.
+ */
+const prerenderMathImages = async (mathMap) => {
+  const images = {};
+  const entries = Object.entries(mathMap);
+  if (!entries.length) return images;
 
-  const codeMap = [];
-  const mathMap = [];
-
-  // Step 1: Protect fenced code blocks so marked never processes inside them
-  let md = String(content).replace(
-    /(```[\s\S]*?```|~~~[\s\S]*?~~~)/g,
-    (match) => `VCODEBLOCK${codeMap.push(match) - 1}VCODEEND`,
+  // Prime KaTeX fonts before bulk rendering
+  await document.fonts.ready;
+  const katexFamilies = [
+    'KaTeX_Main', 'KaTeX_Math', 'KaTeX_AMS',
+    'KaTeX_Size1', 'KaTeX_Size2', 'KaTeX_Size3', 'KaTeX_Size4',
+  ];
+  await Promise.allSettled(
+    katexFamilies.flatMap((f) =>
+      ['12px', '16px', '24px'].map((s) => document.fonts.load(`${s} ${f}`)),
+    ),
   );
+  await new Promise((r) => setTimeout(r, 200));
 
-  // Step 2: Tokenize math expressions — display math first to avoid ambiguity
-  const tok = (math, display) =>
-    `VMATHSTART${mathMap.push({ math, display }) - 1}VMATHEND`;
+  // Render all expressions (sequentially to avoid DOM thrashing)
+  for (const [key, { latex, display }] of entries) {
+    const result = await renderMathToPng(latex, display);
+    if (result) images[key] = { ...result, display, latex };
+  }
 
-  md = md
-    .replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => tok(m, true))
-    .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_, m) => tok(m, true))
-    .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => tok(m, false))
-    .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g, (_, m) => tok(m, false));
-
-  // Step 3: Restore code blocks before markdown parsing
-  md = md.replace(/VCODEBLOCK(\d+)VCODEEND/g, (_, i) => codeMap[+i]);
-
-  // Step 4: Parse markdown — math tokens pass through as plain text untouched
-  let html = marked.parse(md, { breaks: true, gfm: true });
-
-  // Step 5: Inject KaTeX-rendered HTML in place of each math token
-  html = html.replace(/VMATHSTART(\d+)VMATHEND/g, (_, i) => {
-    const entry = mathMap[+i];
-    return entry ? renderKatex(entry.math, entry.display) : '';
-  });
-
-  // Step 6: Sanitize — allow all tags and attributes KaTeX outputs
-  return DOMPurify.sanitize(html, {
-    ADD_TAGS: [
-      'math', 'semantics', 'annotation',
-      'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'msubsup',
-      'mfrac', 'msqrt', 'mroot', 'mtext', 'mspace',
-      'mover', 'munder', 'munderover',
-      'mtable', 'mtr', 'mtd',
-    ],
-    ADD_ATTR: ['aria-hidden', 'class', 'encoding', 'xmlns', 'style'],
-    ALLOW_DATA_ATTR: true,
-    FORCE_BODY: true,
-  });
+  return images;
 };
 
+
 const Notes = () => {
-  const pdfExportRef = useRef(null);
   const { csrfToken } = useAuth();
   const { showToast } = useToast();
 
@@ -781,115 +405,51 @@ const Notes = () => {
   };
 
   const handleDownloadPDF = useCallback(async () => {
-    if (!selectedNote || !pdfExportRef.current) return;
+    if (!selectedNote) return;
 
     setIsExporting(true);
 
     const safeFilename = (selectedNote.title || 'study_note')
       .replace(/[^a-zA-Z0-9_\- ]/g, '')
       .trim()
-      .replace(/\s+/g, '_');
+      .replace(/\s+/g, '_') || 'study_note';
 
     try {
-      await waitForPdfAssets(pdfExportRef.current);
+      // 1. Tokenize math expressions in the note content
+      const { processed: tokenizedContent, mathMap } = preprocessContent(
+        selectedNote.content || '',
+      );
 
-      const options = {
-        margin: [12, 12, 12, 12],
-        filename: `${safeFilename}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        pagebreak: {
-          mode: ['css', 'legacy'],
-          avoid: [
-            '.vai-pdf-body p',
-            '.vai-pdf-body li',
-            '.vai-pdf-body blockquote',
-            '.vai-pdf-body pre',
-            '.vai-pdf-body table',
-            '.vai-pdf-body tr',
-            '.vai-pdf-body img',
-            '.vai-pdf-body .katex-display',
-          ],
-        },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          backgroundColor: '#ffffff',
-          onclone: (clonedDoc) => {
-            const MODERN_COLOR_RE = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/i;
-            const MODERN_COLOR_RE_GLOBAL = /\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi;
+      // 2. Pre-render all math to PNG images (KaTeX → html2canvas)
+      const mathImages = await prerenderMathImages(mathMap);
 
-            clonedDoc.querySelectorAll('*').forEach((el) => {
-              el.style.setProperty('color-scheme', 'light', 'important');
+      // 3. Build the React PDF document
+      const doc = (
+        <NotesPdfDocument
+          note={{ ...selectedNote, content: tokenizedContent }}
+          mathImages={mathImages}
+        />
+      );
 
-              try {
-                const cloneWin = clonedDoc.defaultView || window;
-                const computed = cloneWin.getComputedStyle(el);
+      // 4. Generate PDF blob via @react-pdf/renderer
+      const blob = await pdf(doc).toBlob();
 
-                const propsToCheck = [
-                  'color',
-                  'background-color',
-                  'border-color',
-                  'border-top-color',
-                  'border-right-color',
-                  'border-bottom-color',
-                  'border-left-color',
-                  'outline-color',
-                  'text-decoration-color',
-                  'fill',
-                  'stroke',
-                  'caret-color',
-                  'box-shadow',
-                  'text-shadow',
-                ];
+      // 5. Trigger browser download
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href     = url;
+      link.download = `${safeFilename}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
 
-                propsToCheck.forEach((prop) => {
-                  const val = computed.getPropertyValue(prop);
-
-                  if (val && MODERN_COLOR_RE.test(val)) {
-                    const isBackground = prop.includes('background');
-                    const isBorder = prop.includes('border') || prop.includes('outline');
-                    const fallback = isBackground ? '#ffffff' : isBorder ? '#d1fae5' : '#111827';
-                    el.style.setProperty(prop, fallback, 'important');
-                  }
-                });
-
-                if (el.getAttribute('style')) {
-                  el.setAttribute(
-                    'style',
-                    el.getAttribute('style').replace(MODERN_COLOR_RE_GLOBAL, '#111827')
-                  );
-                }
-              } catch (_) {
-                // ignore style inspection failures on clone
-              }
-            });
-
-            clonedDoc.querySelectorAll('style').forEach((styleEl) => {
-              if (MODERN_COLOR_RE.test(styleEl.textContent)) {
-                styleEl.textContent = styleEl.textContent
-                  .replace(/:\s*\b(?:oklch|oklab|lab|lch|color)\s*\([^)]*\)/gi, ': #111827')
-                  .replace(MODERN_COLOR_RE_GLOBAL, '#111827');
-              }
-            });
-          },
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-          compress: true,
-        },
-      };
-
-      await html2pdf().set(options).from(pdfExportRef.current).save();
-
-      showStatus('PDF exported — beautifully crafted! ✓');
+      showStatus('PDF exported successfully ✓');
 
       trackEvent('pdf_exported', {
-        route: '/notes',
+        route:      '/notes',
         note_title: selectedNote.title,
-        topic: selectedNote.topic || 'General',
+        topic:      selectedNote.topic || 'General',
       });
     } catch (error) {
       console.error('PDF export failed:', error);
@@ -1139,56 +699,9 @@ const Notes = () => {
         )}
       </div>
 
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: '-10000px',
-          width: '794px',
-          pointerEvents: 'none',
-          background: '#ffffff',
-        }}
-      >
-        <div ref={pdfExportRef} className="vai-pdf-shell">
-          <style dangerouslySetInnerHTML={{ __html: PDF_BODY_STYLES }} />
-
-          <div className="vai-pdf-document">
-            <header className="vai-pdf-header">
-              <div>
-                <p className="vai-pdf-kicker">Vector AI · Physical Science</p>
-                <h1 className="vai-pdf-title">{selectedNote?.title || 'Study Note'}</h1>
-              </div>
-
-              <div className="vai-pdf-meta">
-                <span className="vai-pdf-badge">{selectedNote?.topic || 'General'}</span>
-                <span>
-                  {new Date().toLocaleDateString('en-ZA', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
-            </header>
-
-            <main className="vai-pdf-body">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: renderPdfMarkdownToHtml(selectedNote?.content || ''),
-                }}
-              />
-            </main>
-
-            <footer className="vai-pdf-footer">
-              <span className="vai-pdf-footer-brand">Vector AI</span>
-              <span>{selectedNote?.topic || 'General'} · Study Notes</span>
-            </footer>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
 
 export default Notes;
+b
