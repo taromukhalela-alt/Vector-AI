@@ -830,7 +830,7 @@ const Notes = () => {
                   placeholder="Write your study notes content in markdown..."
                 />
               ) : (
-                <div id="print-note-root" className="mx-auto max-w-3xl prose max-w-none p-6">
+                <div id="print-note-root" className="mx-auto max-w-3xl prose max-w-3xl p-6">
                   <MarkdownRenderer content={selectedNote.content || ''} />
                 </div>
               )}
