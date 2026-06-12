@@ -1,5 +1,5 @@
 import {
-  Gauge, Activity, BookOpen, Search,
+  Gauge, BookOpen,
 } from 'lucide-react';
 
 const Dashboard = () => {
