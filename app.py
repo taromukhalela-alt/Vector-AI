@@ -181,6 +181,28 @@ else:
 # Configure Caching
 cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 
+# Cached Groq client to avoid re-creating on every request
+GROQ_CLIENT = None
+
+
+def get_groq_client(api_key):
+    """Return a cached Groq client, creating it if necessary.
+
+    This avoids repeated client construction which can add significant
+    latency (TLS handshakes, setup) per request.
+    """
+    global GROQ_CLIENT
+    if not Groq:
+        return None
+    if GROQ_CLIENT is None:
+        try:
+            GROQ_CLIENT = Groq(api_key=api_key)
+            logger.info("Initialized Groq client")
+        except Exception as e:
+            logger.exception("Failed to initialize Groq client: %s", e)
+            GROQ_CLIENT = None
+    return GROQ_CLIENT
+
 CSRF_SESSION_KEY = "_csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -985,18 +1007,27 @@ def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
 
     def worker():
         try:
-            client = Groq(api_key=api_key)
+            # Use a cached client to avoid per-request construction latency
+            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            max_tokens = env_int("GROQ_MAX_TOKENS", 2048, min_value=64, max_value=8192)
 
+            client = get_groq_client(api_key)
+            if not client:
+                raise Exception("Groq client not available")
+
+            req_start = time.monotonic()
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",  # Fast, high-quality model
+                model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful physics tutor."},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
                 top_p=0.95,
-                max_tokens=8192,
+                max_tokens=max_tokens,
             )
+            req_end = time.monotonic()
+            logger.info("Groq request finished: model=%s tokens=%d time=%.3fs", model, max_tokens, req_end - req_start)
 
             text = response.choices[0].message.content or ""
             result_queue.put(("ok", text.strip()))
