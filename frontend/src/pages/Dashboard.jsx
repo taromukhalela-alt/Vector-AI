@@ -1,4 +1,5 @@
-import { Gauge, BookOpen, TrendingUp, Activity } from 'lucide-react';
+
+import { Gauge, BookOpen, TrendingUp, Activity } from "lucide-react";
 
 const Dashboard = () => {
   const metrics = [
