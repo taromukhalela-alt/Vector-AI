@@ -667,7 +667,7 @@ const PhysicsCanvas = ({
             Separation: `${separation.toFixed(1)} m`,
             'Charge (+q)': '1.6 × 10⁻¹⁹ C',
             'Charge (-q)': '-1.6 × 10⁻¹⁹ C',
-            Permittivity: '8.85 × 10⁻¹² F/m',
+            'Permittivity': '8.85 × 10⁻¹² F/m',
           });
         }
       }

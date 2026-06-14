@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout.jsx — Emerald Nexus (refined)
+// Floating navbar + bottom mobile nav. Editorial spacing, tighter contrast,
+// emerald accent as the single point of color. Drop into src/components/.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -8,19 +13,26 @@ import {
 } from 'lucide-react';
 
 const tabs = [
-  { path: '/dashboard', label: 'Dashboard',    shortLabel: 'Dashboard', icon: Gauge },
-  { path: '/chat',    label: 'AI Tutor',     shortLabel: 'Tutor',    icon: MessageSquare },
-  { path: '/lab',     label: 'Visual Lab',   shortLabel: 'Lab',      icon: FlaskConical },
-  { path: '/notes',   label: 'Study Notes',  shortLabel: 'Notes',    icon: FileText },
-  { path: '/voice',   label: 'Voice Tutor',  shortLabel: 'Voice',    icon: Mic },
-  { path: '/history', label: 'History',      shortLabel: 'History',  icon: HistoryIcon },
-  { path: '/topics',  label: 'CAPS Syllabus', shortLabel: 'CAPS',   icon: BookOpen },
+  { path: '/dashboard', label: 'Dashboard',     shortLabel: 'Dashboard', icon: Gauge },
+  { path: '/chat',      label: 'AI Tutor',      shortLabel: 'Tutor',     icon: MessageSquare },
+  { path: '/lab',       label: 'Visual Lab',    shortLabel: 'Lab',       icon: FlaskConical },
+  { path: '/notes',     label: 'Study Notes',   shortLabel: 'Notes',     icon: FileText },
+  { path: '/voice',     label: 'Voice Tutor',   shortLabel: 'Voice',     icon: Mic },
+  { path: '/history',   label: 'History',       shortLabel: 'History',   icon: HistoryIcon },
+  { path: '/topics',    label: 'CAPS Syllabus', shortLabel: 'CAPS',      icon: BookOpen },
 ];
 
-const BrandLogo = ({ className }) => (
-  <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vector AI logo">
-    <rect width="64" height="64" rx="16" fill="#09090b" />
-    <path d="M24 12 L40 12 L28 32 H44 L18 60 L26 36 H12 L24 12 Z" fill="#10b981" />
+const BrandMark = ({ className }) => (
+  <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vector AI">
+    <defs>
+      <linearGradient id="v-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#34d399" />
+        <stop offset="100%" stopColor="#059669" />
+      </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="18" fill="#050807" />
+    <rect x="1" y="1" width="62" height="62" rx="17" fill="none" stroke="rgba(16,185,129,0.25)" />
+    <path d="M22 14 L42 14 L30 32 H44 L18 60 L26 36 H12 L22 14 Z" fill="url(#v-grad)" />
   </svg>
 );
 
@@ -39,34 +51,54 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="relative flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 light:bg-zinc-50 light:text-zinc-950" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+    <div
+      className="relative flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100 light:bg-[#fafaf9] light:text-zinc-900"
+      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+    >
+      {/* Ambient backdrop — subtle emerald aurora */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-70 dark:opacity-70 light:opacity-40"
+        style={{
+          background:
+            'radial-gradient(800px 400px at 12% -10%, rgba(16,185,129,0.10), transparent 60%),' +
+            'radial-gradient(700px 500px at 100% 0%, rgba(45,212,191,0.06), transparent 55%),' +
+            'radial-gradient(1100px 600px at 50% 110%, rgba(6,95,70,0.08), transparent 60%)',
+        }}
+      />
 
       {/* ── Floating Navbar ── */}
       <nav
-        className="floating-bar anim-fade-down bg-zinc-950/95 border border-zinc-800/40 dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/85 light:border-zinc-200/40"
+        className="floating-bar anim-fade-down border border-white/[0.06] bg-zinc-950/80 backdrop-blur-xl light:border-zinc-200/60 light:bg-white/80"
         style={{
           top: 'var(--float-gap)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
+          boxShadow:
+            '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(16,185,129,0.04)',
         }}
       >
         <div className="flex h-[var(--navbar-h)] items-center justify-between gap-2 px-3">
-
           {/* Brand */}
-          <div className="flex shrink-0 items-center gap-2.5">
-            <div className="w-8 h-8 rounded-2xl bg-[#09090b] flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <BrandLogo className="h-6 w-6" />
+          <button
+            onClick={() => goToPath('/dashboard')}
+            className="group flex shrink-0 items-center gap-2.5 rounded-xl px-1 py-1 transition-all hover:bg-white/[0.03]"
+          >
+            <div className="relative">
+              <BrandMark className="h-8 w-8" />
+              <span className="absolute -inset-0.5 -z-10 rounded-2xl bg-emerald-500/20 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
             </div>
-            <div className="hidden sm:block">
-              <span className="block text-sm font-extrabold leading-none tracking-tight text-zinc-50">Vector AI</span>
-              <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-[.16em] text-emerald-400">
-                {activeTab?.label || 'STEM OS'}
+            <div className="hidden sm:block text-left">
+              <span className="block text-[13px] font-semibold leading-none tracking-tight text-zinc-50 light:text-zinc-900">
+                Vector<span className="text-emerald-400">.</span>AI
+              </span>
+              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.22em] text-emerald-400/90">
+                {activeTab?.label || 'STEM Operating System'}
               </span>
             </div>
-          </div>
+          </button>
 
-          {/* Desktop Tab Navigation */}
-          <div className="hidden md:flex items-center gap-0.5 rounded-xl p-1"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+          {/* Desktop tabs */}
+          <div
+            className="hidden items-center gap-0.5 rounded-2xl border border-white/[0.05] bg-white/[0.02] p-1 md:flex light:border-zinc-200/70 light:bg-zinc-100/60"
           >
             {tabs.map((item) => {
               const Icon = item.icon;
@@ -74,29 +106,32 @@ const Layout = ({ children }) => {
               return (
                 <button
                   key={item.path}
-                  id={`nav-${item.path.slice(1)}`}
                   onClick={() => goToPath(item.path)}
                   title={item.label}
                   aria-current={active ? 'page' : undefined}
-                  className="relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer"
-                  style={active ? {
-                    background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(45,212,191,0.10))',
-                    color: '#10b981',
-                    boxShadow: '0 0 12px rgba(16,185,129,0.12)',
-                    border: '1px solid rgba(16,185,129,0.20)',
-                  } : {
-                    color: '#71717a',
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                  }}
-                  onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#d4d4d8'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; } }}
-                  onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#71717a'; e.currentTarget.style.background = 'transparent'; } }}
+                  className={[
+                    'group relative flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold tracking-tight transition-all duration-200',
+                    active
+                      ? 'text-emerald-300 light:text-emerald-700'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] light:text-zinc-500 light:hover:text-zinc-900 light:hover:bg-white',
+                  ].join(' ')}
+                  style={
+                    active
+                      ? {
+                          background:
+                            'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(6,95,70,0.10))',
+                          boxShadow:
+                            '0 0 0 1px rgba(16,185,129,0.28) inset, 0 6px 18px -8px rgba(16,185,129,0.45)',
+                        }
+                      : undefined
+                  }
                 >
-                  <Icon className="h-3.5 w-3.5" strokeWidth={active ? 2.5 : 2} />
+                  <Icon className="h-3.5 w-3.5" strokeWidth={active ? 2.4 : 1.9} />
                   <span className="hidden lg:inline">{item.shortLabel}</span>
                   {active && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-3 h-0.5 rounded-full"
-                      style={{ background: '#10b981', boxShadow: '0 0 4px #10b981' }}
+                    <span
+                      className="absolute -bottom-[3px] left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-full bg-emerald-400"
+                      style={{ boxShadow: '0 0 10px rgba(16,185,129,0.7)' }}
                     />
                   )}
                 </button>
@@ -104,32 +139,40 @@ const Layout = ({ children }) => {
             })}
           </div>
 
-          {/* Right Controls */}
-          <div className="flex shrink-0 items-center gap-1">
+          {/* Right cluster */}
+          <div className="flex shrink-0 items-center gap-1.5">
             <ThemeToggle />
 
-            {/* User Menu */}
             <div className="relative">
               <button
-                id="user-menu-btn"
-                onClick={() => setUserMenu(!userMenu)}
-                className="flex items-center gap-1.5 rounded-xl p-1.5 transition-all cursor-pointer"
-                style={{ background: userMenu ? 'rgba(255,255,255,0.08)' : 'transparent' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
-                onMouseLeave={e => { if (!userMenu) e.currentTarget.style.background = 'transparent'; }}
-                title="Account"
+                onClick={() => setUserMenu(v => !v)}
+                className={[
+                  'flex items-center gap-1.5 rounded-xl border p-1 transition-all',
+                  userMenu
+                    ? 'border-white/10 bg-white/[0.06] light:border-zinc-300 light:bg-white'
+                    : 'border-transparent hover:border-white/10 hover:bg-white/[0.04] light:hover:border-zinc-200 light:hover:bg-white',
+                ].join(' ')}
                 aria-label="Open account menu"
               >
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="" className="h-7 w-7 rounded-lg border" style={{ borderColor: 'rgba(255,255,255,0.10)' }} />
+                  <img
+                    src={user.avatar}
+                    alt=""
+                    className="h-7 w-7 rounded-lg border border-white/10 object-cover"
+                  />
                 ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg"
-                    style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.20), rgba(45,212,191,0.12))', border: '1px solid rgba(16,185,129,0.20)' }}
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/25"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, rgba(16,185,129,0.20), rgba(6,95,70,0.08))',
+                    }}
                   >
-                    <User className="h-3.5 w-3.5 text-emerald-400" />
+                    <User className="h-3.5 w-3.5 text-emerald-300" />
                   </div>
                 )}
-                <ChevronDown className="hidden h-3 w-3 text-zinc-500 sm:block transition-transform duration-200"
+                <ChevronDown
+                  className="hidden h-3 w-3 text-zinc-500 transition-transform duration-200 sm:block"
                   style={{ transform: userMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}
                 />
               </button>
@@ -137,30 +180,44 @@ const Layout = ({ children }) => {
               {userMenu && (
                 <>
                   <div className="fixed inset-0 z-[150]" onClick={() => setUserMenu(false)} />
-                  <div className="anim-scale-in absolute right-0 top-full z-[200] mt-2 w-52 rounded-xl p-1.5 shadow-2xl bg-zinc-950/95 border border-zinc-800/40 backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30"
+                  <div
+                    className="anim-scale-in absolute right-0 top-full z-[200] mt-2 w-60 overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-950/95 p-1.5 shadow-2xl backdrop-blur-xl light:border-zinc-200/70 light:bg-white/95"
                   >
-                    <div className="mb-1 border-b px-3 py-2.5" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                      <p className="truncate text-xs font-bold text-zinc-100">{user?.name || 'Learner'}</p>
-                      <p className="text-[10px] font-semibold text-emerald-400 mt-0.5">CAPS Student</p>
+                    <div className="mb-1 flex items-center gap-3 border-b border-white/[0.06] px-3 py-3 light:border-zinc-200">
+                      <div
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-500/25"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, rgba(16,185,129,0.22), rgba(6,95,70,0.08))',
+                        }}
+                      >
+                        <User className="h-4 w-4 text-emerald-300" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-zinc-50 light:text-zinc-900">
+                          {user?.name || 'Learner'}
+                        </p>
+                        <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+                          CAPS Student
+                        </p>
+                      </div>
                     </div>
                     <button
                       onClick={() => { logout(); setUserMenu(false); }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-400 transition-all cursor-pointer hover:bg-red-500/10"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/10"
                     >
                       <LogOut className="h-3.5 w-3.5" />
-                      Sign Out
+                      Sign out
                     </button>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Mobile hamburger */}
+            {/* Hamburger */}
             <button
-              id="mobile-menu-btn"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-xl p-1.5 transition-all md:hidden cursor-pointer"
-              style={{ background: mobileMenuOpen ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+              onClick={() => setMobileMenuOpen(v => !v)}
+              className="rounded-xl p-1.5 transition md:hidden hover:bg-white/[0.06] light:hover:bg-zinc-100"
               aria-label="Toggle navigation"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -174,10 +231,10 @@ const Layout = ({ children }) => {
         <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setMobileMenuOpen(false)}>
           <div className="absolute inset-0 bg-zinc-950/70 backdrop-blur-sm" />
           <div
-            className="anim-slide-right absolute right-3 space-y-1 rounded-2xl p-3 shadow-2xl bg-zinc-950/95 border border-zinc-800/30 backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/30 light:bg-white/90 light:border-zinc-200/30"
+            className="anim-slide-right absolute right-3 space-y-1 rounded-2xl border border-white/[0.08] bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl light:border-zinc-200/70 light:bg-white/95"
             style={{
               top: 'calc(var(--navbar-h) + var(--float-gap) + 14px)',
-              minWidth: '200px',
+              minWidth: '220px',
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -188,18 +245,23 @@ const Layout = ({ children }) => {
                 <button
                   key={item.path}
                   onClick={() => goToPath(item.path)}
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer"
-                  style={active ? {
-                    background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))',
-                    color: '#10b981',
-                    border: '1px solid rgba(16,185,129,0.18)',
-                  } : {
-                    color: '#71717a',
-                    background: 'transparent',
-                    border: '1px solid transparent',
-                  }}
+                  className={[
+                    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition',
+                    active
+                      ? 'text-emerald-300'
+                      : 'text-zinc-300 hover:bg-white/[0.04] light:text-zinc-700 light:hover:bg-zinc-100',
+                  ].join(' ')}
+                  style={
+                    active
+                      ? {
+                          background:
+                            'linear-gradient(135deg, rgba(16,185,129,0.16), rgba(6,95,70,0.08))',
+                          boxShadow: '0 0 0 1px rgba(16,185,129,0.25) inset',
+                        }
+                      : undefined
+                  }
                 >
-                  <Icon className="h-4 w-4" strokeWidth={active ? 2.5 : 2} />
+                  <Icon className="h-4 w-4" strokeWidth={active ? 2.4 : 1.9} />
                   {item.label}
                 </button>
               );
@@ -210,42 +272,57 @@ const Layout = ({ children }) => {
 
       {/* ── Page Content ── */}
       <main
-        className="flex min-h-0 flex-1 flex-col overflow-hidden md:pb-0"
-        style={{ 
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        style={{
           paddingTop: 'calc(var(--navbar-h) + var(--float-gap) * 2)',
-          paddingBottom: 'calc(80px + env(safe-area-inset-bottom))'
+          paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
         }}
       >
         <div className="anim-fade-in d-100 min-h-0 flex-1">{children}</div>
       </main>
 
-      {/* ── Mobile Bottom Nav (Enhanced) ── */}
+      {/* ── Mobile Bottom Nav ── */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-[120] bg-zinc-950/98 border-t border-zinc-800/50 backdrop-blur-lg md:hidden dark:bg-zinc-950/98 light:bg-white/98 light:border-zinc-200/50"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-white/[0.06] bg-zinc-950/95 backdrop-blur-xl md:hidden light:border-zinc-200/70 light:bg-white/95"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Mobile navigation"
       >
-        <div className="flex h-20 items-stretch divide-x divide-zinc-800/30 dark:divide-zinc-800/30 light:divide-zinc-200/30">
+        <div className="flex h-[68px] items-stretch">
           {tabs.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;
             return (
               <button
                 key={item.path}
-                id={`mobile-nav-${item.path.slice(1)}`}
                 onClick={() => goToPath(item.path)}
                 aria-current={active ? 'page' : undefined}
-                className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer hover:bg-zinc-800/30 dark:hover:bg-zinc-800/30 light:hover:bg-zinc-100/50 active:scale-95 select-none"
-                style={active ? {
-                  background: 'linear-gradient(180deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.04) 100%)',
-                  borderTop: '2px solid #10b981',
-                } : {
-                  background: 'transparent',
-                  borderTop: '2px solid transparent',
-                }}
+                className="relative flex flex-1 select-none flex-col items-center justify-center gap-1 transition active:scale-95"
               >
-                <Icon className={`w-5 h-5 transition-all ${ active ? 'text-emerald-400' : 'text-zinc-500 dark:text-zinc-500 light:text-zinc-400'}`} strokeWidth={active ? 2.5 : 2} />
-                <span className={`text-[10px] font-bold uppercase tracking-wider transition-all ${ active ? 'text-emerald-400 opacity-100' : 'text-zinc-500 opacity-75 dark:text-zinc-500 light:text-zinc-500'}`}>{item.shortLabel}</span>
+                {active && (
+                  <span
+                    className="absolute inset-x-3 top-0 h-[2px] rounded-full bg-emerald-400"
+                    style={{ boxShadow: '0 0 12px rgba(16,185,129,0.8)' }}
+                  />
+                )}
+                <Icon
+                  className={[
+                    'h-5 w-5 transition',
+                    active
+                      ? 'text-emerald-400'
+                      : 'text-zinc-500 light:text-zinc-400',
+                  ].join(' ')}
+                  strokeWidth={active ? 2.4 : 1.9}
+                />
+                <span
+                  className={[
+                    'text-[9.5px] font-semibold uppercase tracking-[0.14em] transition',
+                    active
+                      ? 'text-emerald-400'
+                      : 'text-zinc-500 light:text-zinc-500',
+                  ].join(' ')}
+                >
+                  {item.shortLabel}
+                </span>
               </button>
             );
           })}

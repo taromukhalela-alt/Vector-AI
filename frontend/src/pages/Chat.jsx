@@ -5,7 +5,7 @@ import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
 import {
   Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, X, Atom, Sparkles, Mic, MicOff, Loader2, Zap
+  ChevronLeft, ChevronRight, Bookmark, X, Sparkles, Mic, MicOff, Loader2, Zap
 } from 'lucide-react';
 
 const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
@@ -86,10 +86,10 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const cambVoices = [{ id: '147320', name: 'Silas Blackwood' }];
 
   const promptChips = [
-    "Explain projectile motion for Grade 11 CAPS.",
-    "Explain Newton's second law with a worked example.",
-    "Explain collision theory and reaction rates.",
-    "How do electric fields and Coulomb's Law work?",
+    { title: "Projectile motion", sub: "Grade 11 CAPS, with worked example", prompt: "Explain projectile motion for Grade 11 CAPS." },
+    { title: "Newton's second law", sub: "F = ma with intuition", prompt: "Explain Newton's second law with a worked example." },
+    { title: "Reaction rates", sub: "Collision theory & catalysts", prompt: "Explain collision theory and reaction rates." },
+    { title: "Electric fields", sub: "Coulomb's law visualised", prompt: "How do electric fields and Coulomb's Law work?" },
   ];
 
   const loadSessions = async () => {
@@ -116,7 +116,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions();
     updateBrowserVoices();
     if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
@@ -125,17 +124,13 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
 
   useEffect(() => {
     localStorage.setItem('preferred_tts_provider', ttsProvider);
-    /* eslint-disable react-hooks/set-state-in-effect */
-    if (ttsProvider === 'camb') {
-      setVoiceId(localStorage.getItem('preferred_camb_voice') || '147320');
-    } else if (ttsProvider === 'elevenlabs') {
-      setVoiceId(localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB');
-    } else {
+    if (ttsProvider === 'camb') setVoiceId(localStorage.getItem('preferred_camb_voice') || '147320');
+    else if (ttsProvider === 'elevenlabs') setVoiceId(localStorage.getItem('preferred_elevenlabs_voice') || 'pNInz6obpgDQGcFmaJgB');
+    else {
       const saved = localStorage.getItem('preferred_browser_voice') || '';
       if (saved) setVoiceId(saved);
       else if (browserVoices.length > 0) setVoiceId(browserVoices[0].voiceURI);
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [ttsProvider, browserVoices]);
 
   useEffect(() => {
@@ -170,9 +165,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   const stopDictation = () => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch { /* noop */ }
-    }
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch { /* noop */ } }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
     }
@@ -180,23 +173,17 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   const toggleDictation = async () => {
-    if (isRecording) {
-      stopDictation();
-      return;
-    }
-
+    if (isRecording) { stopDictation(); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
       const mr = new MediaRecorder(stream);
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mr.onstop = async () => {
         setIsRecording(false);
         setIsProcessingAudio(true);
         stream.getTracks().forEach(t => t.stop());
-        
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         let whisperSuccess = false;
         if (audioBlob.size > 0) {
@@ -210,27 +197,17 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
             });
             const data = await res.json();
             if (data.success && data.text) {
-              setInputValue(prev => {
-                const newText = prev + (prev ? ' ' : '') + data.text;
-                return newText;
-              });
+              setInputValue(prev => prev + (prev ? ' ' : '') + data.text);
               whisperSuccess = true;
             }
-          } catch (e) {
-            console.error('STT error', e);
-          }
+          } catch (e) { console.error('STT error', e); }
         }
-        
-        // Fallback to browser STT if Whisper failed
         if (!whisperSuccess && interimTranscriptRef.current) {
-          setInputValue(prev => {
-            const newText = prev + (prev ? ' ' : '') + interimTranscriptRef.current;
-            return newText;
-          });
+          setInputValue(prev => prev + (prev ? ' ' : '') + interimTranscriptRef.current);
         }
         setIsProcessingAudio(false);
       };
-      
+
       mediaRecorderRef.current = mr;
       mr.start();
       setIsRecording(true);
@@ -238,14 +215,10 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SR) {
         const rec = new SR();
-        rec.continuous = false;
-        rec.interimResults = true;
-        rec.lang = 'en-ZA';
-        
+        rec.continuous = false; rec.interimResults = true; rec.lang = 'en-ZA';
         rec.onstart = () => { interimTranscriptRef.current = ''; };
         rec.onresult = (e) => {
-          let interim = '';
-          let final = '';
+          let interim = '', final = '';
           for (let i = e.resultIndex; i < e.results.length; i++) {
             if (e.results[i].isFinal) final += e.results[i][0].transcript;
             else interim += e.results[i][0].transcript;
@@ -257,18 +230,12 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
             mediaRecorderRef.current.stop();
           }
         };
-        
         recognitionRef.current = rec;
         rec.start();
       }
-
     } catch (e) {
       console.error('Microphone error', e);
-      showToast({
-        type: 'error',
-        title: 'Microphone unavailable',
-        message: 'Please allow microphone access in your browser, then try recording again.',
-      });
+      showToast({ type: 'error', title: 'Microphone unavailable', message: 'Please allow microphone access in your browser, then try recording again.' });
     }
   };
 
@@ -334,60 +301,40 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const data = await res.json();
       if (data.success) {
         trackEvent('note_saved_from_chat', { route: '/chat' });
-        showToast({
-          type: 'success',
-          title: 'Saved to Notes',
-          message: 'The answer was added to your Notes Vault.',
-        });
+        showToast({ type: 'success', title: 'Saved to Notes', message: 'The answer was added to your Notes Vault.' });
       }
     } catch (err) { console.error(err); }
   };
 
-  /* ── Shared select style ── */
-  const selectStyle = {
-    width: '100%',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    borderRadius: '8px',
-    padding: '7px 10px',
-    fontSize: '11px',
-    color: '#d4d4d8',
-    outline: 'none',
-    cursor: 'pointer',
-  };
+  const selectClass = "w-full bg-white/[0.03] border border-white/[0.07] rounded-md px-2.5 py-1.5 text-[12px] text-zinc-200 outline-none focus:border-emerald-500/40 cursor-pointer";
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100 light:bg-zinc-50 light:text-zinc-950">
-
-      {/* Sidebar mobile overlay */}
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100">
       {sidebarVisible && !isDesktop && (
         <div className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* ── Session Sidebar ── */}
-      <aside className={`shrink-0 flex flex-col transition-all duration-300 ${
-        sidebarVisible
-          ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
-          : 'hidden'
-      } bg-zinc-950/95 border-r border-zinc-800/40 backdrop-blur-md dark:bg-zinc-950/95 dark:border-zinc-800/40 light:bg-white/90 light:border-zinc-200/30`}>
-        {/* Sidebar Header */}
-        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 text-zinc-400">
-            <History className="w-3.5 h-3.5 text-emerald-400" />
-            Sessions
-          </h2>
-          <div className="flex items-center gap-1">
+      {/* Sidebar */}
+      <aside className={`shrink-0 flex flex-col transition-all duration-300 bg-zinc-950/95 border-r border-white/[0.05] backdrop-blur-md ${
+        sidebarVisible ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none' : 'hidden'
+      }`}>
+        <div className="p-4 border-b border-white/[0.05] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-emerald-400" strokeWidth={1.8} />
+            <h2 className="text-[12.5px] font-semibold text-zinc-100">Sessions</h2>
+          </div>
+          <div className="flex items-center gap-0.5">
             <button
               id="new-session-sidebar-btn"
               onClick={handleNewSession}
-              className="p-1.5 rounded-lg text-emerald-400 transition-all cursor-pointer hover:bg-emerald-500/10"
-              title="New Session"
+              className="p-1.5 rounded-md text-emerald-300 hover:bg-emerald-500/[0.08] transition-colors"
+              title="New session"
             >
-              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              <Plus className="w-4 h-4" strokeWidth={2.25} />
             </button>
             <button
               onClick={() => { setSidebarPinned(false); localStorage.setItem('vector_chat_sidebar_pinned', 'false'); setSidebarOpen(false); }}
-              className="p-1.5 rounded-lg text-zinc-600 transition-all cursor-pointer hover:bg-zinc-800/60 hover:text-zinc-400"
+              className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
               title="Close"
             >
               <X className="w-4 h-4" />
@@ -395,49 +342,44 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           </div>
         </div>
 
-        {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {sessions.length === 0 ? (
             <div className="text-center py-10">
-              <MessageSquare className="w-6 h-6 text-zinc-700 mx-auto mb-2" />
-              <p className="text-[10px] text-zinc-600 font-medium">No previous sessions</p>
+              <MessageSquare className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
+              <p className="text-[11.5px] text-zinc-500">No previous sessions</p>
             </div>
           ) : (
-            sessions.map((sess) => (
-              <button
-                key={sess.chat_id}
-                onClick={() => handleResumeSession(sess.chat_id)}
-                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold truncate flex items-center gap-2.5 cursor-pointer transition-all"
-                style={currentSessionId === sess.chat_id ? {
-                  background: 'rgba(16,185,129,0.10)',
-                  color: '#10b981',
-                  border: '1px solid rgba(16,185,129,0.18)',
-                } : {
-                  color: '#71717a',
-                  background: 'transparent',
-                  border: '1px solid transparent',
-                }}
-                onMouseEnter={e => { if (currentSessionId !== sess.chat_id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                onMouseLeave={e => { if (currentSessionId !== sess.chat_id) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{sess.title || 'Untitled Session'}</span>
-              </button>
-            ))
+            sessions.map((sess) => {
+              const active = currentSessionId === sess.chat_id;
+              return (
+                <button
+                  key={sess.chat_id}
+                  onClick={() => handleResumeSession(sess.chat_id)}
+                  className={`w-full text-left px-3 py-2 rounded-md text-[13px] font-medium truncate flex items-center gap-2 cursor-pointer transition-colors ${
+                    active
+                      ? 'bg-emerald-500/[0.08] text-emerald-300 border border-emerald-500/20'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.03] border border-transparent'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" strokeWidth={1.8} />
+                  <span className="truncate">{sess.title || 'Untitled session'}</span>
+                </button>
+              );
+            })
           )}
         </div>
 
-        {/* Voice Settings */}
-        <div className="p-3 space-y-3 border-t border-zinc-800/50 bg-zinc-950/80 dark:border-zinc-800/50 dark:bg-zinc-950/80 light:border-zinc-200/30 light:bg-white/80">
+        {/* Voice settings */}
+        <div className="p-3 space-y-2.5 border-t border-white/[0.05]">
           <div>
-            <label className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mb-1.5">Voice Synth</label>
-            <select value={ttsProvider} onChange={e => setTtsProvider(e.target.value)} style={selectStyle}>
+            <label className="text-[10.5px] font-medium text-zinc-500 block mb-1">Voice synth</label>
+            <select value={ttsProvider} onChange={e => setTtsProvider(e.target.value)} className={selectClass}>
               {voiceProviders.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest block mb-1.5">Speaker Profile</label>
-            <select value={voiceId} onChange={e => setVoiceId(e.target.value)} style={selectStyle}>
+            <label className="text-[10.5px] font-medium text-zinc-500 block mb-1">Speaker</label>
+            <select value={voiceId} onChange={e => setVoiceId(e.target.value)} className={selectClass}>
               {ttsProvider === 'camb' && cambVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               {ttsProvider === 'elevenlabs' && elevenLabsVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               {ttsProvider === 'browser' && browserVoices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}
@@ -446,120 +388,98 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
       </aside>
 
-      {/* ── Main Chat Workspace ── */}
+      {/* Main workspace */}
       <div className="flex-1 flex flex-col min-w-0">
-
         {/* Toolbar */}
-        <div className="flex h-11 shrink-0 items-center justify-between px-4 border-b border-zinc-800/40 bg-zinc-950/90 dark:border-zinc-800/40 dark:bg-zinc-950/90 light:border-zinc-200/30 light:bg-white/90">
+        <div className="flex h-12 shrink-0 items-center justify-between px-4 border-b border-white/[0.05] bg-zinc-950/90 backdrop-blur-md">
           <button
             id="toggle-sidebar-btn"
             onClick={toggleSidebar}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition-all hover:text-zinc-200 hover:bg-zinc-800/60 cursor-pointer"
-            title={sidebarVisible ? 'Hide sessions' : 'Show sessions'}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
             {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             Sessions
           </button>
-
           <button
             id="new-session-btn"
             onClick={handleNewSession}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all"
-            style={{
-              background: 'rgba(16,185,129,0.12)',
-              color: '#10b981',
-              border: '1px solid rgba(16,185,129,0.20)',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.20)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.12)'}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11.5px] font-medium bg-emerald-500/[0.10] border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/[0.16] transition-colors cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-            New
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
+            New chat
           </button>
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5 bg-zinc-950 dark:bg-zinc-950 light:bg-zinc-50">
+        {/* Messages */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 bg-zinc-950">
           {messages.length === 0 ? (
-            /* Empty State */
-            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-8 sm:py-10 text-center px-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center mb-4 sm:mb-6"
-                style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(45,212,191,0.08))', border: '1px solid rgba(16,185,129,0.18)' }}
-              >
-                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400" strokeWidth={1.8} />
+            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-10 text-center px-4">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-emerald-500/[0.08] border border-emerald-500/15">
+                <Zap className="w-6 h-6 text-emerald-400" strokeWidth={1.6} />
               </div>
-              <h3 className="font-extrabold text-base sm:text-lg tracking-tight text-zinc-100 mb-1 sm:mb-2 dark:text-zinc-100 light:text-zinc-950">Vector AI</h3>
-              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6 sm:mb-8 max-w-xs dark:text-zinc-500 light:text-zinc-600">
-                Ask questions about CAPS Physical Sciences or Chemistry.
+              <h2 className="text-[20px] font-semibold tracking-tight text-zinc-50 mb-2">
+                How can I help you study today?
+              </h2>
+              <p className="text-zinc-400 text-[13.5px] leading-relaxed mb-8 max-w-md">
+                Ask anything about CAPS Physical Sciences or Chemistry. Worked examples, formulas, and visual simulations included.
               </p>
 
-              {/* Prompt chips */}
-              <div className="flex flex-col w-full gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-2">
                 {promptChips.map((chip, idx) => (
                   <button
                     key={idx}
                     id={`chip-${idx}`}
-                    onClick={() => handleSendMessage(chip)}
-                    className="rounded-lg p-3 sm:p-4 text-left text-xs sm:text-sm font-medium text-zinc-400 transition-all cursor-pointer hover:bg-zinc-800/70 hover:text-zinc-100 bg-zinc-950/70 border border-zinc-800/40 dark:bg-zinc-950/70 dark:border-zinc-800/40 light:bg-zinc-100 light:border-zinc-200/60 light:text-zinc-900 active:scale-95"
+                    onClick={() => handleSendMessage(chip.prompt)}
+                    className="group rounded-xl p-4 text-left transition-all cursor-pointer bg-zinc-900/40 hover:bg-zinc-900/70 border border-white/[0.05] hover:border-emerald-500/20"
                   >
-                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 mb-1.5" />
-                    <div className="font-medium text-xs sm:text-sm leading-snug">{chip}</div>
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 mb-2 opacity-80" strokeWidth={2.25} />
+                    <div className="text-[13.5px] font-semibold text-zinc-100 leading-snug group-hover:text-emerald-300 transition-colors">{chip.title}</div>
+                    <div className="text-[12px] text-zinc-500 mt-1">{chip.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            /* Messages */
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-2 sm:gap-4">
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  <div
-                    className={
-                      `rounded-2xl p-3 sm:p-4 text-xs sm:text-sm leading-relaxed break-words max-w-[95%] sm:max-w-[80%] ${msg.role === 'user' ? 'rounded-br-none bg-gradient-to-br from-emerald-500/15 to-teal-500/10 border border-emerald-500/20 text-zinc-950' : 'rounded-bl-none bg-zinc-950/70 border border-zinc-800/40 text-zinc-100 shadow-sm light:bg-white/85 light:border-zinc-200/30 light:text-zinc-950'}`
-                    }
-                  >
-                    <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-1 sm:mb-2">
-                      {msg.role === 'user' ? 'You' : 'AI'}
-                    </div>
-                    {msg.role === 'user' ? (
-                      <p className="whitespace-pre-line font-medium text-xs sm:text-sm">{msg.content}</p>
-                    ) : (
-                      <div>
-                        <MarkdownRenderer content={msg.content} />
-                        <button
-                          onClick={() => handleSaveAsNote(msg.content)}
-                          className="mt-2 sm:mt-3 inline-flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-md px-2 py-1"
-                          style={{
-                            color: '#52525b',
-                            border: '1px solid rgba(255,255,255,0.07)',
-                            background: 'rgba(255,255,255,0.03)',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.color = '#10b981'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.22)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.color = '#52525b'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
-                        >
-                          <Bookmark className="w-3 h-3" />
-                          Save
-                        </button>
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+              {messages.map((msg, index) => {
+                const isUser = msg.role === 'user';
+                return (
+                  <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex flex-col max-w-[92%] sm:max-w-[82%] ${isUser ? 'items-end' : 'items-start'}`}>
+                      <div className="text-[10.5px] font-medium uppercase tracking-wider text-zinc-500 mb-1.5 px-1">
+                        {isUser ? 'You' : 'Vector AI'}
                       </div>
-                    )}
+                      {isUser ? (
+                        <div className="rounded-2xl rounded-tr-sm px-4 py-3 bg-emerald-500/[0.10] border border-emerald-500/20 text-zinc-100 text-[14px] leading-relaxed break-words">
+                          <p className="whitespace-pre-line">{msg.content}</p>
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-zinc-900/50 border border-white/[0.06] text-zinc-200 text-[14px] leading-relaxed break-words">
+                          <MarkdownRenderer content={msg.content} />
+                          <button
+                            onClick={() => handleSaveAsNote(msg.content)}
+                            className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
+                          >
+                            <Bookmark className="w-3 h-3" strokeWidth={2} />
+                            Save to notes
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
-              {/* Typing indicator */}
               {isSending && (
-                <div className="flex flex-col self-start max-w-[140px]">
-                  <div className="rounded-2xl rounded-bl-none p-3 sm:p-4 bg-zinc-950/70 border border-zinc-800/40 dark:bg-zinc-950/70 dark:border-zinc-800/40 light:bg-white/85 light:border-zinc-200/30">
-                    <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-1.5">AI</div>
-                    <div className="flex gap-1 items-center">
-                      {[0,1,2].map(i => (
-                        <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full"
-                          style={{ background: '#10b981' }}
-                        />
-                      ))}
+                <div className="flex justify-start">
+                  <div className="flex flex-col items-start max-w-[140px]">
+                    <div className="text-[10.5px] font-medium uppercase tracking-wider text-zinc-500 mb-1.5 px-1">Vector AI</div>
+                    <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-zinc-900/50 border border-white/[0.06]">
+                      <div className="flex gap-1 items-center">
+                        {[0,1,2].map(i => (
+                          <span key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-emerald-400/80" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -569,52 +489,52 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           )}
         </div>
 
-        {/* ── Input Bar ── */}
-        <div className="shrink-0 p-3 sm:p-4 border-t border-zinc-800/40 bg-zinc-950/95 dark:border-zinc-800/40 dark:bg-zinc-950/95 light:border-zinc-200/30 light:bg-white/90">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:gap-3">
-            <div className="flex items-end gap-2 sm:gap-3">
+        {/* Composer */}
+        <div className="shrink-0 px-4 pb-4 pt-2 bg-zinc-950">
+          <div className="mx-auto max-w-3xl">
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 focus-within:border-emerald-500/30 focus-within:bg-zinc-900/60 transition-colors backdrop-blur-md">
               <textarea
                 ref={textareaRef}
                 id="chat-input"
                 rows={1}
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
-                }}
-                placeholder="Ask something..."
-                className="flex-1 resize-none max-h-24 text-xs sm:text-sm py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl transition-all bg-zinc-950/70 border border-zinc-800/40 text-zinc-100 outline-none font-sans dark:bg-zinc-950/70 dark:border-zinc-800/40 dark:text-zinc-100 light:bg-zinc-100 light:border-zinc-200 light:text-zinc-950"
-                onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.35)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.06)'; }}
-                onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none'; }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                placeholder="Ask anything…"
+                className="w-full resize-none max-h-32 text-[14px] py-3.5 px-4 bg-transparent text-zinc-100 placeholder:text-zinc-500 outline-none font-sans"
               />
-              <button
-                id="dictate-btn"
-                onClick={toggleDictation}
-                disabled={isProcessingAudio}
-                className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 active:scale-95 ${
-                  isRecording ? 'bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse' : 'bg-zinc-800/50 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 border border-zinc-800/60'
-                }`}
-                title="Voice input"
-                aria-label="Record voice"
-              >
-                {isProcessingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
-              <button
-                id="send-btn"
-                onClick={() => handleSendMessage()}
-                disabled={isSending || !inputValue.trim()}
-                className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 active:scale-95"
-                style={{
-                  background: (!isSending && inputValue.trim()) ? 'linear-gradient(135deg, #10b981, #2dd4bf)' : 'rgba(255,255,255,0.05)',
-                  color: (!isSending && inputValue.trim()) ? '#09090b' : '#3f3f46',
-                  boxShadow: (!isSending && inputValue.trim()) ? '0 4px 16px rgba(16,185,129,0.25)' : 'none',
-                }}
-                aria-label="Send message"
-              >
-                <Send className="w-4 h-4 fill-current" />
-              </button>
+              <div className="flex items-center justify-between px-2 pb-2">
+                <span className="text-[11px] text-zinc-600 pl-2">Enter to send · Shift + Enter for newline</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    id="dictate-btn"
+                    onClick={toggleDictation}
+                    disabled={isProcessingAudio}
+                    className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-center ${
+                      isRecording
+                        ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+                        : 'text-zinc-400 hover:text-emerald-300 hover:bg-white/[0.04] border border-transparent'
+                    }`}
+                    title="Voice input"
+                  >
+                    {isProcessingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" strokeWidth={1.8} />}
+                  </button>
+                  <button
+                    id="send-btn"
+                    onClick={() => handleSendMessage()}
+                    disabled={isSending || !inputValue.trim()}
+                    className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-center ${
+                      !isSending && inputValue.trim()
+                        ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_4px_12px_-2px_rgba(16,185,129,0.4)]'
+                        : 'bg-white/[0.04] text-zinc-600'
+                    }`}
+                    aria-label="Send message"
+                  >
+                    <Send className="w-4 h-4" strokeWidth={2.25} />
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-center text-[9px] sm:text-[10px] text-zinc-700 font-medium dark:text-zinc-700 light:text-zinc-400">Enter to send · Shift+Enter for newline</p>
           </div>
         </div>
       </div>
