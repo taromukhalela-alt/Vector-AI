@@ -23,19 +23,11 @@ import html2canvas from 'html2canvas';
 import { pdf } from '@react-pdf/renderer';
 import NotesPdfDocument from '../components/NotesPdfDocument';
 
-// ── Math pre-rendering helpers ───────────────────────────────────────────────
-
-/**
- * Replaces all math expressions in `content` with unique tokens (__MATH_N__)
- * so marked.js never processes them. Returns the tokenized string and a map
- * of { token → { latex, display } }.
- */
 const preprocessContent = (content) => {
   const mathMap = {};
   const codeStore = [];
   let idx = 0;
 
-  // Step 1: protect code blocks / inline code
   let md = String(content || '').replace(
     /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,
     (m) => {
@@ -45,7 +37,6 @@ const preprocessContent = (content) => {
     },
   );
 
-  // Step 2: tokenize math (display first to avoid $$ vs $ ambiguity)
   const tok = (latex, display) => {
     const key = `__MATH_${idx++}__`;
     mathMap[key] = { latex, display };
@@ -57,7 +48,7 @@ const preprocessContent = (content) => {
     .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_, m) => tok(m, true))
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => tok(m, false))
     .replace(/(?<!\\)\$([^\n$]+?)(?<!\\)\$/g, (_, m) => tok(m, false));
-  // Step 3: restore code blocks
+
   md = md.replace(/__CODE_(\d+)__/g, (_, i) => codeStore[+i]);
 
   return { processed: md, mathMap };
@@ -71,15 +62,12 @@ const fallbackCssValue = (propName, displayMode) => {
   if (prop === 'color' || prop.endsWith('color') || prop === 'fill' || prop === 'stroke') {
     return '#1e293b';
   }
-
   if (prop.startsWith('background')) {
     return displayMode ? '#f7fef9' : 'transparent';
   }
-
   if (prop.includes('shadow')) {
     return 'none';
   }
-
   return '';
 };
 
@@ -90,43 +78,34 @@ const sanitizeCssValue = (propName, value, displayMode) => {
     : value;
 };
 
+// Apply only minimal safe styles (avoid copying all computed styles that may contain oklch/lab/lch)
 const snapshotInlineStyles = (root, displayMode) => {
   if (!root || typeof window === 'undefined') return;
 
-  const apply = (el) => {
+  const applySafeStyles = (el) => {
     if (!(el instanceof Element)) return;
 
-    const computed = window.getComputedStyle(el);
-    for (const prop of Array.from(computed)) {
-      if (!prop || prop.startsWith('--')) continue;
+    const color = sanitizeCssValue('color', '#1e293b', displayMode);
+    const bg = sanitizeCssValue('background-color', 'transparent', displayMode);
+    const border = sanitizeCssValue('border-color', '#94a3b8', displayMode);
 
-      const rawValue = computed.getPropertyValue(prop);
-      if (!rawValue) continue;
+    try {
+      el.style.setProperty('color', color);
+      el.style.setProperty('background-color', bg);
+      el.style.setProperty('border-color', border);
+      el.style.setProperty('text-shadow', 'none');
+      el.style.setProperty('box-shadow', 'none');
+    } catch {}
 
-      const safeValue = sanitizeCssValue(prop, rawValue, displayMode);
-      if (!safeValue && safeValue !== '0') continue;
-
-      try {
-        el.style.setProperty(prop, safeValue);
-      } catch {
-        // Ignore inline CSS declarations the browser will not accept.
-      }
-    }
-
-    Array.from(el.children).forEach((child) => apply(child));
+    Array.from(el.children).forEach((child) => applySafeStyles(child));
   };
 
-  apply(root);
+  applySafeStyles(root);
 };
 
-/**
- * Renders a single LaTeX expression into a PNG data-URL using KaTeX + html2canvas.
- * Returns { dataUrl, width, height } or null on failure.
- *
- * Snapshots computed KaTeX styles inline, strips cloned stylesheets, and sanitizes
- * unsupported CSS color functions (like oklch) before html2canvas paints.
- */
 const renderMathToPng = async (latex, displayMode) => {
+  if (typeof document === 'undefined') return null;
+
   const backgroundColor = displayMode ? '#f7fef9' : '#ffffff';
   const foregroundColor = '#1e293b';
 
@@ -173,6 +152,8 @@ const renderMathToPng = async (latex, displayMode) => {
       color: ${foregroundColor} !important;
       border-color: #94a3b8 !important;
       caret-color: ${foregroundColor} !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
     }
     [data-math-isolated] {
       background: ${backgroundColor} !important;
@@ -266,16 +247,13 @@ const renderMathToPng = async (latex, displayMode) => {
   }
 };
 
-/**
- * Pre-renders every math expression in mathMap to a PNG.
- * Returns { [token]: { dataUrl, width, height, display, latex } }.
- */
 const prerenderMathImages = async (mathMap) => {
+  if (typeof document === 'undefined') return {};
+
   const images = {};
   const entries = Object.entries(mathMap);
   if (!entries.length) return images;
 
-  // Prime KaTeX fonts before bulk rendering
   if (document.fonts?.ready) {
     await document.fonts.ready;
   }
@@ -293,7 +271,6 @@ const prerenderMathImages = async (mathMap) => {
   }
   await new Promise((r) => setTimeout(r, 200));
 
-  // Render all expressions (sequentially to avoid DOM thrashing)
   for (const [key, { latex, display }] of entries) {
     const result = await renderMathToPng(latex, display);
     if (result) images[key] = { ...result, display, latex };
@@ -301,7 +278,6 @@ const prerenderMathImages = async (mathMap) => {
 
   return images;
 };
-
 
 const Notes = () => {
   const { csrfToken } = useAuth();
@@ -403,7 +379,6 @@ const Notes = () => {
 
   useEffect(() => {
     fetchNotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showStatus = (message, type = 'success', title) => {
@@ -578,15 +553,12 @@ const Notes = () => {
       .replace(/\s+/g, '_') || 'study_note';
 
     try {
-      // 1. Tokenize math expressions in the note content
       const { processed: tokenizedContent, mathMap } = preprocessContent(
         selectedNote.content || '',
       );
 
-      // 2. Pre-render all math to PNG images (KaTeX → html2canvas)
       const mathImages = await prerenderMathImages(mathMap);
 
-      // 3. Build the React PDF document
       const doc = (
         <NotesPdfDocument
           note={{ ...selectedNote, content: tokenizedContent }}
@@ -594,10 +566,8 @@ const Notes = () => {
         />
       );
 
-      // 4. Generate PDF blob via @react-pdf/renderer
       const blob = await pdf(doc).toBlob();
 
-      // 5. Trigger browser download
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -830,7 +800,7 @@ const Notes = () => {
                   placeholder="Write your study notes content in markdown..."
                 />
               ) : (
-                <div id="print-note-root" className="mx-auto max-w-3xl prose max-w-3xl p-6">
+                <div id="print-note-root" className="mx-auto max-w-3xl prose p-6">
                   <MarkdownRenderer content={selectedNote.content || ''} />
                 </div>
               )}
