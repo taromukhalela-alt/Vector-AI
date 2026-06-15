@@ -1001,6 +1001,52 @@ def make_chat_friendly(text):
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
 
+def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_name=None):
+    if not genai:
+        raise Exception("google-genai package not installed")
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise Exception("GOOGLE_API_KEY not configured")
+
+    result_queue = queue.Queue(maxsize=1)
+    model_name = model_name or os.getenv("GOOGLE_CHAT_MODEL", "gemini-1.5-flash")
+
+    def worker():
+        try:
+            client = genai.Client(api_key=api_key)
+            final_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+            response = client.models.generate_content(
+                model=model_name,
+                contents=final_prompt,
+            )
+            text = getattr(response, "text", None)
+            if text and str(text).strip():
+                result_queue.put(("ok", str(text).strip()))
+                return
+
+            candidates = getattr(response, "candidates", None) or []
+            if candidates:
+                parts = (
+                    getattr(candidates[0], "content", None) and getattr(candidates[0].content, "parts", None)
+                ) or []
+                out = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", ""))
+                if out.strip():
+                    result_queue.put(("ok", out.strip()))
+                    return
+            result_queue.put(("ok", ""))
+        except Exception as exc:
+            result_queue.put(("error", str(exc)))
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    try:
+        status, payload = result_queue.get(timeout=timeout_seconds)
+    except queue.Empty:
+        raise TimeoutError("Gemini request timed out")
+
+    if status == "error":
+        raise Exception(payload)
+    return payload
 
 def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
     result_queue = queue.Queue(maxsize=1)
@@ -1170,6 +1216,24 @@ def generate_response(
             "solve your questions before you move on further.]"
         )
 
+    prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
+
+    # Primary provider: Google AI Studio Gemini
+    try:
+        google_timeout = timeout_seconds or (60.0 if provider in {"openrouter", "groq"} else 20.0)
+        text = _google_generate_with_timeout(
+            prompt=prompt,
+            system_prompt="",
+            timeout_seconds=google_timeout,
+            model_name=os.getenv("GOOGLE_CHAT_MODEL", "gemini-1.5-flash"),
+        )
+        if text:
+            return text
+    except TimeoutError:
+        logger.warning("Gemini timeout, falling back")
+    except Exception as e:
+        logger.warning("Gemini error: %s", e)
+
     if provider == "openrouter":
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
@@ -1178,18 +1242,13 @@ def generate_response(
             return fallback or "I couldn't generate the exam paper because OpenRouter is not configured."
 
         try:
-            prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
-            timeout = timeout_seconds or env_float(
-                "OPENROUTER_EXAM_TIMEOUT", 60.0, min_value=5.0
-            )
+            timeout = timeout_seconds or env_float("OPENROUTER_EXAM_TIMEOUT", 60.0, min_value=5.0)
             text = _openrouter_generate_with_timeout(
                 prompt,
                 api_key,
                 timeout,
                 model=os.getenv("OPENROUTER_EXAM_MODEL", "openrouter/free"),
-                max_tokens=env_int(
-                    "OPENROUTER_EXAM_MAX_TOKENS", 9000, min_value=500
-                ),
+                max_tokens=env_int("OPENROUTER_EXAM_MAX_TOKENS", 9000, min_value=500),
             )
             if text:
                 return text
@@ -1208,15 +1267,13 @@ def generate_response(
             logger.error("Groq API not available for exam generation")
             fallback = local_hint or get_local_science_response(user_message)
             return fallback or "Groq is not configured for exam generation. Please try again."
-        
+
         try:
-            prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
             groq_timeout = timeout_seconds or 60.0
             text = _groq_generate_with_timeout(prompt, api_key, groq_timeout)
             if text:
                 logger.info("Groq successfully generated exam response")
                 return text
-            # If Groq returned empty, retry with a shorter prompt
             logger.info("Groq returned empty for exam, retrying without history")
             simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
             text = _groq_generate_with_timeout(simple_prompt, api_key, groq_timeout)
@@ -1231,22 +1288,19 @@ def generate_response(
             logger.error("Groq generation error for exam: %s", e)
             return "I hit a temporary issue while generating the exam paper. Please try again."
 
-    # Use Groq as the main chat provider
+    # Fallback to Groq for chat
     api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
     if api_key and Groq:
         try:
-            prompt = build_prompt(history, user_message, system_prompt, user_key=user_key)
             groq_timeout = timeout_seconds or (6.0 if local_hint else 10.0)
             text = _groq_generate_with_timeout(prompt, api_key, groq_timeout)
             if text:
                 return text
-            # If Groq returned empty, try once more with a shorter prompt (no history)
             logger.info("Groq returned empty, retrying without history")
             simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
-            text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds)
+            text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds or 10.0)
             if text:
                 return text
-            # Still empty, fall through to OpenRouter or local
             logger.info("Groq empty, falling back to OpenRouter")
         except TimeoutError:
             logger.error("Groq timeout, falling back to OpenRouter")
@@ -1258,9 +1312,8 @@ def generate_response(
     if api_key:
         try:
             chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct")
-            timeout_seconds = env_float("OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0)
+            timeout_seconds_local = env_float("OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0)
 
-            # Build messages array with system prompt and history
             messages = [{"role": "system", "content": system_prompt}]
             for item in normalize_history(history):
                 messages.append({"role": item["role"], "content": item["content"]})
@@ -1281,7 +1334,7 @@ def generate_response(
                     "top_p": 0.9,
                     "max_tokens": 6000,
                 },
-                timeout=timeout_seconds,
+                timeout=timeout_seconds_local,
             )
 
             if response.ok:
@@ -1290,7 +1343,6 @@ def generate_response(
                 if text:
                     return text
 
-            # If main model fails, try fallback
             fallback_model = os.getenv("OPENROUTER_CHAT_FALLBACK", "openrouter/free")
             if fallback_model and fallback_model != chat_model:
                 response = requests.post(
@@ -1308,7 +1360,7 @@ def generate_response(
                         "top_p": 0.9,
                         "max_tokens": 6000,
                     },
-                    timeout=timeout_seconds,
+                    timeout=timeout_seconds_local,
                 )
                 if response.ok:
                     payload = response.json()
@@ -1316,12 +1368,10 @@ def generate_response(
                     if text:
                         return text
 
-            # OpenRouter failed, fall through to local
             logger.warning("OpenRouter chat failed, falling back to local")
         except Exception as e:
             logger.warning("OpenRouter chat error: %s", e)
 
-    # All providers failed, use local response
     logger.error("All AI providers failed, using local response")
     fallback = local_hint or get_local_science_response(user_message)
     return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
@@ -2353,73 +2403,6 @@ def get_notes():
     return jsonify({"success": True, "notes": [n.to_dict() for n in notes]})
 
 
-@app.route("/api/notes", methods=["POST"])
-@login_required
-def create_note():
-    """Create a new AI-assisted note"""
-    data = request.get_json(silent=True) or {}
-    title = clean_limited_text(data.get("title", ""), NOTE_TITLE_MAX_CHARS)
-    content = clean_limited_text(data.get("content", ""), NOTE_CONTENT_MAX_CHARS)
-    topic = clean_limited_text(data.get("topic", ""), NOTE_TOPIC_MAX_CHARS)
-    tags = sanitize_tags(data.get("tags", []))
-
-    if not title or not content:
-        return jsonify({"success": False, "message": "Title and content required"}), 400
-    if len(str(data.get("content", ""))) > NOTE_CONTENT_MAX_CHARS:
-        return jsonify({"success": False, "message": "Note content is too long"}), 413
-
-    note_id = f"note_{secrets.token_urlsafe(12)}"
-    new_note = Note(
-        id=note_id,
-        user_id=current_user.id,
-        title=title,
-        content=content,
-        topic=topic,
-        tags=tags,
-        source="ai" if data.get("ai_generated") else "user"
-    )
-    db.session.add(new_note)
-    db.session.commit()
-
-    return jsonify({"success": True, "note": new_note.to_dict()})
-
-
-@app.route("/api/notes/<note_id>", methods=["PUT"])
-@login_required
-def update_note(note_id):
-    """Update an existing note"""
-    if not valid_note_id(note_id):
-        return jsonify({"success": False, "message": "Invalid note id"}), 400
-    data = request.get_json(silent=True) or {}
-    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
-    if note:
-        if "content" in data and len(str(data.get("content", ""))) > NOTE_CONTENT_MAX_CHARS:
-            return jsonify({"success": False, "message": "Note content is too long"}), 413
-        note.title = clean_limited_text(data.get("title", note.title), NOTE_TITLE_MAX_CHARS)
-        note.content = clean_limited_text(data.get("content", note.content), NOTE_CONTENT_MAX_CHARS)
-        note.topic = clean_limited_text(data.get("topic", note.topic), NOTE_TOPIC_MAX_CHARS)
-        if "tags" in data:
-            note.tags = sanitize_tags(data.get("tags", []))
-        db.session.commit()
-        return jsonify({"success": True, "note": note.to_dict()})
-
-    return jsonify({"success": False, "message": "Note not found"}), 404
-
-
-@app.route("/api/notes/<note_id>", methods=["DELETE"])
-@login_required
-def delete_note(note_id):
-    """Delete a note"""
-    if not valid_note_id(note_id):
-        return jsonify({"success": False, "message": "Invalid note id"}), 400
-    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
-    if note:
-        db.session.delete(note)
-        db.session.commit()
-        return jsonify({"success": True})
-    return jsonify({"success": False, "message": "Note not found"}), 404
-
-
 @app.route("/api/notes/generate", methods=["POST"])
 @login_required
 def generate_ai_note():
@@ -2456,18 +2439,16 @@ def generate_ai_note():
             history=[],
             system_prompt=system_prompt,
             user_key=user_key,
-            provider='openrouter',
+            provider=None,  # Gemini primary
             timeout_seconds=120.0
         )
         reply = limit_text(reply, EXAM_MAX_OUTPUT_CHARS)
 
-        # Infer metadata
         meta = infer_note_metadata(f"{topic} Study Guide", topic, reply)
         title = meta.get("title") or f"{topic} Study Guide"
         inferred_topic = meta.get("topic") or topic
         tags = meta.get("tags") or [topic.lower()]
 
-        # Save to DB
         note_id = f"note_{secrets.token_urlsafe(12)}"
         new_note = Note(
             id=note_id,
@@ -2485,6 +2466,7 @@ def generate_ai_note():
     except Exception as e:
         logger.error("AI Note generation error: %s", e)
         return jsonify({"success": False, "message": "Failed to generate study guide. Please try again."}), 500
+
 
 
 

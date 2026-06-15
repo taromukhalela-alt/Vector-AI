@@ -15,8 +15,8 @@ const normalizeMathDelimiters = (value = '') => {
     .map((part) => {
       if (part.startsWith('```') || part.startsWith('~~~')) return part;
       return part
-        .replace(/\\\[([\s\S]*?)\\\]/g, (_m, math) => `\n\n$$\n${math}\n$$\n\n`)
-        .replace(/\\\(([\s\S]*?)\\\)/g, (_m, math) => `$${math}$`);
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_m, math) => `\n\n$$\n${math.trim()}\n$$\n\n`)
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_m, math) => `$${math.trim()}$`);
     })
     .join('');
 };
