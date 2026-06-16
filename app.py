@@ -1011,7 +1011,7 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
         raise Exception("GOOGLE_API_KEY not configured")
 
     result_queue = queue.Queue(maxsize=1)
-    model_name = model_name or os.getenv("GOOGLE_CHAT_MODEL", "gemini-1.5-flash")
+    model_name = model_name or os.getenv("GOOGLE_CHAT_MODEL", "gemini-3.5-flash")
 
     def worker():
         try:
@@ -1078,7 +1078,7 @@ def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=
             return None, {}
 
         # Use gemini-2.0-flash for tools as per implementation plan
-        model_id = os.getenv("GOOGLE_TOOLS_MODEL", "gemini-2.0-flash")
+        model_id = os.getenv("GOOGLE_TOOLS_MODEL", "gemini-3.5-flash")
         
         response = client.models.generate_content(
             model=model_id,
@@ -1286,7 +1286,6 @@ def generate_response(
         google_timeout = timeout_seconds or (60.0 if provider in {"openrouter", "groq"} else 20.0)
         text = _google_generate_with_timeout(
             prompt=prompt,
-            tools=tools,
             system_prompt="",
             timeout_seconds=google_timeout,
             model_name=os.getenv("GOOGLE_CHAT_MODEL", "gemini-3.5-flash"),

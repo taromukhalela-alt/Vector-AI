@@ -18,7 +18,6 @@ import {
   X,
   BookOpen,
   Clock,
-  Tag,
   AlignLeft,
 } from 'lucide-react';
 import katex from 'katex';
@@ -503,7 +502,7 @@ const Notes = () => {
       {/* Mobile sidebar overlay */}
       {sidebarVisible && !isDesktop && (
         <div
-          className="no-print fixed inset-0 z-[130] bg-black/50 backdrop-blur-sm md:hidden"
+          className="no-print fixed inset-0 z-130 bg-black/50 backdrop-blur-sm md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -512,7 +511,7 @@ const Notes = () => {
       <aside
         className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300 ${
           sidebarVisible
-            ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
+            ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
             : 'hidden'
         }`}
       >
@@ -583,7 +582,7 @@ const Notes = () => {
                   onClick={() => handleSelectNote(note)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group ${
                     isActive
-                      ? 'bg-emerald-500/10 dark:bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
+                      ? 'bg-emerald-500/10 dark:bg-emerald-500/12 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
                       : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-transparent'
                   }`}
                 >
@@ -812,7 +811,7 @@ const Notes = () => {
               {sidebarVisible ? 'Hide notes' : 'Open notes'}
             </button>
 
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/15 flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/8 border border-emerald-500/15 flex items-center justify-center mb-5">
               <BookOpen className="w-7 h-7 text-emerald-400" strokeWidth={1.5} />
             </div>
             <h3 className="font-extrabold text-base text-zinc-800 dark:text-zinc-100 mb-2">
