@@ -353,6 +353,70 @@ const Landing = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* Maker's Story */}
+      <section className="relative z-10 py-24 px-6 border-t border-white/[0.05] overflow-hidden">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+          <Reveal variant="from-left" className="flex-1">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-emerald-500/20 blur-2xl rounded-full opacity-50 anim-glow" />
+              <div className="relative rounded-3xl border border-white/[0.1] bg-zinc-900/40 p-4 sm:p-6 backdrop-blur-md shadow-2xl">
+                <div className="aspect-square w-full rounded-2xl bg-zinc-800 flex items-center justify-center overflow-hidden">
+                   {/* Placeholder for Taro's photo or a cool avatar */}
+                   <div className="flex flex-col items-center gap-4 text-center px-8">
+                     <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <Cpu className="w-10 h-10 text-emerald-400" strokeWidth={1.5} />
+                     </div>
+                     <div>
+                        <h3 className="text-[18px] font-bold text-zinc-50">Taro Mukhalela</h3>
+                        <p className="text-emerald-400 text-[12px] font-bold uppercase tracking-[0.2em] mt-1">Founder & Developer</p>
+                     </div>
+                   </div>
+                </div>
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-px bg-emerald-500/40" />
+                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Loding, Mpumalanga</span>
+                  </div>
+                  <p className="text-zinc-300 text-[14px] italic leading-relaxed">
+                    "I believe AI shouldn't just answer questions, it should build intuition. Vector AI is my contribution to making STEM education more visual and accessible for every South African student."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal variant="from-right" className="flex-[1.2]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-emerald-300 text-[11px] font-bold uppercase tracking-wider">
+              Meet the Maker
+            </div>
+            <h2 className="text-[36px] sm:text-[48px] font-bold tracking-tight text-zinc-50 leading-tight mb-8">
+              A 14-year-old developer with a <span className="bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent">massive vision.</span>
+            </h2>
+            <div className="space-y-6 text-zinc-400 text-[16px] leading-relaxed">
+              <p>
+                Based in <span className="text-zinc-100 font-semibold">Loding, Mpumalanga</span>, Taro Mukhalela is a self-taught web developer on a mission to democratise high-quality STEM education. 
+              </p>
+              <p>
+                Frustrated by the lack of interactive tools for the South African CAPS curriculum, Taro spent his after-school hours engineering Vector AI — a platform that combines state-of-the-art Large Language Models with real-time physics simulations.
+              </p>
+              <p>
+                Vector AI isn't just an app; it's a testament to what's possible when passion meets code. It's built for students, by a student who understands exactly what it takes to master matric physical science.
+              </p>
+            </div>
+            <div className="mt-10 flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 text-[13px] font-bold text-zinc-300">
+                <Zap className="w-4 h-4 text-emerald-400" />
+                100% Student Built
+              </div>
+              <div className="flex items-center gap-2 text-[13px] font-bold text-zinc-300">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                Mpumalanga Pride
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="relative z-10 py-24 px-6 border-t border-white/[0.05]">
         <div className="max-w-3xl mx-auto">

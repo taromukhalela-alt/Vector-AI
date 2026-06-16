@@ -79,11 +79,16 @@
   }
 
   body {
-    @apply bg-zinc-950 text-zinc-100 transition-colors duration-200;
+    @apply bg-zinc-950 text-zinc-100 transition-colors duration-300;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     overflow-x: hidden;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smoothly transition all surface containers and interactive elements */
+  #root, .glass, .glass-surface, .card, aside, header, footer, nav, button {
+    @apply transition-all duration-300;
   }
 
   ::selection {

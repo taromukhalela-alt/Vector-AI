@@ -183,6 +183,10 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // Tool Toggles
+  const [enableSearch, setEnableSearch] = useState(true);
+  const [enableCode, setEnableCode] = useState(true);
+
   // Memory/RAG state
   const [memory, setMemory] = useState(null);
   const [memoryLoading, setMemoryLoading] = useState(true);
@@ -485,7 +489,12 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({ message: question, history: messages }),
+        body: JSON.stringify({ 
+          message: question, 
+          history: messages,
+          enable_search: enableSearch,
+          enable_code: enableCode
+        }),
       });
       const data = await response.json();
       if (data.reply) {
@@ -830,9 +839,33 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                 style={{ minHeight: '44px', maxHeight: '120px' }}
               />
               <div className="flex items-center justify-between px-2 pb-2">
-                <span className="text-[10px] sm:text-[11px] text-zinc-600 pl-1.5 hidden xs:block">
-                  Enter to send · Shift+Enter for newline
-                </span>
+                <div className="flex items-center gap-1.5 pl-1">
+                  <button
+                    onClick={() => setEnableSearch(!enableSearch)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                      enableSearch 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                        : 'bg-zinc-800/50 border-white/5 text-zinc-500'
+                    }`}
+                    title="Enable/Disable Google Search"
+                  >
+                    <Zap className={`w-3 h-3 ${enableSearch ? 'text-emerald-400' : 'text-zinc-600'}`} />
+                    <span className="hidden sm:inline">Search</span>
+                  </button>
+                  <button
+                    onClick={() => setEnableCode(!enableCode)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                      enableCode 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                        : 'bg-zinc-800/50 border-white/5 text-zinc-500'
+                    }`}
+                    title="Enable/Disable Code Execution"
+                  >
+                    <Sparkles className={`w-3 h-3 ${enableCode ? 'text-emerald-400' : 'text-zinc-600'}`} />
+                    <span className="hidden sm:inline">Code</span>
+                  </button>
+                </div>
+                
                 <div className="flex items-center gap-1.5 ml-auto">
                   {/* Mic button */}
                   <button

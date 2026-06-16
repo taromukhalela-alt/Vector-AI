@@ -130,7 +130,7 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
           </div>
         )}
 
-        <div className="relative flex min-h-0 flex-1 items-center justify-center">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center lab-canvas-container">
           <PhysicsCanvas
             animationId={activeAnim}
             params={params}

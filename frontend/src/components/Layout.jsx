@@ -174,20 +174,6 @@ const Layout = ({ children }) => {
 
       {/* ── Mobile Layout ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile Header */}
-        <header className="flex h-14 items-center justify-between border-b border-white/[0.06] px-4 md:hidden light:border-zinc-200 bg-zinc-950/50 backdrop-blur-lg">
-          <div className="flex items-center gap-2.5">
-            <BrandMark className="h-7 w-7" />
-            <span className="text-sm font-bold tracking-tight">Vector AI</span>
-          </div>
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="rounded-lg p-2 hover:bg-white/[0.06] light:hover:bg-zinc-100"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </header>
-
         {/* Content Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
           <div className="flex-1 overflow-y-auto page-enter">
@@ -195,8 +181,8 @@ const Layout = ({ children }) => {
           </div>
         </main>
 
-        {/* Mobile Bottom Nav */}
-        <nav className="flex h-16 items-center border-t border-white/[0.06] bg-zinc-950/80 backdrop-blur-xl md:hidden pb-safe light:border-zinc-200 light:bg-white/80">
+        {/* Mobile Bottom Nav (Polished) */}
+        <nav className="flex h-16 items-center border-t border-white/[0.06] bg-zinc-950/90 backdrop-blur-xl md:hidden pb-safe light:border-zinc-200 light:bg-white/90">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;
@@ -208,8 +194,12 @@ const Layout = ({ children }) => {
                   active ? 'text-emerald-400' : 'text-zinc-500'
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'stroke-[2.5px]' : 'stroke-[1.8px]'}`} />
-                <span className="text-[10px] font-medium tracking-tight">{item.shortLabel}</span>
+                <div className={`relative p-1 rounded-lg transition-all ${active ? 'bg-emerald-500/10' : ''}`}>
+                  <Icon className={`h-5 w-5 ${active ? 'stroke-[2.5px]' : 'stroke-[1.8px]'}`} />
+                </div>
+                <span className={`text-[10px] font-bold tracking-tight ${active ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                  {item.shortLabel}
+                </span>
               </button>
             );
           })}
@@ -219,27 +209,33 @@ const Layout = ({ children }) => {
               isMoreActive ? 'text-emerald-400' : 'text-zinc-500'
             }`}
           >
-            <MoreHorizontal className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-tight">More</span>
+            <div className={`relative p-1 rounded-lg transition-all ${isMoreActive ? 'bg-emerald-500/10' : ''}`}>
+              <MoreHorizontal className="h-5 w-5" />
+            </div>
+            <span className={`text-[10px] font-bold tracking-tight ${isMoreActive ? 'text-emerald-400' : 'text-zinc-500'}`}>
+              More
+            </span>
           </button>
         </nav>
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Actions Bottom Sheet */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[300] md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <div className="anim-slide-right absolute inset-y-0 right-0 w-[280px] bg-zinc-950 p-6 shadow-2xl light:bg-white">
+        <div className="fixed inset-0 z-[400] md:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm anim-fade-in" onClick={() => setMobileMenuOpen(false)} />
+          <div className="anim-fade-up absolute bottom-0 left-0 right-0 max-h-[80dvh] overflow-y-auto rounded-t-[32px] border-t border-white/10 bg-zinc-900 p-6 shadow-[0_-12px_40px_rgba(0,0,0,0.6)]">
+            <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/10" />
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2.5">
                 <BrandMark className="h-8 w-8" />
-                <span className="font-bold tracking-tight">Vector AI</span>
+                <h3 className="font-bold tracking-tight">System Menu</h3>
               </div>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2">
-                <X className="h-6 w-6 text-zinc-500" />
+              <button onClick={() => setMobileMenuOpen(false)} className="rounded-full bg-white/5 p-2">
+                <X className="h-5 w-5 text-zinc-400" />
               </button>
             </div>
-            <div className="space-y-2">
+            
+            <div className="grid grid-cols-2 gap-3 mb-8">
               {tabs.map((item) => {
                 const Icon = item.icon;
                 const active = location.pathname === item.path;
@@ -247,22 +243,27 @@ const Layout = ({ children }) => {
                   <button
                     key={item.path}
                     onClick={() => goToPath(item.path)}
-                    className={`flex w-full items-center gap-4 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+                    className={`flex flex-col items-start gap-3 rounded-2xl p-4 transition-all border ${
                       active 
-                        ? 'bg-emerald-500/10 text-emerald-400' 
-                        : 'text-zinc-400 hover:bg-white/[0.04]'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                        : 'bg-white/[0.03] border-white/[0.06] text-zinc-400'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    {item.label}
+                    <span className="text-xs font-bold">{item.label}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="absolute bottom-8 left-6 right-6 pt-6 border-t border-white/[0.06]">
-               <button
+
+            <div className="space-y-3 pt-6 border-t border-white/[0.06]">
+              <div className="flex items-center justify-between px-2">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Theme</span>
+                <ThemeToggle />
+              </div>
+              <button
                 onClick={() => { logout(); setMobileMenuOpen(false); }}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition"
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-4 text-sm font-bold text-red-400 bg-red-500/5 border border-red-500/10 active:bg-red-500/10 transition"
               >
                 <LogOut className="h-5 w-5" />
                 Sign out

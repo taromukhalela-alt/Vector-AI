@@ -1,7 +1,9 @@
-import { Gauge, BookOpen, TrendingUp, Activity, Loader2 } from "lucide-react";
+import { Gauge, BookOpen, TrendingUp, Activity, Loader2, Zap, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,20 +31,8 @@ const Dashboard = () => {
     );
   }
 
-  const metrics = data?.metrics || [
-    { label: "Model accuracy", value: 98.7, max: 100, unit: "%", desc: "Trajectory model accuracy across visual labs" },
-    { label: "Inference latency", value: 14.2, max: 50, unit: "ms", desc: "Median semantic response synthesis time" },
-    { label: "CAPS alignment", value: 100, max: 100, unit: "%", desc: "Syllabus criteria compliance match" }
-  ];
-
-  const syllabusProgress = data?.syllabus || [
-    { title: "Newton's Laws & Forces", progress: 85, grade: "Gr 11/12", category: "Physics" },
-    { title: "Projectile Motion", progress: 92, grade: "Gr 12", category: "Physics" },
-    { title: "Reaction Rates & Energy", progress: 60, grade: "Gr 12", category: "Chemistry" },
-    { title: "Acids & Bases", progress: 45, grade: "Gr 11/12", category: "Chemistry" },
-    { title: "Electrochemistry", progress: 78, grade: "Gr 12", category: "Chemistry" },
-    { title: "Doppler Effect & Waves", progress: 100, grade: "Gr 11/12", category: "Physics" }
-  ];
+  const metrics = data?.metrics || [];
+  const syllabusProgress = data?.syllabus || [];
 
   return (
     <div className="bg-zinc-950 min-h-full">
@@ -50,22 +40,22 @@ const Dashboard = () => {
         {/* Header */}
         <div className="anim-fade-up">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-emerald-400 text-[10.5px] font-medium tracking-wider uppercase mb-3">
-            <Activity className="w-3 h-3" strokeWidth={2.25} />
-            Live telemetry
+            <LayoutDashboard className="w-3 h-3" strokeWidth={2.25} />
+            Command Center
           </div>
-          <h1 className="text-[26px] sm:text-[30px] font-semibold tracking-tight text-zinc-50">
-            Engine performance
+          <h1 className="text-[26px] sm:text-[32px] font-bold tracking-tight text-zinc-50">
+            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.name?.split(' ')[0] || 'Learner'}!
           </h1>
-          <p className="text-[14px] text-zinc-400 mt-1.5">
-            Real-time signals from the Vector AI inference engine.
+          <p className="text-[14px] text-zinc-400 mt-1.5 max-w-2xl">
+            Here is your live STEM performance telemetry and CAPS syllabus progress. Keep pushing towards mastery.
           </p>
         </div>
 
         {/* Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {metrics.map((metric, idx) => {
-            const radius = 50;
-            const strokeWidth = 7;
+            const radius = 48;
+            const strokeWidth = 8;
             const circumference = 2 * Math.PI * radius;
             const percent = (metric.value / metric.max) * 100;
             const strokeDashoffset = circumference - (percent / 100) * circumference;
@@ -74,36 +64,38 @@ const Dashboard = () => {
             return (
               <div 
                 key={idx} 
-                className="anim-fade-up relative p-6 rounded-xl bg-zinc-900/40 border border-white/[0.05] hover:border-emerald-500/20 transition-all group overflow-hidden"
+                className="anim-fade-up relative p-6 rounded-2xl bg-zinc-900/40 border border-white/[0.05] hover:border-emerald-500/20 transition-all group overflow-hidden shadow-lg"
                 style={{ animationDelay: `${delay}ms` }}
               >
                 <div className="absolute inset-0 bg-emerald-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                <div className="flex items-center justify-between mb-5">
-                  <span className="text-[11.5px] text-zinc-400 font-medium">{metric.label}</span>
-                  <Gauge className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.75} />
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-emerald-400/70 transition-colors">{metric.label}</span>
+                  <div className="p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                    <Gauge className="w-3.5 h-3.5 text-zinc-500" strokeWidth={2} />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-5">
-                  <div className="relative w-[108px] h-[108px] flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-6">
+                  <div className="relative w-[110px] h-[110px] flex items-center justify-center shrink-0">
                     <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="54" cy="54" r={radius} className="stroke-white/[0.05]" strokeWidth={strokeWidth} fill="transparent" />
+                      <circle cx="55" cy="55" r={radius} className="stroke-white/[0.04]" strokeWidth={strokeWidth} fill="transparent" />
                       <circle
-                        cx="54" cy="54" r={radius}
-                        className="stroke-emerald-400 transition-all duration-1000 ease-out"
+                        cx="55" cy="55" r={radius}
+                        className="stroke-emerald-500 transition-all duration-1000 ease-out"
                         strokeWidth={strokeWidth}
                         strokeDasharray={circumference}
                         strokeDashoffset={strokeDashoffset}
                         strokeLinecap="round"
                         fill="transparent"
-                        style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.35))' }}
+                        style={{ filter: 'drop-shadow(0 0 10px rgba(16,185,129,0.4))' }}
                       />
                     </svg>
-                    <div className="absolute inset-0 flex items-baseline justify-center gap-0.5">
-                      <span className="text-[26px] font-semibold tracking-tight text-zinc-50 tabular-nums self-center">{metric.value}</span>
-                      <span className="text-[11px] text-emerald-400 font-medium self-center mt-0.5">{metric.unit}</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-[24px] font-bold tracking-tighter text-zinc-50 tabular-nums">{metric.value}</span>
+                      <span className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">{metric.unit}</span>
                     </div>
                   </div>
-                  <p className="text-[12px] text-zinc-500 leading-relaxed">
+                  <p className="text-[12px] text-zinc-500 leading-relaxed font-medium">
                     {metric.desc}
                   </p>
                 </div>
