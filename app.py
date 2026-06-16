@@ -1225,7 +1225,7 @@ def generate_response(
             prompt=prompt,
             system_prompt="",
             timeout_seconds=google_timeout,
-            model_name=os.getenv("GOOGLE_CHAT_MODEL", "gemini-1.5-flash"),
+            model_name=os.getenv("GOOGLE_CHAT_MODEL", "gemini-3.5-flash"),
         )
         if text:
             return text
