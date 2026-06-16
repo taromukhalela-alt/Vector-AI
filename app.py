@@ -2392,6 +2392,68 @@ def chat():
     )
 
 
+# ============ MEMORY / RAG API ============
+
+
+@app.route("/api/memory", methods=["GET"])
+@login_required
+def get_memory():
+    """Return the current learner memory profile for the authenticated user."""
+    raw = (current_user.memory_summary or "").strip()
+    if not raw:
+        return jsonify({"success": True, "memory": None})
+    try:
+        profile = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        profile = {"recent_context": raw}
+    return jsonify({"success": True, "memory": profile})
+
+
+@app.route("/api/memory", methods=["DELETE"])
+@login_required
+def clear_memory():
+    """Clear the learner memory profile for the authenticated user."""
+    try:
+        current_user.memory_summary = None
+        db.session.commit()
+        return jsonify({"success": True, "message": "Memory cleared."})
+    except Exception as e:
+        logger.error("Failed to clear memory: %s", e)
+        return jsonify({"success": False, "message": "Failed to clear memory."}), 500
+
+
+@app.route("/api/memory/update", methods=["POST"])
+@login_required
+def update_memory():
+    """Manually trigger a memory profile update using the student's recent history."""
+    try:
+        recent_convs = (
+            Conversation.query.filter_by(user_id=current_user.id)
+            .order_by(Conversation.timestamp.desc())
+            .limit(20)
+            .all()
+        )
+        history = []
+        for conv in reversed(recent_convs):
+            history.append({"role": "user", "content": conv.message})
+            history.append({"role": "assistant", "content": conv.reply})
+
+        intent = recent_convs[0].intent if recent_convs else "unknown"
+        update_learner_memory_profile(current_user, history, intent)
+        db.session.commit()
+
+        raw = (current_user.memory_summary or "").strip()
+        try:
+            profile = json.loads(raw) if raw else {}
+        except (json.JSONDecodeError, ValueError):
+            profile = {}
+
+        return jsonify({"success": True, "memory": profile})
+    except Exception as e:
+        logger.error("Failed to update memory: %s", e)
+        return jsonify({"success": False, "message": "Failed to update memory."}), 500
+
+
 # ============ NOTES API ============
 
 
