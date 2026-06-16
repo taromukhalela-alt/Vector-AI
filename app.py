@@ -1018,6 +1018,10 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
             response = client.models.generate_content(
                 model=model_name,
                 contents=final_prompt,
+                tools = [
+                   {"code_execution": {}}, 
+                   {"google_search_retrieval": {}}
+                ],
             )
             text = getattr(response, "text", None)
             if text and str(text).strip():
@@ -1068,7 +1072,7 @@ def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
                     {"role": "system", "content": "You are a helpful physics tutor."},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.7,
+                temperature=0.3,
                 top_p=0.95,
                 max_tokens=max_tokens,
             )
@@ -1223,6 +1227,7 @@ def generate_response(
         google_timeout = timeout_seconds or (60.0 if provider in {"openrouter", "groq"} else 20.0)
         text = _google_generate_with_timeout(
             prompt=prompt,
+            tools=tools,
             system_prompt="",
             timeout_seconds=google_timeout,
             model_name=os.getenv("GOOGLE_CHAT_MODEL", "gemini-3.5-flash"),
