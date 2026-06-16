@@ -5,6 +5,53 @@ import {
   ChevronDown, Cpu, Sparkles, Award, ShieldCheck, Zap, Play
 } from 'lucide-react';
 
+/* ── Floating Orbs ── */
+const FloatingOrbs = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="orb absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-emerald-500/10 blur-[120px] anim-float-slow" />
+    <div className="orb absolute bottom-[20%] right-[5%] w-[350px] h-[350px] bg-emerald-500/10 blur-[100px] anim-float" style={{ animationDelay: '-3s' }} />
+    <div className="orb absolute top-[40%] right-[15%] w-[300px] h-[300px] bg-emerald-600/5 blur-[140px] anim-float-slow" style={{ animationDelay: '-5s' }} />
+  </div>
+);
+
+/* ── Particle System ── */
+const Particles = () => {
+  const [particles, setParticles] = useState([]);
+  useEffect(() => {
+    const count = 25;
+    const newParticles = Array.from({ length: count }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      bottom: `-${Math.random() * 20}%`,
+      duration: `${10 + Math.random() * 15}s`,
+      delay: `${Math.random() * 10}s`,
+      opacity: 0.1 + Math.random() * 0.4,
+      size: `${1 + Math.random() * 3}px`
+    }));
+    setParticles(newParticles);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {particles.map(p => (
+        <div 
+          key={p.id}
+          className="particle bg-emerald-400"
+          style={{
+            left: p.left,
+            bottom: p.bottom,
+            width: p.size,
+            height: p.size,
+            opacity: p.opacity,
+            animationDuration: p.duration,
+            animationDelay: p.delay
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 /* ── Animated counter ── */
 const Counter = ({ end, suffix = '', duration = 1800 }) => {
   const [val, setVal] = useState(0);
@@ -29,7 +76,7 @@ const Counter = ({ end, suffix = '', duration = 1800 }) => {
   return <span ref={ref}>{val}{suffix}</span>;
 };
 
-const Reveal = ({ children, className = '', delay = 0 }) => {
+const Reveal = ({ children, className = '', delay = 0, variant = 'from-bottom' }) => {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -39,14 +86,24 @@ const Reveal = ({ children, className = '', delay = 0 }) => {
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
+
+  const getTransform = () => {
+    if (visible) return 'translate(0, 0)';
+    switch (variant) {
+      case 'from-left': return 'translateX(-40px)';
+      case 'from-right': return 'translateX(40px)';
+      case 'from-bottom': default: return 'translateY(20px)';
+    }
+  };
+
   return (
     <div
       ref={ref}
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(20px)',
-        transition: `opacity .7s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform .7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+        transform: getTransform(),
+        transition: `opacity .8s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform .8s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
       }}
     >
       {children}
@@ -59,7 +116,7 @@ const FaqItem = ({ q, a, delay }) => {
   return (
     <Reveal delay={delay}>
       <div
-        className="rounded-xl border border-white/[0.06] bg-zinc-900/30 hover:bg-zinc-900/50 hover:border-white/[0.09] overflow-hidden cursor-pointer transition-colors"
+        className="rounded-xl border border-white/[0.06] bg-zinc-900/30 hover:bg-zinc-900/50 hover:border-white/[0.09] overflow-hidden cursor-pointer transition-all duration-300"
         onClick={() => setOpen(o => !o)}
         role="button"
         aria-expanded={open}
@@ -71,11 +128,14 @@ const FaqItem = ({ q, a, delay }) => {
             style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
           />
         </div>
-        {open && (
+        <div 
+          className="transition-all duration-500 ease-in-out overflow-hidden"
+          style={{ maxHeight: open ? '200px' : '0' }}
+        >
           <div className="px-5 pb-5 pt-0 border-t border-white/[0.05]">
             <p className="text-zinc-400 text-[13.5px] leading-relaxed pt-4">{a}</p>
           </div>
-        )}
+        </div>
       </div>
     </Reveal>
   );
@@ -128,24 +188,25 @@ const Landing = ({ onNavigate }) => {
 
   return (
     <div className="relative min-h-dvh overflow-x-hidden bg-zinc-950 text-zinc-100 font-sans antialiased">
-      {/* Ambient */}
+      <FloatingOrbs />
+      <Particles />
+
+      {/* Grid Overlay */}
       <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.35]"
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.2]"
         style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-          WebkitMaskImage: 'radial-gradient(ellipse 80% 50% at 50% 10%, black 30%, transparent 80%)',
-          maskImage: 'radial-gradient(ellipse 80% 50% at 50% 10%, black 30%, transparent 80%)',
+          backgroundImage: 'linear-gradient(rgba(16,185,129,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.05) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          WebkitMaskImage: 'radial-gradient(ellipse 60% 40% at 50% 10%, black 20%, transparent 80%)',
+          maskImage: 'radial-gradient(ellipse 60% 40% at 50% 10%, black 20%, transparent 80%)',
         }}
       />
-      <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-emerald-500/[0.10] blur-[140px] pointer-events-none z-0" />
-      <div className="absolute top-[55%] right-[10%] w-[340px] h-[340px] rounded-full bg-teal-500/[0.06] blur-[100px] pointer-events-none z-0" />
 
       {/* Navbar */}
       <header className="sticky top-0 z-50 px-4 pt-4">
-        <nav className="mx-auto max-w-6xl flex items-center justify-between rounded-xl border border-white/[0.07] bg-zinc-950/70 backdrop-blur-xl px-4 py-2.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
+        <nav className="mx-auto max-w-6xl flex items-center justify-between rounded-xl border border-white/[0.07] bg-zinc-950/70 backdrop-blur-xl px-4 py-2.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] anim-fade-down">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(16,185,129,0.5)]">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_4px_12px_-2px_rgba(16,185,129,0.5)] anim-glow">
               <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.75} />
             </div>
             <div className="leading-none">
@@ -155,16 +216,14 @@ const Landing = ({ onNavigate }) => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              id="landing-signin-btn"
               onClick={go}
               className="hidden sm:inline-flex items-center px-3 py-1.5 text-[13px] font-medium text-zinc-300 hover:text-zinc-50 transition-colors cursor-pointer"
             >
               Sign in
             </button>
             <button
-              id="landing-cta-btn"
               onClick={go}
-              className="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-zinc-50 text-zinc-950 text-[13px] font-semibold hover:bg-white transition-all shadow-sm cursor-pointer"
+              className="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 text-[13px] font-bold hover:bg-emerald-400 transition-all shadow-lg hover:shadow-emerald-500/20 cursor-pointer"
             >
               Get started
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" strokeWidth={2.5} />
@@ -176,7 +235,7 @@ const Landing = ({ onNavigate }) => {
       {/* Hero */}
       <section className="relative z-10 px-6 pt-24 pb-28 text-center max-w-4xl mx-auto flex flex-col items-center">
         <Reveal>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-7 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-7 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 anim-breathe">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-emerald-300 font-medium text-[11.5px] tracking-wide">AI-accelerated Physical Science</span>
           </div>
@@ -186,44 +245,43 @@ const Landing = ({ onNavigate }) => {
           className="font-semibold tracking-[-0.025em] leading-[1.02] mb-6 text-zinc-50"
           style={{ fontSize: 'clamp(2.4rem, 7vw, 4.75rem)' }}
         >
-          <Reveal delay={80}>Master physical science,</Reveal>
-          <Reveal delay={180}>
-            <span className="block bg-gradient-to-r from-emerald-300 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+          <Reveal delay={100}>Master physical science,</Reveal>
+          <Reveal delay={250}>
+            <span className="block bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent">
               intelligently.
             </span>
           </Reveal>
         </h1>
 
-        <Reveal delay={280}>
+        <Reveal delay={400}>
           <p className="text-zinc-400 text-[15px] sm:text-[16px] leading-relaxed max-w-xl mb-10">
             South Africa's CAPS-aligned tutoring platform. Interactive 2D simulations, real-time voice tutoring, and semantic study notes — engineered for matric mastery.
           </p>
         </Reveal>
 
-        <Reveal delay={380}>
+        <Reveal delay={550}>
           <div className="flex flex-col sm:flex-row items-center gap-3 mb-16">
             <button
-              id="hero-launch-btn"
               onClick={go}
-              className="group flex items-center gap-2 px-6 py-3 font-semibold rounded-lg text-[14px] cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-zinc-950 transition-all shadow-[0_12px_32px_-12px_rgba(16,185,129,0.6)] hover:shadow-[0_16px_40px_-12px_rgba(16,185,129,0.7)] hover:-translate-y-0.5"
+              className="group flex items-center gap-2 px-6 py-3 font-bold rounded-lg text-[14px] cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-zinc-950 transition-all shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 anim-glow"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               Launch Vector AI
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" strokeWidth={2.5} />
             </button>
-            <p className="text-zinc-500 text-[12.5px]">Free · No credit card required</p>
+            <p className="text-zinc-500 text-[12.5px] font-medium">Free · No credit card required</p>
           </div>
         </Reveal>
 
         {/* Stats strip */}
-        <Reveal delay={500} className="w-full">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.05] rounded-xl overflow-hidden border border-white/[0.06] max-w-3xl mx-auto">
+        <Reveal delay={700} className="w-full">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.05] rounded-xl overflow-hidden border border-white/[0.06] max-w-3xl mx-auto shadow-2xl">
             {stats.map((s, i) => {
               const Icon = s.icon;
               return (
-                <div key={i} className="bg-zinc-950/80 px-5 py-5 text-center">
-                  <Icon className="w-3.5 h-3.5 text-emerald-400/80 mx-auto mb-2.5" strokeWidth={1.8} />
-                  <div className="text-[22px] font-semibold tracking-tight text-zinc-50 tabular-nums">
+                <div key={i} className="bg-zinc-950/80 px-5 py-5 text-center group hover:bg-zinc-900/50 transition-colors">
+                  <Icon className="w-3.5 h-3.5 text-emerald-400/80 mx-auto mb-2.5 transition-transform group-hover:scale-110" strokeWidth={1.8} />
+                  <div className="text-[22px] font-bold tracking-tight text-zinc-50 tabular-nums">
                     <Counter end={s.value} suffix={s.suffix} />
                   </div>
                   <div className="text-[11px] text-zinc-500 font-medium mt-1">{s.label}</div>
@@ -242,8 +300,8 @@ const Landing = ({ onNavigate }) => {
               <Sparkles className="w-3 h-3 text-emerald-400" strokeWidth={2.25} />
               What's inside
             </div>
-            <h2 className="text-[32px] sm:text-[40px] font-semibold tracking-tight text-zinc-50">
-              Built for <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">STEM mastery</span>
+            <h2 className="text-[32px] sm:text-[40px] font-bold tracking-tight text-zinc-50">
+              Built for <span className="bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent">STEM mastery</span>
             </h2>
           </Reveal>
 
@@ -251,17 +309,17 @@ const Landing = ({ onNavigate }) => {
             {features.map((f, i) => {
               const Icon = f.icon;
               return (
-                <Reveal key={i} delay={i * 80}>
-                  <div className="group relative p-7 rounded-2xl border border-white/[0.06] bg-zinc-900/30 hover:bg-zinc-900/60 hover:border-emerald-500/20 transition-all duration-300 overflow-hidden h-full">
+                <Reveal key={i} delay={i * 100} variant={i % 2 === 0 ? 'from-left' : 'from-right'}>
+                  <div className="group relative p-7 rounded-2xl border border-white/[0.06] bg-zinc-900/30 hover:bg-zinc-900/60 hover:border-emerald-500/20 transition-all duration-300 overflow-hidden h-full shadow-lg hover:shadow-emerald-500/5">
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-5 transition-all group-hover:scale-105">
-                      <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-5 transition-all group-hover:scale-110 group-hover:bg-emerald-500/20">
+                      <Icon className="w-[18px] h-[18px]" strokeWidth={2} />
                     </div>
-                    <h3 className="text-[17px] font-semibold tracking-tight text-zinc-50 mb-2">{f.title}</h3>
+                    <h3 className="text-[17px] font-bold tracking-tight text-zinc-50 mb-2">{f.title}</h3>
                     <p className="text-zinc-400 text-[13.5px] leading-relaxed mb-5">{f.desc}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {f.tags.map((tag, j) => (
-                        <span key={j} className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05] text-zinc-400">
+                        <span key={j} className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.05] text-zinc-400 group-hover:text-emerald-400/80 transition-colors">
                           {tag}
                         </span>
                       ))}
@@ -278,15 +336,16 @@ const Landing = ({ onNavigate }) => {
       <section className="relative z-10 py-20 px-6 border-t border-white/[0.05]">
         <div className="max-w-3xl mx-auto text-center relative z-10">
           <Reveal>
-            <div className="rounded-2xl px-8 py-12 border border-white/[0.06] bg-gradient-to-br from-emerald-500/[0.06] via-zinc-900/40 to-teal-500/[0.04]">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-emerald-300 text-[11px] font-medium">
-                <ShieldCheck className="w-3 h-3" strokeWidth={2.25} />
+            <div className="rounded-[32px] px-8 py-14 border border-white/[0.06] bg-gradient-to-br from-emerald-500/[0.1] via-zinc-950 to-emerald-500/10 shadow-2xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-emerald-300 text-[11px] font-bold uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.5} />
                 CAPS certified
               </div>
-              <h2 className="text-[26px] sm:text-[32px] font-semibold tracking-tight leading-tight mb-4 text-zinc-50">
-                The only AI platform <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">purpose-built</span> for SA matric physics.
+              <h2 className="text-[28px] sm:text-[36px] font-bold tracking-tight leading-tight mb-6 text-zinc-50">
+                The only AI platform <span className="bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent">purpose-built</span> for SA matric physics.
               </h2>
-              <p className="text-zinc-400 text-[14px] leading-relaxed max-w-xl mx-auto">
+              <p className="text-zinc-400 text-[15px] leading-relaxed max-w-xl mx-auto">
                 Every formula, every concept, every simulation is verified against the official CAPS curriculum for Grade 10, 11, and 12 — no guesswork, no off-syllabus content.
               </p>
             </div>
@@ -302,30 +361,30 @@ const Landing = ({ onNavigate }) => {
               <Sparkles className="w-3 h-3 text-emerald-400" strokeWidth={2.25} />
               Questions
             </div>
-            <h2 className="text-[30px] font-semibold tracking-tight text-zinc-50">
-              Got questions? <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">Answered.</span>
+            <h2 className="text-[30px] font-bold tracking-tight text-zinc-50">
+              Got questions? <span className="bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent">Answered.</span>
             </h2>
           </Reveal>
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {faqs.map((faq, i) => (
-              <FaqItem key={i} q={faq.q} a={faq.a} delay={i * 60} />
+              <FaqItem key={i} q={faq.q} a={faq.a} delay={i * 80} />
             ))}
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 px-6 py-12 text-center border-t border-white/[0.05]">
+      <footer className="relative z-10 px-6 py-16 text-center border-t border-white/[0.05] bg-zinc-950">
         <Reveal>
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
               <Zap className="w-3 h-3 text-zinc-950" strokeWidth={2.75} />
             </div>
-            <span className="font-semibold text-[13px] tracking-tight text-zinc-200">Vector AI</span>
-            <span className="text-[9.5px] tracking-[0.18em] text-emerald-400/80 uppercase border border-emerald-500/15 rounded-full px-2 py-0.5">STEM OS</span>
+            <span className="font-bold text-[14px] tracking-tight text-zinc-200">Vector AI</span>
+            <span className="text-[9.5px] tracking-[0.18em] text-emerald-400/80 font-bold uppercase border border-emerald-500/15 rounded-full px-2 py-0.5">STEM OS</span>
           </div>
-          <p className="text-zinc-500 text-[12px] mb-1">AI-accelerated learning — built by Taro Mukhalela</p>
-          <p className="text-zinc-700 text-[10.5px] tracking-wider">© {new Date().getFullYear()} Vector AI. All rights reserved.</p>
+          <p className="text-zinc-400 text-[13px] mb-1 font-medium">AI-accelerated learning — built by Taro Mukhalela</p>
+          <p className="text-zinc-600 text-[11px] tracking-wider uppercase font-bold opacity-50">© {new Date().getFullYear()} Vector AI. All rights reserved.</p>
         </Reveal>
       </footer>
     </div>

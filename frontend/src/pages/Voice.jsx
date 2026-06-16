@@ -339,7 +339,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   };
 
   const stateLabel = isListening ? 'Listening' : isSpeaking ? 'Speaking' : 'Idle';
-  const stateColor = isListening ? 'bg-blue-400' : isSpeaking ? 'bg-emerald-400' : 'bg-zinc-500';
+  const stateColor = isListening ? 'bg-emerald-400' : isSpeaking ? 'bg-emerald-400' : 'bg-zinc-500';
 
   return (
     <div
@@ -352,7 +352,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
       {/* Avatar */}
       <div className="relative flex min-h-0 w-full max-w-lg flex-1 items-center justify-center">
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full blur-[100px] pointer-events-none transition-all duration-700 ${
-          isListening ? 'bg-blue-500/15' : isSpeaking ? 'bg-emerald-500/20' : 'bg-emerald-500/[0.06]'
+          isListening ? 'bg-emerald-500/15' : isSpeaking ? 'bg-emerald-500/20' : 'bg-emerald-500/[0.06]'
         }`} />
 
         <AvatarCanvas avatarState={avatarState} speakingAmplitude={speakingAmplitude} frequencyData={frequencyData} />
@@ -410,10 +410,10 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
               onClick={toggleMic}
               className={`w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer border-4 border-zinc-950 ${
                 isListening
-                  ? 'bg-blue-500 hover:bg-blue-400 text-white shadow-[0_0_36px_-4px_rgba(59,130,246,0.6)]'
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_0_36px_-4px_rgba(16,185,129,0.6)]'
                   : isSpeaking
                   ? 'bg-red-500 hover:bg-red-400 text-white shadow-[0_0_36px_-4px_rgba(239,68,68,0.6)]'
-                  : 'bg-gradient-to-br from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-zinc-950 shadow-[0_0_36px_-4px_rgba(16,185,129,0.5)] hover:scale-105 hover:-translate-y-0.5'
+                  : 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-zinc-950 shadow-[0_0_36px_-4px_rgba(16,185,129,0.5)] hover:scale-105 hover:-translate-y-0.5'
               }`}
             >
               {isListening ? <Mic className="w-6 h-6" strokeWidth={2.5} />

@@ -16,6 +16,8 @@
   --status-h: 34px;
   --mobile-tab-h: 72px;
   --float-gap: 10px;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 64px;
   --glass-blur: 20px;
   --float-radius: 18px;
 
@@ -261,6 +263,23 @@ html.light [class*="text-white"] {
   40%           { transform: scale(1);   opacity: 1; }
 }
 
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 /* ─── Animation Utility Classes ─── */
 .anim-fade-down    { animation: fadeInDown var(--dur-slow) var(--ease-out-expo) both; }
 .anim-fade-up      { animation: fadeInUp   var(--dur-slow) var(--ease-out-expo) both; }
@@ -280,6 +299,16 @@ html.light [class*="text-white"] {
 .anim-border-pulse { animation: borderPulse 3s ease-in-out infinite; }
 .anim-toast-in     { animation: toastIn var(--dur-base) var(--ease-spring) both; }
 .anim-spin         { animation: spin 1s linear infinite; }
+.anim-twinkle      { animation: twinkle 3s ease-in-out infinite; }
+.anim-breathe      { animation: breathe 4s ease-in-out infinite; }
+
+.page-enter {
+  animation: fadeIn var(--dur-base) ease-out both;
+}
+
+.sidebar-item {
+  @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200;
+}
 
 /* Stagger delays */
 .d-0    { animation-delay: 0ms; }

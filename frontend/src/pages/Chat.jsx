@@ -94,13 +94,13 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
           {strengths.length > 0 && (
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <TrendingUp className="w-2.5 h-2.5 text-blue-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-blue-400">Strengths</span>
+                <TrendingUp className="w-2.5 h-2.5 text-emerald-400" />
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Strengths</span>
               </div>
               <ul className="space-y-0.5">
                 {strengths.slice(0, 3).map((s, i) => (
                   <li key={i} className="text-[10px] text-zinc-400 leading-snug flex items-start gap-1">
-                    <span className="text-blue-400 mt-0.5 shrink-0">·</span>{s}
+                    <span className="text-emerald-400 mt-0.5 shrink-0">·</span>{s}
                   </li>
                 ))}
               </ul>
@@ -110,13 +110,13 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
           {needs_practice.length > 0 && (
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <Target className="w-2.5 h-2.5 text-amber-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-400">Needs Practice</span>
+                <Target className="w-2.5 h-2.5 text-emerald-400" />
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Needs Practice</span>
               </div>
               <ul className="space-y-0.5">
                 {needs_practice.slice(0, 3).map((n, i) => (
                   <li key={i} className="text-[10px] text-zinc-400 leading-snug flex items-start gap-1">
-                    <span className="text-amber-400 mt-0.5 shrink-0">·</span>{n}
+                    <span className="text-emerald-400 mt-0.5 shrink-0">·</span>{n}
                   </li>
                 ))}
               </ul>
@@ -136,12 +136,12 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
           {study_preferences.length > 0 && (
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <BookOpen className="w-2.5 h-2.5 text-purple-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-purple-400">Preferences</span>
+                <BookOpen className="w-2.5 h-2.5 text-emerald-400" />
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Preferences</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {study_preferences.map((p, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded-md bg-purple-500/[0.08] border border-purple-500/20 text-[9.5px] text-purple-300 font-medium">
+                  <span key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-[9.5px] text-emerald-300 font-medium">
                     {p}
                   </span>
                 ))}
@@ -490,7 +490,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       const data = await response.json();
       if (data.reply) {
         trackEvent('chat_response_received', { route: '/chat' });
-        setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
+        setMessages([...updatedMessages, { 
+          role: 'assistant', 
+          content: data.reply,
+          tool_metadata: data.tool_metadata 
+        }]);
 
         // Refresh memory after every AI response (the backend auto-updates it)
         loadMemory();
@@ -757,6 +761,21 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                         </div>
                       ) : (
                         <div className="rounded-2xl rounded-tl-sm px-3.5 sm:px-4 py-2.5 sm:py-3 bg-zinc-900/50 border border-white/[0.06] text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words w-full">
+                          {/* Tool Badges */}
+                          {msg.tool_metadata && (
+                            <div className="flex gap-2 mb-2">
+                              {msg.tool_metadata.used_search && (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                                  <Zap className="w-2.5 h-2.5" /> Google Search
+                                </span>
+                              )}
+                              {msg.tool_metadata.used_code && (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                                  <Sparkles className="w-2.5 h-2.5" /> Code Execution
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <MarkdownRenderer content={msg.content} dark={true} />
                           <button
                             onClick={() => handleSaveAsNote(msg.content)}

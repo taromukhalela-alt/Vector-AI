@@ -49,10 +49,10 @@ const Topics = ({ onSelectTopic }) => {
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                 <div className="flex items-start justify-between mb-5">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isChem ? 'bg-teal-500/10 text-teal-400 border border-teal-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isChem ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'}`}>
                     <Icon className="w-4 h-4" strokeWidth={1.8} />
                   </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isChem ? 'text-teal-300/90 bg-teal-500/[0.06] border border-teal-500/15' : 'text-emerald-300/90 bg-emerald-500/[0.06] border border-emerald-500/15'}`}>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isChem ? 'text-emerald-300/90 bg-emerald-500/[0.06] border border-emerald-500/15' : 'text-emerald-300/90 bg-emerald-500/[0.06] border border-emerald-500/15'}`}>
                     {topic.tag}
                   </span>
                 </div>

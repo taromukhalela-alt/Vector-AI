@@ -1,9 +1,10 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import useAnalytics from './useAnalytics';
 import Layout from './components/Layout';
 import ToastProvider from './components/ToastProvider';
+import Onboarding from './components/Onboarding';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import Chat from './pages/Chat';
@@ -27,6 +28,13 @@ function App() {
   const [activeAnim, setActiveAnim] = useState('idle');
   const [sharedTriggerPrompt, setSharedTriggerPrompt] = useState('');
   const [resumeChatId, setResumeChatId] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && !localStorage.getItem('vector_onboarding_done')) {
+      setShowOnboarding(true);
+    }
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
@@ -71,6 +79,7 @@ function App() {
 
   return (
     <ToastProvider>
+      {showOnboarding && <Onboarding onComplete={() => setShowOnboarding(false)} />}
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/chat" replace />} />

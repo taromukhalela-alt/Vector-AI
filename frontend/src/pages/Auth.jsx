@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User, ArrowRight, AlertCircle, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Mail, Lock, User, ArrowRight, AlertCircle, Zap, ArrowLeft } from 'lucide-react';
 
 const Auth = ({ onNavigate }) => {
   const { login, register } = useAuth();
@@ -45,6 +46,14 @@ const Auth = ({ onNavigate }) => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 font-sans p-6 overflow-hidden">
+      {/* Back to landing */}
+      <Link
+        to="/"
+        className="absolute top-8 left-8 z-20 flex items-center gap-2 text-zinc-500 hover:text-zinc-100 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span className="text-xs font-bold uppercase tracking-widest">Back</span>
+      </Link>
       {/* Ambient backdrop */}
       <div
         className="absolute inset-0 pointer-events-none z-0 opacity-[0.35]"
@@ -62,7 +71,7 @@ const Auth = ({ onNavigate }) => {
       <div className="w-full max-w-[420px] relative z-10">
         {/* Brand row above card */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)]">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)]">
             <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.75} />
           </div>
           <div className="leading-none">
