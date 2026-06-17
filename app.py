@@ -1019,13 +1019,7 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
             final_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
             response = client.models.generate_content(
                 model=model_name,
-                contents=final_prompt,
-                config=types.GenerateContentConfig(
-                    tools=[
-                        types.Tool(google_search=types.GoogleSearch()),
-                        types.Tool(code_execution=types.ToolCodeExecution()),
-                    ]
-                )
+                contents=final_prompt
             )
             text = getattr(response, "text", None)
             if text and str(text).strip():
@@ -1058,7 +1052,7 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
 
 
 def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=True, enable_code=True):
-    """Gemini 2.0 Flash with Google Search and Code Execution tools."""
+    """Gemini 3.5 Flash without tools - tools have been removed."""
     if not genai:
         return None, {}
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -1067,24 +1061,12 @@ def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=
 
     try:
         client = genai.Client(api_key=api_key)
-        tools = []
-        if enable_search:
-            tools.append(types.Tool(google_search=types.GoogleSearch()))
-        if enable_code:
-            tools.append(types.Tool(code_execution=types.ToolCodeExecution()))
-
-        if not tools:
-            # If no tools requested, just return None so we can use standard flow
-            return None, {}
-
-        # Use gemini-2.0-flash for tools as per implementation plan
-        model_id = os.getenv("GOOGLE_TOOLS_MODEL", "gemini-3.5-flash")
+        model_id = "gemini-3.5-flash"
         
         response = client.models.generate_content(
             model=model_id,
             contents=prompt,
             config=types.GenerateContentConfig(
-                tools=tools, 
                 system_instruction=system_prompt or PHYSICS_SYSTEM_PROMPT
             )
         )
@@ -1095,20 +1077,9 @@ def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=
             "used_code": False
         }
 
-        # Check for tool usage in candidates
-        if response.candidates:
-            for part in response.candidates[0].content.parts:
-                if part.executable_code:
-                    metadata["used_code"] = True
-            
-            # Grounding metadata often indicates search usage
-            if hasattr(response.candidates[0], 'grounding_metadata'):
-                if response.candidates[0].grounding_metadata.search_entry_point:
-                    metadata["used_search"] = True
-
         return text, metadata
     except Exception as e:
-        logger.error(f"Gemini Tools error: {e}")
+        logger.error(f"Gemini error: {e}")
         return None, {}
 
 def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
@@ -2319,29 +2290,11 @@ def chat():
     try:
         intent, confidence = classify_intent(user_message)
 
-        # Explicit tool control from payload
-        enable_search = bool(payload.get("enable_search", True))
-        enable_code = bool(payload.get("enable_code", True))
-
-        # Heuristic for tool routing if not explicitly disabled
-        tool_keywords = ["search", "latest", "calculate", "run code", "solve equation", "what is the current", "current status"]
-        use_tools = (enable_search or enable_code) and any(kw in user_message.lower() for kw in tool_keywords)
-        
+        # Tool functionality has been removed from Gemini API
+        # All requests now use gemini-3.5-flash without tools
+        use_tools = False
         reply = None
         tool_metadata = {}
-
-        if use_tools and not is_exam_generation and not document_mode and not voice_mode:
-            reply, tool_metadata = generate_with_tools(
-                user_message, 
-                history, 
-                system_prompt,
-                enable_search=enable_search,
-                enable_code=enable_code
-            )
-            if not reply:
-                use_tools = False # Fallback to standard flow if tools failed
-        else:
-            use_tools = False
 
         if not use_tools:
             deterministic_hint = None
