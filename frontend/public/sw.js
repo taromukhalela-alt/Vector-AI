@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vector-ai-shell-v1';
+const CACHE_NAME = 'vector-ai-shell-v2';
 const APP_SHELL = ['/', '/favicon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -21,6 +21,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // Skip blob: / data: / chrome-extension: URLs – they cannot be network-fetched
+  // (PDF export creates blob: URLs via URL.createObjectURL)
+  if (!request.url.startsWith('http')) return;
+
   const url = new URL(request.url);
 
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
