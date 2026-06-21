@@ -113,7 +113,10 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { console.warn('Speech recognition not supported in this browser.'); return undefined; }
+    if (!SR) {
+      console.log('Speech recognition not supported in this browser. Falling back to Whisper STT.');
+      return undefined;
+    }
     const rec = new SR();
     rec.continuous = false; rec.interimResults = true; rec.lang = 'en-ZA';
     rec.onstart = () => { interimTranscriptRef.current = ''; };

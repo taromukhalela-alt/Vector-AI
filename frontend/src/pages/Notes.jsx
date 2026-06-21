@@ -23,6 +23,7 @@ import {
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
 import { pdf } from '@react-pdf/renderer';
 import NotesPdfDocument from '../components/NotesPdfDocument';
 
@@ -477,8 +478,62 @@ const Notes = () => {
       showStatus('PDF exported successfully ✓');
       trackEvent('pdf_exported', { route: '/notes', note_title: selectedNote.title, topic: selectedNote.topic || 'General' });
     } catch (error) {
-      console.error('PDF export failed:', error);
-      showStatus(`PDF export failed: ${error?.message || 'Unknown error'}`, 'error');
+      console.warn('React-PDF export failed, attempting fallback to html2pdf:', error);
+      try {
+        const element = document.getElementById('print-note-root');
+        if (!element) throw new Error('Rendered notes content not found.');
+
+        // Build premium styled container for the PDF
+        const printContainer = document.createElement('div');
+        printContainer.className = 'markdown-body prose max-w-none';
+        Object.assign(printContainer.style, {
+          padding: '24px',
+          backgroundColor: '#ffffff',
+          color: '#09090b',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        });
+
+        // Header info
+        const headerEl = document.createElement('div');
+        Object.assign(headerEl.style, {
+          borderBottom: '2px solid #10b981',
+          paddingBottom: '12px',
+          marginBottom: '20px',
+        });
+        headerEl.innerHTML = `
+          <h1 style="margin: 0 0 4px 0; font-size: 22px; font-weight: bold; color: #0f172a;">${selectedNote.title || 'Study Note'}</h1>
+          <div style="font-size: 11px; color: #64748b; font-weight: 500;">
+            Vector AI &bull; ${selectedNote.topic || 'General'} &bull; ${new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+        `;
+        printContainer.appendChild(headerEl);
+
+        // Copy content
+        const bodyContent = document.createElement('div');
+        bodyContent.innerHTML = element.innerHTML;
+        printContainer.appendChild(bodyContent);
+
+        // Remove dark mode classes/styles if any
+        printContainer.querySelectorAll('*').forEach(el => {
+          el.classList.remove('prose-invert', 'dark:prose-invert', 'text-zinc-200', 'dark:text-zinc-200', 'bg-zinc-950', 'dark:bg-zinc-950');
+          if (el.tagName === 'A') el.style.color = '#047857';
+        });
+
+        const opt = {
+          margin: [15, 15, 15, 15],
+          filename: `${safeFilename}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(printContainer).save();
+        showStatus('PDF exported successfully (fallback) ✓');
+        trackEvent('pdf_exported_fallback', { route: '/notes', note_title: selectedNote.title, topic: selectedNote.topic || 'General' });
+      } catch (fallbackError) {
+        console.error('Fallback PDF export failed:', fallbackError);
+        showStatus(`PDF export failed: ${fallbackError?.message || 'Unknown error'}`, 'error');
+      }
     } finally {
       setIsExporting(false);
     }
