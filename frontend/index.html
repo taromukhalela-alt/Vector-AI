@@ -83,8 +83,16 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       // Track both measurement IDs; the first one disables automatic page views if needed
-      gtag('config', 'G-SKRLQ4J4RD', { send_page_view: false });
-      gtag('config', 'G-3GVHPPD2PW');
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1' || 
+                            window.location.hostname.endsWith('.local') ||
+                            window.location.protocol === 'file:';
+      const gaConfig = {
+        cookie_flags: 'SameSite=None;Secure',
+        cookie_domain: isLocalhost ? 'none' : 'auto'
+      };
+      gtag('config', 'G-SKRLQ4J4RD', { send_page_view: false, ...gaConfig });
+      gtag('config', 'G-3GVHPPD2PW', gaConfig);
     </script>
   </head>
   <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 min-h-screen font-sans">

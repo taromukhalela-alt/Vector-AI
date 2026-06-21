@@ -47,7 +47,7 @@ const Onboarding = ({ onComplete }) => {
       content: "Save your AI conversations and generate full CAPS study guides here. You can even export them as professional PDFs.",
       icon: Target,
       page: "/notes",
-      target: "button:contains('New Note')"
+      target: "button[title='New note']"
     },
     {
       title: "Ready to Master STEM?",
@@ -82,13 +82,20 @@ const Onboarding = ({ onComplete }) => {
         return;
       }
 
-      let el = document.querySelector(step.target);
+      let el = null;
+      try {
+        el = document.querySelector(step.target);
+      } catch (err) {
+        console.warn("Onboarding: querySelector failed for", step.target, err);
+      }
       
       // Fallback searches
       if (!el) {
         if (step.target === "textarea") el = document.querySelector('textarea');
         if (step.target === "main") el = document.querySelector('main');
-        if (step.target.includes('button')) el = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Note'));
+        if (typeof step.target === 'string' && step.target.includes('button')) {
+          el = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Note'));
+        }
       }
 
       if (el) {

@@ -13,10 +13,16 @@ export default function useAnalytics() {
     if (window.gtag) {
       const pagePath = `${location.pathname}${location.search}`;
       const pageMeta = getRouteMeta(location.pathname);
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1' || 
+                            window.location.hostname.endsWith('.local') ||
+                            window.location.protocol === 'file:';
 
       window.gtag("config", GA_ID, {
         page_path: pagePath,
         page_title: pageMeta.title,
+        cookie_flags: 'SameSite=None;Secure',
+        cookie_domain: isLocalhost ? 'none' : 'auto'
       });
     }
   }, [location.pathname, location.search]);
