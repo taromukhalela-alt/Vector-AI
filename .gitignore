@@ -17,3 +17,5 @@ replace.py
 replace_rgb.py 
 revert_colors.py
 instance/vector_ai.db
+.agents
+.kilo
