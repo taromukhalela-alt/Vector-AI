@@ -322,7 +322,7 @@ function getPlainText(tokens = []) {
     .map((t) => {
       if (t.tokens) return getPlainText(t.tokens);
       const raw = t.text || t.raw || '';
-      return raw.replace(/--MATH--\d+__/g, '');
+      return raw.replace(/__MATH_\d+__/g, '');
     })
     .join('');
 }
@@ -332,10 +332,10 @@ function getPlainText(tokens = []) {
  * { kind: 'text' | 'math', value } segments.
  */
 function splitMath(raw = '') {
-  const parts = raw.split(/(--MATH--\d+__)/);
+  const parts = raw.split(/(__MATH_\d+__)/);
   return parts
     .filter(Boolean)
-    .map((p) => (/^--MATH--\d+__$/.test(p) ? { kind: 'math', value: p } : { kind: 'text', value: p }));
+    .map((p) => (/^__MATH_\d+__$/.test(p) ? { kind: 'math', value: p } : { kind: 'text', value: p }));
 }
 
 /**
@@ -471,7 +471,7 @@ function extractDisplayMath(token) {
   const toks = token.tokens || [];
   if (toks.length === 1 && toks[0].type === 'text') {
     const trimmed = (toks[0].text || '').trim();
-    if (/^--MATH--\d+__$/.test(trimmed)) return trimmed;
+    if (/^__MATH_\d+__$/.test(trimmed)) return trimmed;
   }
   return null;
 }
