@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import MarkdownRenderer from '../components/MarkdownRenderer';
+import MarkdownRenderer, { normalizeMathDelimiters } from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
 import {
@@ -33,7 +33,7 @@ const preprocessContent = (content) => {
   const codeStore = [];
   let idx = 0;
 
-  let md = String(content || '').replace(
+  let md = normalizeMathDelimiters(content).replace(
     /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,
     (m) => {
       const id = `__CODE_${codeStore.length}__`;
@@ -113,8 +113,8 @@ const renderMathToPng = async (latex, displayMode) => {
     fontSize: '16px',
     lineHeight: '1.4',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    zIndex: '-9999',
-    opacity: '0',
+    zIndex: '0',
+    opacity: '1',
     pointerEvents: 'none',
     margin: '0',
     border: 'none',

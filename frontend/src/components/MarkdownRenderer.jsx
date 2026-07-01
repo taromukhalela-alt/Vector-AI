@@ -14,13 +14,18 @@ import 'katex/dist/katex.min.css';
  * Normalize LaTeX delimiters so remark-math always sees $…$ / $$…$$.
  * We must leave code fences untouched to avoid mangling code blocks.
  */
-const normalizeMathDelimiters = (value = '') => {
+export const normalizeMathDelimiters = (value = '') => {
   // Split out fenced code blocks first
   const parts = String(value).split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g);
   return parts
     .map((part) => {
       if (part.startsWith('```') || part.startsWith('~~~')) return part;
       return part
+        .replace(/\\begin\{(equation\*?|align\*?|gather\*?)\}([\s\S]*?)\\end\{\1\}/g, (_m, _env, math) => `\n\n$$\n${math.trim()}\n$$\n\n`)
+        .replace(/\\{1,2}\[([\s\S]*?)\\{1,2}\]/g, (_m, math) => `\n\n$$\n${math.trim()}\n$$\n\n`)
+        .replace(/\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, (_m, math) => `$${math.trim()}$`)
+        .replace(/\\\$([^\n$]+?)\\\$/g, (_m, math) => `$${math.trim()}$`)
+        .replace(/(?<!\\)\$\$([\s\S]*?)(?<!\\)\$\$/g, (_m, math) => `\n\n$$\n${math.trim()}\n$$\n\n`)
         // \[…\]  →  $$\n…\n$$
         .replace(/\\\[([\s\S]*?)\\\]/g, (_m, math) => `\n\n$$\n${math.trim()}\n$$\n\n`)
         // \(…\)  →  $…$

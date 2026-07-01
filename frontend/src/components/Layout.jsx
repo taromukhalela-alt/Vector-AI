@@ -115,7 +115,7 @@ const Layout = ({ children }) => {
                   <div className="absolute left-0 h-5 w-1 rounded-r-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 )}
                 {collapsed && (
-                  <div className="absolute left-full ml-2 hidden rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap group-hover:block z-50 border border-white/10 shadow-xl">
+                  <div className="absolute left-full ml-2 hidden rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap group-hover:block z-50 border-white/10 shadow-xl">
                     {item.label}
                   </div>
                 )}
@@ -158,7 +158,7 @@ const Layout = ({ children }) => {
               <>
                 <div className="fixed inset-0 z-[150]" onClick={() => setUserMenu(false)} />
                 <div className={`anim-scale-in absolute bottom-full z-[200] mb-2 w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-950/95 p-1.5 shadow-2xl backdrop-blur-xl light:border-zinc-200 light:bg-white/95 ${collapsed ? 'left-0' : 'left-0'}`}>
-                   <button
+                  <button
                     onClick={() => { logout(); setUserMenu(false); }}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition"
                   >
