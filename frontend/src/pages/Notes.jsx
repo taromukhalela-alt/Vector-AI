@@ -43,7 +43,7 @@ const preprocessContent = (content) => {
   );
 
   const tok = (latex, display) => {
-    const key = `__MATH_${idx++}__`;
+    const key = `@@MATH_${idx++}@@`;
     mathMap[key] = { latex, display };
     return key;
   };
@@ -225,7 +225,7 @@ const prerenderMathImages = async (mathMap) => {
 
   for (const [key, { latex, display }] of entries) {
     const result = await renderMathToPng(latex, display);
-    if (result) images[key] = { ...result, display, latex };
+    images[key] = result ? { ...result, display, latex } : { display, latex };
   }
   return images;
 };
@@ -337,7 +337,9 @@ const Notes = () => {
     } catch (e) { console.error(e); }
   };
 
-  useEffect(() => { fetchNotes(); }, []);
+  useEffect(() => { 
+    fetchNotes(); 
+  }, []);
 
   const showStatus = (message, type = 'success', title) => {
     showToast({ type, title: title || (type === 'error' ? 'Notes issue' : 'Notes'), message });
