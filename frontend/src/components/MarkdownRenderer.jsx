@@ -3,12 +3,33 @@
 // Tighter prose, emerald accent links/quotes, refined code blocks, full math.
 // Works in both light (Notes page) and dark (Chat page) contexts.
 // ─────────────────────────────────────────────────────────────────────────────
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
-import rehypeKatex from 'rehype-katex';
+import katex from 'katex';
 
 import 'katex/dist/katex.min.css';
+
+const renderKatex = (value, displayMode) => {
+  try {
+    return katex.renderToString(String(value || '').trim(), {
+      displayMode,
+      throwOnError: false,
+      strict: false,
+      trust: false,
+      output: 'htmlAndMathml',
+    });
+  } catch {
+    return katex.renderToString(String(value || '').trim(), {
+      displayMode,
+      throwOnError: false,
+      strict: 'ignore',
+      trust: false,
+      output: 'html',
+    });
+  }
+};
 
 /**
  * Normalize LaTeX delimiters so remark-math always sees $…$ / $$…$$.
@@ -86,9 +107,30 @@ const MarkdownRenderer = ({ content, dark = false }) => {
     >
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
-        rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false, output: 'htmlAndMathml' }]]}
         components={{
           p: ({ children }) => <p>{children}</p>,
+          pre: ({ children }) => {
+            const child = React.Children.toArray(children)[0];
+            if (React.isValidElement(child) && /language-math/.test(child.props.className || '')) {
+              return <>{children}</>;
+            }
+            return <pre>{children}</pre>;
+          },
+          code: ({ className = '', children, ...props }) => {
+            const value = String(children).replace(/\n$/, '');
+            const isMath = /language-math|math-inline|math-display/.test(className);
+            if (isMath) {
+              const displayMode = /math-display/.test(className);
+              const Tag = displayMode ? 'div' : 'span';
+              return (
+                <Tag
+                  className={displayMode ? 'katex-display-wrapper' : 'katex-inline-wrapper'}
+                  dangerouslySetInnerHTML={{ __html: renderKatex(value, displayMode) }}
+                />
+              );
+            }
+            return <code className={className} {...props}>{children}</code>;
+          },
           // Ensure tables have a wrapper for horizontal scroll on mobile
           table: ({ children }) => (
             <div className="overflow-x-auto my-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
