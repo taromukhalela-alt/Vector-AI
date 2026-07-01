@@ -3,7 +3,7 @@ export const SITE_NAME = 'Vector AI';
 
 export const routeMeta = {
   '/': {
-    title: 'Vector AI – CAPS Physical Sciences & Chemistry AI Tutor | Grades 10–12 South Africa',
+    title: 'Vector AI – CAPS Physical Sciences Tutor',
     description:
       'Master CAPS Physical Sciences and Chemistry with Vector AI. AI-powered study notes, voice tutoring, and interactive simulations for South African learners in Grades 10, 11, and 12. Aligned to the CAPS curriculum.',
     keywords: 'CAPS tutor, Physical Sciences, Chemistry tutor, South Africa, Grade 10, Grade 11, Grade 12, AI tutoring, STEM learning, study platform, physics tutor, chemistry tutor, online learning',

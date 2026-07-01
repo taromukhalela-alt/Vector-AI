@@ -1,16 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// NotesPdfDocument.jsx
-// Renders a Vector AI study note as a proper A4 PDF using @react-pdf/renderer.
-//
-// Math pipeline:  markdown → preprocessContent() (caller)
-//                          → renderMathToPng()   (caller)
-//                          → mathImages map passed as prop
-//                          → <Image src={dataUrl} /> in the PDF
-//
-// All block and inline markdown tokens are mapped to React PDF primitives.
-// Helvetica is used (built-in, no registration required).
-// ─────────────────────────────────────────────────────────────────────────────
-
 import React from 'react';
 import {
   Document,
@@ -322,20 +309,20 @@ function getPlainText(tokens = []) {
     .map((t) => {
       if (t.tokens) return getPlainText(t.tokens);
       const raw = t.text || t.raw || '';
-      return raw.replace(/__MATH_\d+__/g, '');
+      return raw.replace(/@@MATH_\d+@@/g, '');
     })
     .join('');
 }
 
 /**
- * Splits a raw text string by __MATH_N__ markers, returning an array of
+ * Splits a raw text string by @@MATH_N@@ markers, returning an array of
  * { kind: 'text' | 'math', value } segments.
  */
 function splitMath(raw = '') {
-  const parts = raw.split(/(__MATH_\d+__)/);
+  const parts = raw.split(/(@@MATH_\d+@@)/);
   return parts
     .filter(Boolean)
-    .map((p) => (/^__MATH_\d+__$/.test(p) ? { kind: 'math', value: p } : { kind: 'text', value: p }));
+    .map((p) => (/^@@MATH_\d+@@$/.test(p) ? { kind: 'math', value: p } : { kind: 'text', value: p }));
 }
 
 /**
@@ -471,7 +458,7 @@ function extractDisplayMath(token) {
   const toks = token.tokens || [];
   if (toks.length === 1 && toks[0].type === 'text') {
     const trimmed = (toks[0].text || '').trim();
-    if (/^__MATH_\d+__$/.test(trimmed)) return trimmed;
+    if (/^@@MATH_\d+@@$/.test(trimmed)) return trimmed;
   }
   return null;
 }
