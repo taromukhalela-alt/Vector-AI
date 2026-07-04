@@ -98,15 +98,12 @@ const renderMathToPng = async (latex, displayMode) => {
 
   const wrap = document.createElement('div');
   wrap.setAttribute('data-math-isolated', 'true');
-  wrap.setAttribute('aria-hidden', 'true');
-
+  
   Object.assign(wrap.style, {
-    position: 'fixed',
+    position: 'absolute',
     top: '0px',
-    left: '-10000px',
+    left: '0px',
     display: 'inline-block',
-    width: 'auto',
-    height: 'auto',
     backgroundColor,
     color: foregroundColor,
     padding: displayMode ? '12px 20px' : '3px 6px',
@@ -119,40 +116,17 @@ const renderMathToPng = async (latex, displayMode) => {
     margin: '0',
     border: 'none',
     boxSizing: 'border-box',
-    contain: 'layout style paint',
   });
 
   const container = document.createElement('div');
-  container.setAttribute('data-math-container', 'true');
-  Object.assign(container.style, {
-    display: 'inline-block',
-    color: foregroundColor,
-    backgroundColor: 'transparent',
-  });
+  container.style.color = foregroundColor;
+  container.style.backgroundColor = 'transparent';
   wrap.appendChild(container);
 
-  const styleReset = document.createElement('style');
-  styleReset.setAttribute('data-math-reset', 'true');
-  styleReset.textContent = `
-    [data-math-isolated], [data-math-isolated] * {
-      box-sizing: border-box !important;
-      color: ${foregroundColor} !important;
-      border-color: #94a3b8 !important;
-      caret-color: ${foregroundColor} !important;
-      text-shadow: none !important;
-      box-shadow: none !important;
-    }
-    [data-math-isolated] { background: ${backgroundColor} !important; isolation: isolate !important; }
-    [data-math-isolated] .katex, [data-math-isolated] .katex * {
-      color: ${foregroundColor} !important;
-      background: transparent !important;
-    }
-    [data-math-isolated] .katex-mathml { display: none !important; }
-  `;
-  wrap.appendChild(styleReset);
   document.body.appendChild(wrap);
 
   try {
+    // Render KaTeX natively
     katex.render(String(latex || '').trim(), container, {
       displayMode,
       throwOnError: false,
@@ -161,9 +135,9 @@ const renderMathToPng = async (latex, displayMode) => {
       trust: false,
     });
 
+    // Wait for fonts to be ready
     if (document.fonts?.ready) await document.fonts.ready;
-    await new Promise((r) => setTimeout(r, 120));
-    snapshotInlineStyles(wrap, displayMode);
+    await new Promise((r) => setTimeout(r, 150));
 
     const canvas = await html2canvas(wrap, {
       scale: 3,
@@ -173,50 +147,37 @@ const renderMathToPng = async (latex, displayMode) => {
       allowTaint: false,
       removeContainer: true,
       foreignObjectRendering: false,
+      // CRITICAL: This tells html2canvas to ignore all stylesheets EXCEPT KaTeX.
+      // This prevents it from crashing on Tailwind's oklch() colors.
+      ignoreElements: (element) => {
+        if (element.tagName === 'LINK' && element.rel === 'stylesheet') {
+          return !element.href || !element.href.includes('katex');
+        }
+        if (element.tagName === 'STYLE') {
+          return !element.textContent || !element.textContent.includes('.katex');
+        }
+        return false;
+      },
       onclone: (clonedDoc) => {
-        // 1. Remove stylesheets EXCEPT KaTeX
-        clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((n) => {
-          if (!n.href || !n.href.includes('katex')) {
-            n.remove();
-          }
-        });
-
-        // 2. Remove style tags EXCEPT our math-reset and any injected KaTeX styles
-        clonedDoc.querySelectorAll('style:not([data-math-reset])').forEach((n) => {
-          if (!n.textContent || !n.textContent.includes('.katex')) {
-            n.remove();
-          }
-        });
-
+        // Ensure the cloned wrap is visible for the screenshot
         const clonedWrap = clonedDoc.querySelector('[data-math-isolated="true"]');
-        if (!clonedWrap) return;
-
-        clonedDoc.documentElement.style.backgroundColor = 'transparent';
-        clonedDoc.body.style.backgroundColor = 'transparent';
-        clonedDoc.body.style.margin = '0';
-        clonedWrap.style.opacity = '1';
-        clonedWrap.style.visibility = 'visible';
-        clonedWrap.style.left = '0px';
-        clonedWrap.style.top = '0px';
-        clonedWrap.style.pointerEvents = 'none';
-        clonedWrap.style.backgroundColor = backgroundColor;
-        clonedWrap.style.color = foregroundColor;
-
-        const nodes = [clonedWrap, ...clonedWrap.querySelectorAll('*')];
-        nodes.forEach((el) => {
-          Array.from(el.style).forEach((prop) => {
-            const value = el.style.getPropertyValue(prop);
-            const safeValue = sanitizeCssValue(prop, value, displayMode);
-            if (safeValue || safeValue === '0') el.style.setProperty(prop, safeValue);
-            else el.style.removeProperty(prop);
-          });
-        });
+        if (clonedWrap) {
+          clonedDoc.body.style.backgroundColor = 'transparent';
+          clonedDoc.body.style.margin = '0';
+          clonedWrap.style.opacity = '1';
+          clonedWrap.style.left = '0px';
+          clonedWrap.style.top = '0px';
+        }
       },
     });
 
-    return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width / 3, height: canvas.height / 3 };
+    return { 
+      dataUrl: canvas.toDataURL('image/png'), 
+      width: canvas.width / 3, 
+      height: canvas.height / 3 
+    };
   } catch (err) {
-    console.warn('[Vector AI] Math render failed:', latex, err);
+    console.error('[Vector AI] Math render failed for:', latex, err);
     return null;
   } finally {
     if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
