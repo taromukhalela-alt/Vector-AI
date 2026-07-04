@@ -84,7 +84,7 @@ const snapshotInlineStyles = (root, displayMode) => {
       el.style.setProperty('border-color', '#94a3b8');
       el.style.setProperty('text-shadow', 'none');
       el.style.setProperty('box-shadow', 'none');
-    } catch {}
+    } catch { }
     Array.from(el.children).forEach((child) => applySafeStyles(child));
   };
   applySafeStyles(root);
@@ -170,13 +170,27 @@ const renderMathToPng = async (latex, displayMode) => {
       backgroundColor,
       useCORS: true,
       logging: false,
-      allowTaint: true,
+      allowTaint: false,
       removeContainer: true,
       foreignObjectRendering: false,
       onclone: (clonedDoc) => {
-        clonedDoc.querySelectorAll('link[rel="stylesheet"], style:not([data-math-reset])').forEach((n) => n.remove());
+        // 1. Remove stylesheets EXCEPT KaTeX
+        clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((n) => {
+          if (!n.href || !n.href.includes('katex')) {
+            n.remove();
+          }
+        });
+
+        // 2. Remove style tags EXCEPT our math-reset and any injected KaTeX styles
+        clonedDoc.querySelectorAll('style:not([data-math-reset])').forEach((n) => {
+          if (!n.textContent || !n.textContent.includes('.katex')) {
+            n.remove();
+          }
+        });
+
         const clonedWrap = clonedDoc.querySelector('[data-math-isolated="true"]');
         if (!clonedWrap) return;
+
         clonedDoc.documentElement.style.backgroundColor = 'transparent';
         clonedDoc.body.style.backgroundColor = 'transparent';
         clonedDoc.body.style.margin = '0';
@@ -187,6 +201,7 @@ const renderMathToPng = async (latex, displayMode) => {
         clonedWrap.style.pointerEvents = 'none';
         clonedWrap.style.backgroundColor = backgroundColor;
         clonedWrap.style.color = foregroundColor;
+
         const nodes = [clonedWrap, ...clonedWrap.querySelectorAll('*')];
         nodes.forEach((el) => {
           Array.from(el.style).forEach((prop) => {
@@ -337,8 +352,8 @@ const Notes = () => {
     } catch (e) { console.error(e); }
   };
 
-  useEffect(() => { 
-    fetchNotes(); 
+  useEffect(() => {
+    fetchNotes();
   }, []);
 
   const showStatus = (message, type = 'success', title) => {
@@ -566,11 +581,10 @@ const Notes = () => {
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside
-        className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300 ${
-          sidebarVisible
+        className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300 ${sidebarVisible
             ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
             : 'hidden'
-        }`}
+          }`}
       >
         {/* Sidebar header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-800">
@@ -637,11 +651,10 @@ const Notes = () => {
                 <button
                   key={note.id}
                   onClick={() => handleSelectNote(note)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group ${
-                    isActive
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group ${isActive
                       ? 'bg-emerald-500/10 dark:bg-emerald-500/12 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
                       : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-transparent'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-1.5">
                     <div className="flex items-start gap-2 min-w-0">
