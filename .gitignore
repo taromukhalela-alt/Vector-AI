@@ -21,3 +21,5 @@ instance/vector_ai.db
 .kilo/
 stress_test_premium.jsx
 stress_test_pdf.js
+old_notes.js
+CODEBASE_OVERVIEW.md

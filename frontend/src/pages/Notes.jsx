@@ -98,7 +98,7 @@ const renderMathToPng = async (latex, displayMode) => {
 
   const wrap = document.createElement('div');
   wrap.setAttribute('data-math-isolated', 'true');
-  
+
   Object.assign(wrap.style, {
     position: 'absolute',
     top: '0px',
@@ -171,10 +171,10 @@ const renderMathToPng = async (latex, displayMode) => {
       },
     });
 
-    return { 
-      dataUrl: canvas.toDataURL('image/png'), 
-      width: canvas.width / 3, 
-      height: canvas.height / 3 
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      width: canvas.width / 3,
+      height: canvas.height / 3
     };
   } catch (err) {
     console.error('[Vector AI] Math render failed for:', latex, err);
@@ -240,6 +240,9 @@ const Notes = () => {
   const [aiTopic, setAiTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [wordCount, setWordCount] = useState(0);
 
   const textareaRef = useRef(null);
@@ -302,15 +305,25 @@ const Notes = () => {
   };
 
   const fetchNotes = async (query = '') => {
+    setIsLoadingNotes(true);
+    setLoadError('');
     try {
       const res = await fetch(`/api/notes${query ? `?q=${encodeURIComponent(query)}` : ''}`);
-      if (!res.ok) { console.error('Fetch notes failed:', res.status); return; }
+      if (!res.ok) throw new Error(`Unable to load notes (${res.status})`);
       const data = await res.json();
       if (data.success && Array.isArray(data.notes)) {
         setNotes(data.notes);
         if (data.notes.length > 0 && !selectedNote) handleSelectNote(data.notes[0]);
+      } else {
+        throw new Error(data.message || 'Unable to load notes right now.');
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setLoadError(e.message || 'Unable to load notes right now.');
+      showStatus(e.message || 'Unable to load notes right now.', 'error');
+    } finally {
+      setIsLoadingNotes(false);
+    }
   };
 
   useEffect(() => {
@@ -343,6 +356,7 @@ const Notes = () => {
       showStatus('Title and content are required', 'error');
       return;
     }
+    setIsSavingNote(true);
     try {
       const isNew = !selectedNote || selectedNote.isTemp;
       const url = isNew ? '/api/notes' : `/api/notes/${selectedNote.id}`;
@@ -368,11 +382,13 @@ const Notes = () => {
         }
         setIsEditing(false);
       } else {
-        showStatus('Your note could not be saved. Please try again.', 'error', 'Save failed');
+        showStatus(data.message || 'Your note could not be saved. Please try again.', 'error', 'Save failed');
       }
     } catch (e) {
       console.error(e);
       showStatus('Network error while saving', 'error');
+    } finally {
+      setIsSavingNote(false);
     }
   };
 
@@ -488,7 +504,7 @@ const Notes = () => {
 
         // Copy content
         const bodyContent = document.createElement('div');
-        bodyContent.innerHTML = element.innerHTML;
+        bodyContent.appendChild(element.cloneNode(true));
         printContainer.appendChild(bodyContent);
 
         // Remove dark mode classes/styles if any
@@ -543,8 +559,8 @@ const Notes = () => {
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside
         className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300 ${sidebarVisible
-            ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
-            : 'hidden'
+          ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
+          : 'hidden'
           }`}
       >
         {/* Sidebar header */}
@@ -593,7 +609,16 @@ const Notes = () => {
 
         {/* Notes list */}
         <div className="flex-1 overflow-y-auto py-1.5 px-2 space-y-0.5">
-          {notes.length === 0 ? (
+          {isLoadingNotes ? (
+            <div className="flex items-center justify-center py-8 text-[10px] text-zinc-400">
+              <span className="mr-2 h-3.5 w-3.5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+              Loading notes…
+            </div>
+          ) : loadError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[10px] text-red-600 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+              {loadError}
+            </div>
+          ) : notes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mb-3" />
               <p className="text-[11px] text-zinc-400 dark:text-zinc-500">No notes yet</p>
@@ -613,8 +638,8 @@ const Notes = () => {
                   key={note.id}
                   onClick={() => handleSelectNote(note)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group ${isActive
-                      ? 'bg-emerald-500/10 dark:bg-emerald-500/12 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-transparent'
+                    ? 'bg-emerald-500/10 dark:bg-emerald-500/12 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-transparent'
                     }`}
                 >
                   <div className="flex items-start justify-between gap-1.5">
@@ -760,10 +785,15 @@ const Notes = () => {
                 {isEditing && (
                   <button
                     onClick={handleSaveNote}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+                    disabled={isSavingNote}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
                   >
-                    <Save className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Save</span>
+                    {isSavingNote ? (
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span className="hidden sm:inline">{isSavingNote ? 'Saving…' : 'Save'}</span>
                   </button>
                 )}
 

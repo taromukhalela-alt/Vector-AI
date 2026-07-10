@@ -114,7 +114,14 @@ def _get_or_create_secret_key():
 app = Flask(__name__, static_folder="frontend/dist", static_url_path="")
 app.secret_key = _get_or_create_secret_key()
 app.config["MAX_CONTENT_LENGTH"] = env_int("MAX_REQUEST_BYTES", 1048576, min_value=1024)
-_secure_cookie_default = env_bool("COOKIE_SECURE_DEFAULT", bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER") or os.getenv("PRODUCTION")))
+_secure_cookie_default = env_bool(
+    "COOKIE_SECURE_DEFAULT",
+    bool(
+        os.getenv("RAILWAY_ENVIRONMENT")
+        or os.getenv("RENDER")
+        or os.getenv("PRODUCTION")
+    ),
+)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE=os.getenv("SESSION_COOKIE_SAMESITE", "Lax"),
@@ -146,14 +153,22 @@ def apply_security_headers(response):
         )
     return response
 
+
 # Configure CORS only for explicitly trusted cross-origin clients.
-cors_origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGIN", "").split(",") if origin.strip()]
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGIN", "").split(",")
+    if origin.strip()
+]
 if cors_origins:
     CORS(app, origins=cors_origins, supports_credentials=False)
 
 # Initialize Database
 from database import db, User, Note, Conversation, utc_now
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///vector_ai.db")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL", "sqlite:///vector_ai.db"
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
@@ -178,7 +193,9 @@ if openrouter_key:
     chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct")
     logger.info("OpenRouter chat model: %s", chat_model)
 else:
-    logger.warning("OpenRouter API key NOT found. Set OPENROUTER_API_KEY environment variable.")
+    logger.warning(
+        "OpenRouter API key NOT found. Set OPENROUTER_API_KEY environment variable."
+    )
 
 # Configure Caching
 cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
@@ -204,6 +221,7 @@ def get_groq_client(api_key):
             logger.exception("Failed to initialize Groq client: %s", e)
             GROQ_CLIENT = None
     return GROQ_CLIENT
+
 
 CSRF_SESSION_KEY = "_csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
@@ -234,7 +252,7 @@ RATE_LIMIT_MAX_BUCKETS = env_int("RATE_LIMIT_MAX_BUCKETS", 10000, min_value=100)
 TRUST_PROXY_HEADERS = env_bool("TRUST_PROXY_HEADERS", False)
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
 CAMB_TTS_MODEL = os.getenv("CAMB_TTS_MODEL", "mars-flash")
-CAMB_TTS_LANGUAGE = (os.getenv("CAMB_TTS_LANGUAGE", "en-us").strip().lower() or "en-us")
+CAMB_TTS_LANGUAGE = os.getenv("CAMB_TTS_LANGUAGE", "en-us").strip().lower() or "en-us"
 if CAMB_TTS_LANGUAGE.isdigit():
     logger.warning("Numeric CAMB_TTS_LANGUAGE values are deprecated; using en-us")
     CAMB_TTS_LANGUAGE = "en-us"
@@ -318,7 +336,10 @@ def enforce_csrf_protection():
         or not supplied
         or not secrets.compare_digest(str(expected), str(supplied))
     ):
-        return jsonify({"success": False, "message": "CSRF token missing or invalid"}), 403
+        return (
+            jsonify({"success": False, "message": "CSRF token missing or invalid"}),
+            403,
+        )
     return None
 
 
@@ -375,7 +396,10 @@ def enforce_rate_limit(scope, limit, window_seconds):
 
 @app.before_request
 def rate_limit_auth_writes():
-    if request.method != "POST" or request.endpoint not in {"auth.login", "auth.register"}:
+    if request.method != "POST" or request.endpoint not in {
+        "auth.login",
+        "auth.register",
+    }:
         return None
     return enforce_rate_limit("auth", AUTH_RATE_LIMIT_COUNT, AUTH_RATE_LIMIT_WINDOW)
 
@@ -402,6 +426,34 @@ def clean_limited_text(value, max_chars):
 
 def valid_note_id(note_id):
     return bool(re.fullmatch(r"note_[A-Za-z0-9_-]{8,64}", str(note_id or "")))
+
+
+def validate_note_payload(data):
+    if not isinstance(data, dict):
+        raise ValueError("Invalid JSON body")
+
+    title = data.get("title")
+    topic = data.get("topic")
+    content = data.get("content")
+    tags = data.get("tags")
+
+    if title is not None:
+        title = str(title).strip()
+        if len(title) > NOTE_TITLE_MAX_CHARS:
+            raise ValueError("Title is too long")
+    if topic is not None:
+        topic = str(topic).strip()
+        if len(topic) > NOTE_TOPIC_MAX_CHARS:
+            raise ValueError("Topic is too long")
+    if content is not None:
+        content = str(content)
+        if len(content) > NOTE_CONTENT_MAX_CHARS:
+            raise ValueError("Content is too long")
+    if tags is not None and not isinstance(tags, list):
+        raise ValueError("Tags must be a list")
+
+    sanitized_tags = sanitize_tags(tags) if tags is not None else None
+    return title, topic, content, sanitized_tags
 
 
 def record_chat_latency(user_id, duration_ms):
@@ -577,7 +629,11 @@ def semantic_rank_documents(query, documents, top_k=10):
                     [
                         doc.get("title", ""),
                         doc.get("topic", ""),
-                        " ".join(doc.get("tags", []) if isinstance(doc.get("tags"), list) else []),
+                        " ".join(
+                            doc.get("tags", [])
+                            if isinstance(doc.get("tags"), list)
+                            else []
+                        ),
                         doc.get("content", ""),
                     ]
                 )
@@ -646,18 +702,22 @@ Use short strings only. Do not include markdown.
     )
     sanitized = {
         "focus_topics": sanitize_tags(profile.get("focus_topics", []), limit=8),
-        "strengths": [str(x)[:120] for x in profile.get("strengths", [])[:6]]
-        if isinstance(profile.get("strengths"), list)
-        else [],
-        "needs_practice": [str(x)[:120] for x in profile.get("needs_practice", [])[:6]]
-        if isinstance(profile.get("needs_practice"), list)
-        else [],
+        "strengths": (
+            [str(x)[:120] for x in profile.get("strengths", [])[:6]]
+            if isinstance(profile.get("strengths"), list)
+            else []
+        ),
+        "needs_practice": (
+            [str(x)[:120] for x in profile.get("needs_practice", [])[:6]]
+            if isinstance(profile.get("needs_practice"), list)
+            else []
+        ),
         "recent_context": str(profile.get("recent_context", ""))[:500],
-        "study_preferences": [
-            str(x)[:120] for x in profile.get("study_preferences", [])[:6]
-        ]
-        if isinstance(profile.get("study_preferences"), list)
-        else [],
+        "study_preferences": (
+            [str(x)[:120] for x in profile.get("study_preferences", [])[:6]]
+            if isinstance(profile.get("study_preferences"), list)
+            else []
+        ),
     }
     user.memory_summary = json.dumps(sanitized, ensure_ascii=True)
 
@@ -721,6 +781,7 @@ Use null if none fit.
             "match_source": "ai",
         }
     return None
+
 
 # ============================================================
 # SYSTEM PROMPTS
@@ -885,15 +946,35 @@ INTENT_KEYWORDS = build_keyword_map()
 
 SCIENCE_TOPIC_LIBRARY = {
     "gas_laws": {
-        "keywords": ["gas laws", "ideal gas", "boyle", "charles", "pressure", "volume", "temperature"],
+        "keywords": [
+            "gas laws",
+            "ideal gas",
+            "boyle",
+            "charles",
+            "pressure",
+            "volume",
+            "temperature",
+        ],
         "response": "Gas laws explain how pressure, volume, and temperature are linked. In CAPS chemistry, Boyle's law links pressure and volume at constant temperature, while Charles's law links volume and temperature at constant pressure.",
     },
     "reaction_rates": {
-        "keywords": ["reaction rate", "collision theory", "rate of reaction", "activation energy", "catalyst"],
+        "keywords": [
+            "reaction rate",
+            "collision theory",
+            "rate of reaction",
+            "activation energy",
+            "catalyst",
+        ],
         "response": "Reaction rate depends on how often particles collide and whether those collisions have enough energy. Higher temperature, greater concentration, and catalysts increase the rate by making successful collisions more likely.",
     },
     "bonding": {
-        "keywords": ["bonding", "ionic bond", "covalent bond", "electronegativity", "chemical bond"],
+        "keywords": [
+            "bonding",
+            "ionic bond",
+            "covalent bond",
+            "electronegativity",
+            "chemical bond",
+        ],
         "response": "Chemical bonding explains how atoms become more stable. Ionic bonding involves electron transfer, while covalent bonding involves sharing electrons between atoms.",
     },
     "acid_base": {
@@ -901,7 +982,13 @@ SCIENCE_TOPIC_LIBRARY = {
         "response": "Acids release hydrogen ions in solution, bases accept hydrogen ions or release hydroxide ions, and pH shows how acidic or basic a solution is. Neutralisation happens when an acid reacts with a base to form salt and water.",
     },
     "electrochemistry": {
-        "keywords": ["electrochemistry", "electrolysis", "galvanic cell", "redox", "cell potential"],
+        "keywords": [
+            "electrochemistry",
+            "electrolysis",
+            "galvanic cell",
+            "redox",
+            "cell potential",
+        ],
         "response": "Electrochemistry links chemical reactions to electricity. Redox reactions transfer electrons, galvanic cells produce electrical energy from chemical change, and electrolysis uses electrical energy to drive a chemical change.",
     },
 }
@@ -910,17 +997,37 @@ ANIMATION_KEYWORD_MAP = [
     {
         "animation_id": "gas_laws",
         "animation_label": "Gas Laws",
-        "keywords": ["gas laws", "boyle", "charles", "pressure", "volume", "temperature of gas", "ideal gas"],
+        "keywords": [
+            "gas laws",
+            "boyle",
+            "charles",
+            "pressure",
+            "volume",
+            "temperature of gas",
+            "ideal gas",
+        ],
     },
     {
         "animation_id": "reaction_rates",
         "animation_label": "Reaction Rates",
-        "keywords": ["reaction rate", "collision theory", "rate of reaction", "catalyst", "activation energy"],
+        "keywords": [
+            "reaction rate",
+            "collision theory",
+            "rate of reaction",
+            "catalyst",
+            "activation energy",
+        ],
     },
     {
         "animation_id": "bonding",
         "animation_label": "Chemical Bonding",
-        "keywords": ["bonding", "ionic", "covalent", "electronegativity", "chemical bond"],
+        "keywords": [
+            "bonding",
+            "ionic",
+            "covalent",
+            "electronegativity",
+            "chemical bond",
+        ],
     },
     {
         "animation_id": "acid_base",
@@ -930,7 +1037,13 @@ ANIMATION_KEYWORD_MAP = [
     {
         "animation_id": "electrochemistry",
         "animation_label": "Electrochemistry",
-        "keywords": ["electrochemistry", "electrolysis", "galvanic", "cell potential", "redox cell"],
+        "keywords": [
+            "electrochemistry",
+            "electrolysis",
+            "galvanic",
+            "cell potential",
+            "redox cell",
+        ],
     },
 ]
 
@@ -961,7 +1074,7 @@ def build_prompt(history, user_message, system_prompt, user_key=None):
             lines.append("## What you remember from past sessions with this student:")
             lines.append(summary)
             lines.append("")
-    
+
     for item in normalize_history(history):
         role = "User" if item["role"] == "user" else "Assistant"
         lines.append(f"{role}: {item['content']}")
@@ -1003,7 +1116,10 @@ def make_chat_friendly(text):
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
 
-def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_name=None):
+
+def _google_generate_with_timeout(
+    prompt, system_prompt, timeout_seconds, model_name=None
+):
     if not genai:
         raise Exception("google-genai package not installed")
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -1018,8 +1134,7 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
             client = genai.Client(api_key=api_key)
             final_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
             response = client.models.generate_content(
-                model=model_name,
-                contents=final_prompt
+                model=model_name, contents=final_prompt
             )
             text = getattr(response, "text", None)
             if text and str(text).strip():
@@ -1029,9 +1144,12 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
             candidates = getattr(response, "candidates", None) or []
             if candidates:
                 parts = (
-                    getattr(candidates[0], "content", None) and getattr(candidates[0].content, "parts", None)
+                    getattr(candidates[0], "content", None)
+                    and getattr(candidates[0].content, "parts", None)
                 ) or []
-                out = "".join(getattr(p, "text", "") for p in parts if getattr(p, "text", ""))
+                out = "".join(
+                    getattr(p, "text", "") for p in parts if getattr(p, "text", "")
+                )
                 if out.strip():
                     result_queue.put(("ok", out.strip()))
                     return
@@ -1051,7 +1169,9 @@ def _google_generate_with_timeout(prompt, system_prompt, timeout_seconds, model_
     return payload
 
 
-def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=True, enable_code=True):
+def generate_with_tools(
+    prompt, history=None, system_prompt=None, enable_search=True, enable_code=True
+):
     """Gemini 3.5 Flash without tools - tools have been removed."""
     if not genai:
         return None, {}
@@ -1062,25 +1182,23 @@ def generate_with_tools(prompt, history=None, system_prompt=None, enable_search=
     try:
         client = genai.Client(api_key=api_key)
         model_id = "gemini-3.5-flash"
-        
+
         response = client.models.generate_content(
             model=model_id,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt or PHYSICS_SYSTEM_PROMPT
-            )
+            ),
         )
 
         text = response.text
-        metadata = {
-            "used_search": False,
-            "used_code": False
-        }
+        metadata = {"used_search": False, "used_code": False}
 
         return text, metadata
     except Exception as e:
         logger.error(f"Gemini error: {e}")
         return None, {}
+
 
 def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
     result_queue = queue.Queue(maxsize=1)
@@ -1107,7 +1225,12 @@ def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
                 max_tokens=max_tokens,
             )
             req_end = time.monotonic()
-            logger.info("Groq request finished: model=%s tokens=%d time=%.3fs", model, max_tokens, req_end - req_start)
+            logger.info(
+                "Groq request finished: model=%s tokens=%d time=%.3fs",
+                model,
+                max_tokens,
+                req_end - req_start,
+            )
 
             text = response.choices[0].message.content or ""
             result_queue.put(("ok", text.strip()))
@@ -1171,7 +1294,9 @@ def _openrouter_generate_with_timeout(
                         headers={
                             "Authorization": f"Bearer {api_key}",
                             "Content-Type": "application/json",
-                            "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+                            "HTTP-Referer": os.getenv(
+                                "OPENROUTER_SITE_URL", "http://localhost:5000"
+                            ),
                             "X-Title": os.getenv("OPENROUTER_APP_NAME", "Vector AI"),
                         },
                         json={
@@ -1254,7 +1379,9 @@ def generate_response(
 
     # Primary provider: Google AI Studio Gemini
     try:
-        google_timeout = timeout_seconds or (60.0 if provider in {"openrouter", "groq"} else 20.0)
+        google_timeout = timeout_seconds or (
+            60.0 if provider in {"openrouter", "groq"} else 20.0
+        )
         text = _google_generate_with_timeout(
             prompt=prompt,
             system_prompt="",
@@ -1273,10 +1400,15 @@ def generate_response(
         if not api_key:
             logger.error("OpenRouter API not available: key=%s", bool(api_key))
             fallback = local_hint or get_local_science_response(user_message)
-            return fallback or "I couldn't generate the exam paper because OpenRouter is not configured."
+            return (
+                fallback
+                or "I couldn't generate the exam paper because OpenRouter is not configured."
+            )
 
         try:
-            timeout = timeout_seconds or env_float("OPENROUTER_EXAM_TIMEOUT", 60.0, min_value=5.0)
+            timeout = timeout_seconds or env_float(
+                "OPENROUTER_EXAM_TIMEOUT", 60.0, min_value=5.0
+            )
             text = _openrouter_generate_with_timeout(
                 prompt,
                 api_key,
@@ -1287,7 +1419,9 @@ def generate_response(
             if text:
                 return text
             fallback = get_local_science_response(user_message)
-            return fallback or "I couldn't generate the exam paper. Could you try again?"
+            return (
+                fallback or "I couldn't generate the exam paper. Could you try again?"
+            )
         except TimeoutError:
             logger.error("OpenRouter timeout after %.1fs", timeout)
             return "The exam generator took too long. Please try again with a narrower topic or fewer marks."
@@ -1300,7 +1434,10 @@ def generate_response(
         if not api_key or not Groq:
             logger.error("Groq API not available for exam generation")
             fallback = local_hint or get_local_science_response(user_message)
-            return fallback or "Groq is not configured for exam generation. Please try again."
+            return (
+                fallback
+                or "Groq is not configured for exam generation. Please try again."
+            )
 
         try:
             groq_timeout = timeout_seconds or 60.0
@@ -1314,7 +1451,9 @@ def generate_response(
             if text:
                 return text
             fallback = get_local_science_response(user_message)
-            return fallback or "I couldn't generate the exam paper. Could you try again?"
+            return (
+                fallback or "I couldn't generate the exam paper. Could you try again?"
+            )
         except TimeoutError:
             logger.error("Groq timeout after %.1fs for exam generation", groq_timeout)
             return "The exam generator took too long. Please try again with a narrower topic or fewer marks."
@@ -1332,7 +1471,9 @@ def generate_response(
                 return text
             logger.info("Groq returned empty, retrying without history")
             simple_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
-            text = _groq_generate_with_timeout(simple_prompt, api_key, timeout_seconds or 10.0)
+            text = _groq_generate_with_timeout(
+                simple_prompt, api_key, timeout_seconds or 10.0
+            )
             if text:
                 return text
             logger.info("Groq empty, falling back to OpenRouter")
@@ -1345,8 +1486,12 @@ def generate_response(
     api_key = os.getenv("OPENROUTER_API_KEY")
     if api_key:
         try:
-            chat_model = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct")
-            timeout_seconds_local = env_float("OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0)
+            chat_model = os.getenv(
+                "OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct"
+            )
+            timeout_seconds_local = env_float(
+                "OPENROUTER_CHAT_TIMEOUT", 30.0, min_value=5.0
+            )
 
             messages = [{"role": "system", "content": system_prompt}]
             for item in normalize_history(history):
@@ -1358,7 +1503,9 @@ def generate_response(
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
-                    "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+                    "HTTP-Referer": os.getenv(
+                        "OPENROUTER_SITE_URL", "http://localhost:5000"
+                    ),
                     "X-Title": os.getenv("OPENROUTER_APP_NAME", "Vector AI"),
                 },
                 json={
@@ -1384,7 +1531,9 @@ def generate_response(
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+                        "HTTP-Referer": os.getenv(
+                            "OPENROUTER_SITE_URL", "http://localhost:5000"
+                        ),
                         "X-Title": os.getenv("OPENROUTER_APP_NAME", "Vector AI"),
                     },
                     json={
@@ -1398,7 +1547,9 @@ def generate_response(
                 )
                 if response.ok:
                     payload = response.json()
-                    text = (payload["choices"][0]["message"].get("content") or "").strip()
+                    text = (
+                        payload["choices"][0]["message"].get("content") or ""
+                    ).strip()
                     if text:
                         return text
 
@@ -1408,7 +1559,11 @@ def generate_response(
 
     logger.error("All AI providers failed, using local response")
     fallback = local_hint or get_local_science_response(user_message)
-    return fallback or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
+    return (
+        fallback
+        or "I'm ready to help with CAPS physics and chemistry. Ask me anything!"
+    )
+
 
 # -------------------------------
 # Physics knowledge base
@@ -1804,8 +1959,13 @@ def _format_time(iso_value):
 
 
 def load_user_history(user_id):
-    if not user_id: return []
-    convs = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.timestamp.asc()).all()
+    if not user_id:
+        return []
+    convs = (
+        Conversation.query.filter_by(user_id=user_id)
+        .order_by(Conversation.timestamp.asc())
+        .all()
+    )
     return [c.to_dict() for c in convs]
 
 
@@ -1881,17 +2041,27 @@ def _generate_dashboard_payload():
     now = datetime.now()
     if not current_user.is_authenticated:
         return {}
-        
-    history = Conversation.query.filter_by(user_id=current_user.id).order_by(Conversation.timestamp.desc()).all()
+
+    history = (
+        Conversation.query.filter_by(user_id=current_user.id)
+        .order_by(Conversation.timestamp.desc())
+        .all()
+    )
     sessions = build_sessions([c.to_dict() for c in history])
     questions_asked = len(history)
     confidences = [c.confidence for c in history if c.confidence is not None]
-    avg_confidence = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+    avg_confidence = (
+        round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+    )
     raw_accuracy = config.get("accuracy") if isinstance(config, dict) else None
     if raw_accuracy is None:
         model_accuracy = 0.0
     else:
-        model_accuracy = float(raw_accuracy) * 100 if float(raw_accuracy) <= 1 else float(raw_accuracy)
+        model_accuracy = (
+            float(raw_accuracy) * 100
+            if float(raw_accuracy) <= 1
+            else float(raw_accuracy)
+        )
         model_accuracy = round(model_accuracy, 1)
 
     intent_counts = Counter(c.intent or "unknown" for c in history)
@@ -1930,20 +2100,26 @@ def _generate_dashboard_payload():
 
     recent_questions = []
     for entry in history[:6]:
-        recent_questions.append({
-            "question": entry.message[:48],
-            "confidence": entry.confidence or 0,
-            "time": entry.timestamp.strftime("%b %d, %H:%M") if entry.timestamp else ""
-        })
+        recent_questions.append(
+            {
+                "question": entry.message[:48],
+                "confidence": entry.confidence or 0,
+                "time": (
+                    entry.timestamp.strftime("%b %d, %H:%M") if entry.timestamp else ""
+                ),
+            }
+        )
 
     session_cards = []
     for session_entry in sessions[:6]:
-        session_cards.append({
-            "chat_id": session_entry["chat_id"],
-            "title": session_entry["title"],
-            "count": session_entry["count"],
-            "last_time": session_entry["last_time"],
-        })
+        session_cards.append(
+            {
+                "chat_id": session_entry["chat_id"],
+                "title": session_entry["title"],
+                "count": session_entry["count"],
+                "last_time": session_entry["last_time"],
+            }
+        )
 
     return {
         "timestamp": now.isoformat(),
@@ -2061,9 +2237,11 @@ def simulate_physics():
                 "physics": {
                     k: v.tolist() for k, v in sim_results.items()
                 },  # Convert numpy to list
-                "ml": {k: v.tolist() for k, v in ml_results.items()}
-                if ml_results
-                else None,
+                "ml": (
+                    {k: v.tolist() for k, v in ml_results.items()}
+                    if ml_results
+                    else None
+                ),
                 "explanation": explanation_text,
                 "symbolic": symbolic,
                 "error_margin": error_margin,
@@ -2131,22 +2309,22 @@ def api_history():
 @app.route("/api/session/<chat_id>")
 @login_required
 def get_session_detail(chat_id):
-    convs = Conversation.query.filter_by(user_id=current_user.id, chat_id=chat_id).order_by(Conversation.timestamp.asc()).all()
+    convs = (
+        Conversation.query.filter_by(user_id=current_user.id, chat_id=chat_id)
+        .order_by(Conversation.timestamp.asc())
+        .all()
+    )
     if not convs:
         return jsonify({"success": False, "error": "Session not found"}), 404
-    
+
     session["chat_id"] = chat_id
-    
+
     formatted_history = []
     for c in convs:
         formatted_history.append({"role": "user", "content": c.message})
         formatted_history.append({"role": "assistant", "content": c.reply})
-    
-    return jsonify({
-        "success": True, 
-        "chat_id": chat_id, 
-        "history": formatted_history
-    })
+
+    return jsonify({"success": True, "chat_id": chat_id, "history": formatted_history})
 
 
 @app.route("/api/new_session", methods=["POST"])
@@ -2254,7 +2432,9 @@ def chat():
     document_mode = payload.get("response_format") == "document"
     generation_type = (payload.get("generation_type") or "").strip().lower()
     is_exam_generation = document_mode and generation_type == "exam"
-    max_input_chars = EXAM_MAX_INPUT_CHARS if is_exam_generation else CHAT_MAX_INPUT_CHARS
+    max_input_chars = (
+        EXAM_MAX_INPUT_CHARS if is_exam_generation else CHAT_MAX_INPUT_CHARS
+    )
     if len(user_message) > max_input_chars:
         return (
             jsonify(
@@ -2304,7 +2484,9 @@ def chat():
                 elif intent in PHYSICS_INTENTS or intent == "physics":
                     deterministic_hint = solve_physics_problem(user_message)
                 if not deterministic_hint:
-                    deterministic_hint = get_local_science_response(user_message, intent=intent)
+                    deterministic_hint = get_local_science_response(
+                        user_message, intent=intent
+                    )
 
             system_prompt = VOICE_SYSTEM_PROMPT if voice_mode else PHYSICS_SYSTEM_PROMPT
             if voice_max_chars:
@@ -2368,9 +2550,7 @@ def chat():
         output_limit = (
             EXAM_MAX_OUTPUT_CHARS
             if document_mode
-            else VOICE_MAX_OUTPUT_CHARS
-            if voice_mode
-            else CHAT_MAX_OUTPUT_CHARS
+            else VOICE_MAX_OUTPUT_CHARS if voice_mode else CHAT_MAX_OUTPUT_CHARS
         )
         reply = limit_text(reply, output_limit)
 
@@ -2417,20 +2597,16 @@ def chat():
 
     # Save to DB
     save_user_data(
-        user_message,
-        intent,
-        chat_id=chat_id,
-        reply=reply,
-        confidence=confidence
+        user_message, intent, chat_id=chat_id, reply=reply, confidence=confidence
     )
 
     return jsonify(
         {
-            "reply": reply, 
-            "history": history, 
-            "confidence": confidence, 
+            "reply": reply,
+            "history": history,
+            "confidence": confidence,
             "intent": intent,
-            "tool_metadata": tool_metadata
+            "tool_metadata": tool_metadata,
         }
     )
 
@@ -2441,24 +2617,31 @@ def get_dashboard_data():
     """Returns real metrics and syllabus progress for the dashboard."""
     try:
         notes_count = Note.query.filter_by(user_id=current_user.id).count()
-        convs = Conversation.query.filter_by(user_id=current_user.id).order_by(Conversation.timestamp.desc()).limit(100).all()
+        convs = (
+            Conversation.query.filter_by(user_id=current_user.id)
+            .order_by(Conversation.timestamp.desc())
+            .limit(100)
+            .all()
+        )
         conv_count = len(convs)
 
         # Accuracy derived from model confidence in recent interactions
         confidences = [c.confidence for c in convs if c.confidence is not None]
-        base_accuracy = round(sum(confidences) / len(confidences), 1) if confidences else 95.0
+        base_accuracy = (
+            round(sum(confidences) / len(confidences), 1) if confidences else 95.0
+        )
         accuracy = min(100.0, base_accuracy + min(2.0, notes_count * 0.1))
-        
+
         # Real latency from recorded events
         latency = average_recent_chat_latency(current_user.id)
         if latency <= 0:
-            latency = 14.5 # Default fallback
+            latency = 14.5  # Default fallback
 
-        alignment = 100.0 # Standard compliance
+        alignment = 100.0  # Standard compliance
 
         # Group intents to calculate real progress per CAPS topic
         intent_counts = Counter(c.intent for c in convs if c.intent)
-        
+
         def get_topic_prog(intents, base_weight=15):
             count = sum(intent_counts.get(i, 0) for i in intents)
             # Progress is a factor of interactions + related notes
@@ -2467,52 +2650,74 @@ def get_dashboard_data():
 
         syllabus = [
             {
-                "title": "Newton's Laws & Forces", 
-                "progress": get_topic_prog(["forces", "dynamics"]), 
-                "grade": "Gr 11/12", 
-                "category": "Physics"
+                "title": "Newton's Laws & Forces",
+                "progress": get_topic_prog(["forces", "dynamics"]),
+                "grade": "Gr 11/12",
+                "category": "Physics",
             },
             {
-                "title": "Projectile Motion", 
-                "progress": get_topic_prog(["projectile_motion", "kinematics"]), 
-                "grade": "Gr 12", 
-                "category": "Physics"
+                "title": "Projectile Motion",
+                "progress": get_topic_prog(["projectile_motion", "kinematics"]),
+                "grade": "Gr 12",
+                "category": "Physics",
             },
             {
-                "title": "Reaction Rates & Energy", 
-                "progress": get_topic_prog(["chemistry"]), 
-                "grade": "Gr 12", 
-                "category": "Chemistry"
+                "title": "Reaction Rates & Energy",
+                "progress": get_topic_prog(["chemistry"]),
+                "grade": "Gr 12",
+                "category": "Chemistry",
             },
             {
-                "title": "Acids & Bases", 
-                "progress": get_topic_prog(["unit_conversion"]), # Placeholder for acid/base intent
-                "grade": "Gr 11/12", 
-                "category": "Chemistry"
+                "title": "Acids & Bases",
+                "progress": get_topic_prog(
+                    ["unit_conversion"]
+                ),  # Placeholder for acid/base intent
+                "grade": "Gr 11/12",
+                "category": "Chemistry",
             },
             {
-                "title": "Electrochemistry", 
-                "progress": get_topic_prog(["electricity", "electrostatics"]), 
-                "grade": "Gr 12", 
-                "category": "Chemistry"
+                "title": "Electrochemistry",
+                "progress": get_topic_prog(["electricity", "electrostatics"]),
+                "grade": "Gr 12",
+                "category": "Chemistry",
             },
             {
-                "title": "Doppler Effect & Waves", 
-                "progress": get_topic_prog(["waves"]), 
-                "grade": "Gr 11/12", 
-                "category": "Physics"
-            }
+                "title": "Doppler Effect & Waves",
+                "progress": get_topic_prog(["waves"]),
+                "grade": "Gr 11/12",
+                "category": "Physics",
+            },
         ]
 
-        return jsonify({
-            "success": True,
-            "metrics": [
-                {"label": "Model accuracy", "value": accuracy, "max": 100, "unit": "%", "desc": "Calculated from average semantic confidence levels"},
-                {"label": "Inference latency", "value": latency, "max": 50, "unit": "ms", "desc": "Real-time median response synthesis time"},
-                {"label": "CAPS alignment", "value": alignment, "max": 100, "unit": "%", "desc": "Syllabus criteria compliance match"}
-            ],
-            "syllabus": syllabus
-        })
+        return jsonify(
+            {
+                "success": True,
+                "metrics": [
+                    {
+                        "label": "Model accuracy",
+                        "value": accuracy,
+                        "max": 100,
+                        "unit": "%",
+                        "desc": "Calculated from average semantic confidence levels",
+                    },
+                    {
+                        "label": "Inference latency",
+                        "value": latency,
+                        "max": 50,
+                        "unit": "ms",
+                        "desc": "Real-time median response synthesis time",
+                    },
+                    {
+                        "label": "CAPS alignment",
+                        "value": alignment,
+                        "max": 100,
+                        "unit": "%",
+                        "desc": "Syllabus criteria compliance match",
+                    },
+                ],
+                "syllabus": syllabus,
+            }
+        )
     except Exception as e:
         logger.error(f"Dashboard data error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -2601,10 +2806,15 @@ def get_notes():
 def create_note():
     """Create a new note"""
     data = request.get_json(silent=True) or {}
-    title = (data.get("title") or "Untitled Note").strip()
-    content = (data.get("content") or "").strip()
-    topic = (data.get("topic") or "General").strip()
-    tags = sanitize_tags(data.get("tags") or [])
+    try:
+        title, topic, content, tags = validate_note_payload(data)
+    except ValueError as exc:
+        status_code = 413 if "too long" in str(exc).lower() else 400
+        return jsonify({"success": False, "message": str(exc)}), status_code
+
+    title = title or "Untitled Note"
+    content = (content or "").strip()
+    topic = topic or "General"
     ai_generated = bool(data.get("ai_generated", False))
 
     note_id = f"note_{secrets.token_urlsafe(12)}"
@@ -2615,7 +2825,7 @@ def create_note():
         content=content,
         topic=topic,
         tags=tags,
-        source="ai" if ai_generated else "user"
+        source="ai" if ai_generated else "user",
     )
     db.session.add(new_note)
     db.session.commit()
@@ -2631,13 +2841,22 @@ def update_note(note_id):
         return jsonify({"success": False, "message": "Note not found"}), 404
 
     data = request.get_json(silent=True) or {}
-    note.title = (data.get("title") or note.title).strip()
-    note.content = (data.get("content") or note.content).strip()
-    note.topic = (data.get("topic") or note.topic).strip()
-    if "tags" in data:
-        note.tags = sanitize_tags(data["tags"])
+    try:
+        title, topic, content, tags = validate_note_payload(data)
+    except ValueError as exc:
+        status_code = 413 if "too long" in str(exc).lower() else 400
+        return jsonify({"success": False, "message": str(exc)}), status_code
+
+    if title is not None:
+        note.title = title.strip()
+    if content is not None:
+        note.content = content.strip()
+    if topic is not None:
+        note.topic = topic.strip()
+    if tags is not None:
+        note.tags = tags
     note.updated_at = utc_now()
-    
+
     db.session.commit()
     return jsonify({"success": True, "note": note.to_dict()})
 
@@ -2649,7 +2868,7 @@ def delete_note(note_id):
     note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
     if not note:
         return jsonify({"success": False, "message": "Note not found"}), 404
-    
+
     db.session.delete(note)
     db.session.commit()
     return jsonify({"success": True, "message": "Note deleted"})
@@ -2692,7 +2911,7 @@ def generate_ai_note():
             system_prompt=system_prompt,
             user_key=user_key,
             provider=None,  # Gemini primary
-            timeout_seconds=120.0
+            timeout_seconds=120.0,
         )
         reply = limit_text(reply, EXAM_MAX_OUTPUT_CHARS)
 
@@ -2709,7 +2928,7 @@ def generate_ai_note():
             content=reply,
             topic=inferred_topic,
             tags=tags,
-            source="ai"
+            source="ai",
         )
         db.session.add(new_note)
         db.session.commit()
@@ -2717,10 +2936,15 @@ def generate_ai_note():
         return jsonify({"success": True, "note": new_note.to_dict()})
     except Exception as e:
         logger.error("AI Note generation error: %s", e)
-        return jsonify({"success": False, "message": "Failed to generate study guide. Please try again."}), 500
-
-
-
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Failed to generate study guide. Please try again.",
+                }
+            ),
+            500,
+        )
 
 
 @app.route("/api/notes/ai", methods=["POST"])
@@ -2814,7 +3038,9 @@ Note:
         answer = str(card.get("answer", "")).strip()[:500]
         if question and answer:
             clean_cards.append({"question": question, "answer": answer})
-    return jsonify({"success": True, "flashcards": clean_cards or fallback["flashcards"]})
+    return jsonify(
+        {"success": True, "flashcards": clean_cards or fallback["flashcards"]}
+    )
 
 
 @app.route("/api/stt", methods=["POST"])
@@ -2823,15 +3049,18 @@ def speech_to_text():
     """Process Speech-to-Text using Groq Whisper API."""
     if "audio" not in request.files:
         return jsonify({"success": False, "message": "No audio file provided"}), 400
-        
+
     audio_file = request.files["audio"]
     if audio_file.filename == "":
         return jsonify({"success": False, "message": "No selected file"}), 400
 
     api_key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_KEY")
     if not api_key:
-        return jsonify({"success": False, "message": "Groq API key not configured"}), 500
-        
+        return (
+            jsonify({"success": False, "message": "Groq API key not configured"}),
+            500,
+        )
+
     temp_path = None
     try:
         client = Groq(api_key=api_key)
@@ -2868,7 +3097,9 @@ def text_to_speech():
     text = data.get("text", "").strip()
     provider = str(data.get("provider", "elevenlabs")).strip().lower()
 
-    rate_limited = enforce_rate_limit("tts", TTS_RATE_LIMIT_COUNT, TTS_RATE_LIMIT_WINDOW)
+    rate_limited = enforce_rate_limit(
+        "tts", TTS_RATE_LIMIT_COUNT, TTS_RATE_LIMIT_WINDOW
+    )
     if rate_limited:
         return rate_limited
 
@@ -2897,7 +3128,12 @@ def text_to_speech():
         api_key = os.environ.get("CAMB_API_KEY")
         if not api_key:
             logger.error("CAMB AI API key not configured")
-            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 503
+            return (
+                jsonify(
+                    {"success": False, "message": "Voice synthesis is unavailable"}
+                ),
+                503,
+            )
 
         url = "https://client.camb.ai/apis/tts-stream"
         headers = {
@@ -2913,12 +3149,16 @@ def text_to_speech():
         }
 
         try:
-            response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
+            response = requests.post(
+                url, json=payload, headers=headers, stream=True, timeout=20
+            )
             response_headers = getattr(response, "headers", {}) or {}
             response_content_type = response_headers.get("Content-Type", "audio/wav")
             audio_content_type = response_content_type.split(";", 1)[0].strip().lower()
             if response.status_code == 200 and audio_content_type.startswith("audio/"):
-                return Response(response.iter_content(chunk_size=1024), mimetype=audio_content_type)
+                return Response(
+                    response.iter_content(chunk_size=1024), mimetype=audio_content_type
+                )
 
             body_preview = response.text[:500]
             logger.error(
@@ -2929,41 +3169,55 @@ def text_to_speech():
                 CAMB_TTS_LANGUAGE,
                 body_preview,
             )
-            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 502
+            return (
+                jsonify(
+                    {"success": False, "message": "Voice synthesis is unavailable"}
+                ),
+                502,
+            )
         except Exception as e:
             logger.error("CAMB AI exception: %s", str(e))
-            return jsonify({"success": False, "message": "Voice synthesis is unavailable"}), 502
+            return (
+                jsonify(
+                    {"success": False, "message": "Voice synthesis is unavailable"}
+                ),
+                502,
+            )
 
     if provider != "elevenlabs":
         return jsonify({"success": False, "message": "Invalid TTS provider"}), 400
 
-    voice_id = data.get("voice_id", "pNInz6obpgDQGcFmaJgB") # Default to Adam
+    voice_id = data.get("voice_id", "pNInz6obpgDQGcFmaJgB")  # Default to Adam
     if not re.fullmatch(r"[A-Za-z0-9_-]{5,80}", voice_id):
         return jsonify({"success": False, "message": "Invalid voice id"}), 400
 
     api_key = os.environ.get("ELEVENLABS_API_KEY")
     if not api_key:
-        return jsonify({"success": False, "message": "ElevenLabs API key not configured"}), 500
+        return (
+            jsonify({"success": False, "message": "ElevenLabs API key not configured"}),
+            500,
+        )
 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",
-        "xi-api-key": api_key
+        "xi-api-key": api_key,
     }
     payload = {
         "text": text,
         "model_id": ELEVENLABS_TTS_MODEL,
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.75
-        }
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
     }
-    
+
     try:
-        response = requests.post(url, json=payload, headers=headers, stream=True, timeout=20)
+        response = requests.post(
+            url, json=payload, headers=headers, stream=True, timeout=20
+        )
         if response.status_code == 200:
-            return Response(response.iter_content(chunk_size=1024), mimetype="audio/mpeg")
+            return Response(
+                response.iter_content(chunk_size=1024), mimetype="audio/mpeg"
+            )
         else:
             logger.error(f"ElevenLabs error: {response.text}")
             return jsonify({"success": False, "message": "ElevenLabs API error"}), 500
@@ -3105,8 +3359,12 @@ def adaptive_practice():
         return rate_limited
 
     data = request.get_json(silent=True) or {}
-    requested_topics = data.get("topics") if isinstance(data.get("topics"), list) else []
-    requested_topics = [str(topic).strip().lower() for topic in requested_topics if str(topic).strip()]
+    requested_topics = (
+        data.get("topics") if isinstance(data.get("topics"), list) else []
+    )
+    requested_topics = [
+        str(topic).strip().lower() for topic in requested_topics if str(topic).strip()
+    ]
     count = env_int("ADAPTIVE_PRACTICE_COUNT", 5, min_value=1, max_value=10)
     areas = requested_topics[:3] or weak_areas_for_user(current_user.id, limit=3)
     fallback = fallback_practice_questions(areas, count=count)
@@ -3189,9 +3447,15 @@ def check_answer():
     working = (data.get("working") or "").strip()
     rubric = (data.get("rubric") or "").strip()
     if not question or not working:
-        return jsonify({"success": False, "message": "Question and working are required"}), 400
+        return (
+            jsonify({"success": False, "message": "Question and working are required"}),
+            400,
+        )
     if len(question) + len(working) + len(rubric) > EXAM_MAX_INPUT_CHARS:
-        return jsonify({"success": False, "message": "Submitted answer is too long"}), 413
+        return (
+            jsonify({"success": False, "message": "Submitted answer is too long"}),
+            413,
+        )
 
     fallback = {
         "score": None,
@@ -3229,9 +3493,19 @@ Be specific and constructive. Do not invent marks if no rubric is provided; use 
             "assessment": {
                 "score": result.get("score"),
                 "max_score": result.get("max_score"),
-                "strengths": result.get("strengths") if isinstance(result.get("strengths"), list) else [],
-                "corrections": result.get("corrections") if isinstance(result.get("corrections"), list) else fallback["corrections"],
-                "next_step": str(result.get("next_step") or fallback["next_step"])[:500],
+                "strengths": (
+                    result.get("strengths")
+                    if isinstance(result.get("strengths"), list)
+                    else []
+                ),
+                "corrections": (
+                    result.get("corrections")
+                    if isinstance(result.get("corrections"), list)
+                    else fallback["corrections"]
+                ),
+                "next_step": str(result.get("next_step") or fallback["next_step"])[
+                    :500
+                ],
             },
         }
     )
@@ -3286,7 +3560,9 @@ def push_notes():
 
     db.session.commit()
     merged_notes = [note.to_dict() for note in current_user.notes]
-    merged_notes.sort(key=lambda x: x.get("updated_at") or x.get("created_at") or "", reverse=True)
+    merged_notes.sort(
+        key=lambda x: x.get("updated_at") or x.get("created_at") or "", reverse=True
+    )
 
     return jsonify({"success": True, "notes": merged_notes, "count": len(merged_notes)})
 
@@ -3304,7 +3580,9 @@ def export_notes():
 
     text_corpus = "\n".join(corpus)
 
-    return jsonify({"success": True, "corpus": text_corpus, "notes_count": len(current_user.notes)})
+    return jsonify(
+        {"success": True, "corpus": text_corpus, "notes_count": len(current_user.notes)}
+    )
 
 
 @app.route("/api/user/preferences", methods=["GET"])
@@ -3337,7 +3615,11 @@ def get_profile():
                 "name": current_user.name,
                 "email": current_user.email,
                 "avatar": current_user.avatar,
-                "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+                "created_at": (
+                    current_user.created_at.isoformat()
+                    if current_user.created_at
+                    else None
+                ),
                 "notes_count": len(current_user.notes),
             },
         }
@@ -3348,16 +3630,22 @@ def get_profile():
 def handle_404(error):
     if request.path.startswith("/api") or request.is_json:
         return jsonify({"success": False, "error": "Not found"}), 404
-    return render_template("index.html", user=current_user if current_user.is_authenticated else None), 404
+    return (
+        render_template(
+            "index.html", user=current_user if current_user.is_authenticated else None
+        ),
+        404,
+    )
 
 
 @app.errorhandler(Exception)
 def handle_exception(error):
     # Don't log 404s as unhandled server errors
     from werkzeug.exceptions import HTTPException
+
     if isinstance(error, HTTPException) and error.code == 404:
         return handle_404(error)
-        
+
     logger.error("Unhandled server error: %s", error)
     if request.path.startswith("/api") or request.is_json:
         return jsonify({"success": False, "error": "Server error"}), 500
@@ -3366,4 +3654,3 @@ def handle_exception(error):
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
-    
