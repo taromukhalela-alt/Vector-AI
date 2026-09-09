@@ -88,7 +88,7 @@ const Auth = ({ onNavigate }) => {
             <p className="text-[13px] text-zinc-400 mt-1.5 leading-relaxed">
               {isRegister
                 ? 'Start mastering CAPS-aligned physics & chemistry today.'
-                : 'Sign in to continue your study sessions.'}
+                : 'Sign in to continue your study sessions. Server is currently down.'}
             </p>
           </div>
 

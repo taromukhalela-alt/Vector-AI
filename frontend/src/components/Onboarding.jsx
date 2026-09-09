@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  X, ChevronRight, Sparkles, Zap, Brain, 
+import {
+  X, ChevronRight, Sparkles, Zap, Brain,
   FlaskConical, MessageSquare, LayoutDashboard,
   Target, Info, ArrowLeft
 } from 'lucide-react';
@@ -16,38 +16,38 @@ const Onboarding = ({ onComplete }) => {
   const tourSteps = useMemo(() => [
     {
       title: "Welcome to Vector AI",
-      content: "I'm Taro Mukhalela, and I built this to help you master Physical Science. Ready for a quick tour of your new STEM Operating System?",
+      content: "Hiee! I'm Taro Mukhalela, and I built this to help you master Physical Science. Ready for a quick tour of your new Physical Science Assistant?",
       icon: Sparkles,
       page: "/dashboard",
       target: null // Center of screen
     },
     {
       title: "Your Command Center",
-      content: "The Dashboard shows your real-time performance telemetry. It tracks your model accuracy and CAPS syllabus progress as you study.",
+      content: "The Dashboard shows your real-time performance telemetry. It tracks your the ML model accuracy for your questions and CAPS syllabus progress as you study.",
       icon: LayoutDashboard,
       page: "/dashboard",
       target: "main" // Highlight main content
     },
     {
       title: "The AI Tutor",
-      content: "This is where the magic happens. You can ask anything, search the web, or even run Python code to solve physics problems.",
+      content: "This is where the magic happens. You can ask anything to solve physics problems or pursue knowledge.",
       icon: MessageSquare,
       page: "/chat",
-      target: "textarea" 
+      target: "textarea"
     },
     {
       title: "Interactive Simulations",
       content: "The Visual Lab lets you see concepts in motion. Projectiles, waves, and more — simulated in real-time.",
       icon: FlaskConical,
       page: "/lab",
-      target: ".lab-canvas-container" // Assuming this class exists or I'll add it
+      target: ".lab-canvas-container"
     },
     {
       title: "Study Notes Vault",
       content: "Save your AI conversations and generate full CAPS study guides here. You can even export them as professional PDFs.",
       icon: Target,
       page: "/notes",
-      target: "button[title='New note']"
+      target: ".p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-colors"
     },
     {
       title: "Ready to Master STEM?",
@@ -66,7 +66,7 @@ const Onboarding = ({ onComplete }) => {
   // Update spotlight when step or location changes
   useEffect(() => {
     const step = tourSteps[currentStep];
-    
+
     // Navigate if needed
     if (step.page && location.pathname !== step.page) {
       navigate(step.page);
@@ -88,7 +88,7 @@ const Onboarding = ({ onComplete }) => {
       } catch (err) {
         console.warn("Onboarding: querySelector failed for", step.target, err);
       }
-      
+
       // Fallback searches
       if (!el) {
         if (step.target === "textarea") el = document.querySelector('textarea');
@@ -106,7 +106,7 @@ const Onboarding = ({ onComplete }) => {
           width: rect.width + 16,
           height: rect.height + 16
         });
-        
+
         // Scroll into view if needed
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
@@ -145,7 +145,7 @@ const Onboarding = ({ onComplete }) => {
       {/* Dim Overlay with Spotlight Hole */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]">
         {spotlightRect && (
-          <div 
+          <div
             className="absolute bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] transition-all duration-500 ease-spring rounded-xl border-2 border-emerald-500/50"
             style={{
               top: spotlightRect.top,
@@ -160,15 +160,14 @@ const Onboarding = ({ onComplete }) => {
       </div>
 
       {/* Content Card */}
-      <div 
-        className={`absolute transition-all duration-500 ease-spring flex flex-col items-center justify-center p-6 text-center ${
-          spotlightRect 
-            ? 'bottom-10 left-1/2 -translate-x-1/2 w-full max-w-md' 
+      <div
+        className={`absolute transition-all duration-500 ease-spring flex flex-col items-center justify-center p-6 text-center ${spotlightRect
+            ? 'bottom-10 left-1/2 -translate-x-1/2 w-full max-w-md'
             : 'inset-0 m-auto w-full max-w-lg h-fit'
-        }`}
+          }`}
       >
         <div className="relative w-full overflow-hidden rounded-[32px] border border-white/[0.1] bg-zinc-900/90 backdrop-blur-xl shadow-2xl p-8 sm:p-10">
-          <button 
+          <button
             onClick={handleComplete}
             className="absolute top-6 right-6 p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
           >
@@ -192,9 +191,8 @@ const Onboarding = ({ onComplete }) => {
             <button
               onClick={handlePrev}
               disabled={currentStep === 0}
-              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors ${
-                currentStep === 0 ? 'text-zinc-700 pointer-events-none' : 'text-zinc-400 hover:text-zinc-100'
-              }`}
+              className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors ${currentStep === 0 ? 'text-zinc-700 pointer-events-none' : 'text-zinc-400 hover:text-zinc-100'
+                }`}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back
