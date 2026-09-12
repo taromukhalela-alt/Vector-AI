@@ -87,8 +87,8 @@ const Auth = ({ onNavigate }) => {
             </h1>
             <p className="text-[13px] text-zinc-400 mt-1.5 leading-relaxed">
               {isRegister
-                ? 'Start mastering CAPS-aligned physics & chemistry today.'
-                : 'Sign in to continue your study sessions.'}
+                ? 'Server is currently down. Difficulties may occur.'
+                : 'Server is currently down. Difficulties may occur'}
             </p>
           </div>
 
@@ -101,7 +101,7 @@ const Auth = ({ onNavigate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {isRegister && (
-              <Field icon={User} label="Full name" type="text" placeholder="Taro Mukhalela" value={name} onChange={setName} />
+              <Field icon={User} label="Full name" type="text" placeholder="Your name here..." value={name} onChange={setName} />
             )}
             <Field icon={Mail} label="Email" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
             <Field icon={Lock} label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} />
