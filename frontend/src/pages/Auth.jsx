@@ -101,7 +101,7 @@ const Auth = ({ onNavigate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {isRegister && (
-              <Field icon={User} label="Full name" type="text" placeholder="Taro Mukhalela" value={name} onChange={setName} />
+              <Field icon={User} label="Full name" type="text" placeholder="Your name here..." value={name} onChange={setName} />
             )}
             <Field icon={Mail} label="Email" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
             <Field icon={Lock} label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} />
