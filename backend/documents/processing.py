@@ -45,6 +45,9 @@ def content_to_ir(title, content, theme="default", metadata=None):
             equation = first[opener:]
             if equation.endswith(closer):
                 equation = equation[:-2]
+                # Advances past the fully-closed single-line equation. Without
+                # this the while-loop re-processes the same line forever.
+                index += 1
             else:
                 index += 1
                 body = []
