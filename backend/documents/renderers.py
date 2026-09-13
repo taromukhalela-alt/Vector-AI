@@ -9,7 +9,7 @@ import re
 import textwrap
 from xml.sax.saxutils import escape
 
-from .processing import plain_text
+from .processing import clean_math_spans, equation_text, plain_text
 from .themes import THEMES
 
 
@@ -59,7 +59,7 @@ class BuiltinPdfRenderer(PdfRenderer):
                 for line in value.splitlines() or [""]:
                     lines.append((line, 9, (0.12, 0.12, 0.12), "F3"))
             elif kind == "equation":
-                lines.append(("Equation: " + plain_text(value), 11, (0.05, 0.20, 0.40), "F1"))
+                lines.append(("Equation: " + equation_text(value), 11, (0.05, 0.20, 0.40), "F1"))
             elif kind == "diagram":
                 diagram_label = block.get("src") or block.get("source") or block.get("alt", "")
                 lines.append(("Diagram: " + plain_text(diagram_label), 10,
@@ -159,7 +159,10 @@ class ReportLabRenderer(PdfRenderer):
             return escape(plain_text(str(value)))
 
         def markdown_paragraph(value):
-            rendered = escape(str(value))
+            # Remove math delimiters first so $...$ / \\(...\\) never appear
+            # verbatim, while the math source itself stays untouched.
+            rendered = clean_math_spans(str(value))
+            rendered = escape(rendered)
             rendered = rendered.replace("&lt;br&gt;", "<br/>")
             rendered = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", rendered)
             rendered = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", r"<i>\1</i>", rendered)
@@ -178,7 +181,8 @@ class ReportLabRenderer(PdfRenderer):
                     styles.get("Code", styles["Normal"]),
                 ))
             elif kind == "equation":
-                story.append(Paragraph("Equation: " + safe(block["text"]), styles["Normal"]))
+                story.append(Paragraph("Equation: " + escape(equation_text(block["text"])),
+                                       styles["Normal"]))
             elif kind == "diagram":
                 story.append(Paragraph("[Diagram: %s]" %
                                        safe(block.get("src") or block.get("source") or block.get("alt", "")),

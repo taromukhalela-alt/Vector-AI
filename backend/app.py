@@ -176,6 +176,34 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL", f"sqlite:///{os.path.join(BACKEND_ROOT, 'instance', 'vector_ai.db')}"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# --- PostgreSQL connection resilience -----------------------------------------
+# Managed Postgres providers (e.g. Railway, Render) silently close idle TCP/TLS
+# connections. SQLAlchemy's default pool then hands those half-dead sockets to
+# requests, producing errors like:
+#   psycopg2.OperationalError: SSL error: decryption failed or bad record mac
+# pool_pre_ping runs a cheap liveness probe ("SELECT 1") before reusing a pooled
+# connection, and pool_recycle closes connections older than the timeout so a
+# fresh TLS handshake happens before the server/proxy drops them.
+database_uri = os.getenv("DATABASE_URL", "")
+if database_uri.startswith("postgres"):
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        # Validate the socket is alive before reusing a pooled connection.
+        "pool_pre_ping": True,
+        # Reconnect at least every 5 minutes (tune with DB_POOL_RECYCLE env var).
+        "pool_recycle": env_int("DB_POOL_RECYCLE", 300, min_value=30, max_value=3600),
+        # Wait up to 30s for an available pool connection, then fail fast.
+        "pool_timeout": env_int("DB_POOL_TIMEOUT", 30, min_value=5),
+        # Keep the pool small; Railway accounts for one Postgres connection each.
+        "pool_size": env_int("DB_POOL_SIZE", 5, min_value=1, max_value=20),
+        "max_overflow": env_int("DB_MAX_OVERFLOW", 10, min_value=0, max_value=50),
+    }
+    logger.info(
+        "Postgres detected: enabling pre-ping pool (recycle=%ds, pool_size=%d)",
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"]["pool_recycle"],
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"]["pool_size"],
+    )
+
 db.init_app(app)
 
 with app.app_context():
@@ -1211,7 +1239,7 @@ def _groq_generate_with_timeout(prompt, api_key, timeout_seconds):
         try:
             # Use a cached client to avoid per-request construction latency
             model = os.getenv("qwen/qwen3.8-27b")
-            max_tokens = env_int(2048, min_value=64, max_value=2048)
+            max_tokens = env_int("GROQ_MAX_TOKENS", min_value=64, max_value=2048)
 
             client = get_groq_client(api_key)
             if not client:
