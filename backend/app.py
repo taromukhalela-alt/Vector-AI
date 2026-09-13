@@ -2,7 +2,6 @@ from flask import (
     Flask,
     request,
     jsonify,
-    render_template,
     session,
     redirect,
     url_for,
@@ -3480,6 +3479,20 @@ def delete_document(document_id):
     db.session.commit()
     return jsonify({"success": True})
 
+def _serve_spa_page(status):
+    """Serve the SPA entry page with the given HTTP status.
+
+    This project ships no Jinja2 templates: the SPA is a static file in
+    frontend/dist and is served via send_from_directory. Fall back to a plain
+    message when the frontend build is not present in this environment so a
+    single missing asset never escalates a recoverable error into a 500.
+    """
+    index_path = os.path.join(FRONTEND_BUILD_DIR, "index.html")
+    if not os.path.isfile(index_path):
+        return ("Page not found" if status == 404 else "Forbidden"), status
+    return send_from_directory(FRONTEND_BUILD_DIR, "index.html"), status
+
+
 @app.errorhandler(403)
 def handle_403(error):
     if request.path.startswith(('/api', '/documents')) or request.is_json:
@@ -3487,20 +3500,13 @@ def handle_403(error):
             "success": False,
             "error": "Unauthorized"
         }), 403
-    return render_template(
-        "index.html", user=current_user if current_user.is_authenticated else None
-    ), 403
+    return _serve_spa_page(403)
 
 @app.errorhandler(404)
 def handle_404(error):
     if request.path.startswith(("/api", "/documents")) or request.is_json:
         return jsonify({"success": False, "error": "Not found"}), 404
-    return (
-        render_template(
-            "index.html", user=current_user if current_user.is_authenticated else None
-        ),
-        404,
-    )
+    return _serve_spa_page(404)
 
 
 @app.errorhandler(Exception)

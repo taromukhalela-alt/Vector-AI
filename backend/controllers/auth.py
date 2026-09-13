@@ -5,7 +5,6 @@ from urllib.parse import quote_plus
 from flask import (
     Blueprint,
     current_app,
-    render_template,
     request,
     jsonify,
     session,
@@ -75,11 +74,11 @@ def login():
         user = User.query.filter_by(email=email, provider="local").first()
 
         if not user or not check_password_hash(user.password_hash, password):
-            if request.is_json:
-                return jsonify(
-                    {"success": False, "message": "Invalid email or password"}
-                ), 401
-            return render_template("login.html", error="Invalid email or password")
+            # No Jinja2 templates are shipped; keep the response JSON so the
+            # single-page app can surface the error regardless of content type.
+            return jsonify(
+                {"success": False, "message": "Invalid email or password"}
+            ), 401
 
         login_user(user, remember=False)
         session["user"] = user.id
