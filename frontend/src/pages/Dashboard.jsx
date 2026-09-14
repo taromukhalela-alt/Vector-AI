@@ -161,7 +161,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-full bg-zinc-950">
+    <div className="workspace-page min-h-full">
       <div className="mx-auto max-w-7xl space-y-8 px-5 py-7 sm:px-8 sm:py-10">
         <header className="flex flex-col justify-between gap-5 border-b border-white/[0.06] pb-7 lg:flex-row lg:items-end">
           <div>
