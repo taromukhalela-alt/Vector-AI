@@ -61,21 +61,12 @@ const Layout = ({ children }) => {
   const isMoreActive = tabs.slice(4).some(t => t.path === location.pathname);
 
   return (
-    <div className="relative flex h-dvh overflow-hidden bg-zinc-950 text-zinc-100 light:bg-[#fafaf9] light:text-zinc-900">
-      {/* Ambient backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-        style={{
-          background:
-            'radial-gradient(800px 400px at 12% -10%, rgba(16,185,129,0.08), transparent 60%),' +
-            'radial-gradient(1100px 600px at 50% 110%, rgba(6,95,70,0.06), transparent 60%)',
-        }}
-      />
+    <div className="flex h-dvh overflow-hidden bg-[var(--clr-bg)] text-[var(--clr-text-1)]">
+      <div className="sr-only" aria-live="polite">Vector learning workspace</div>
 
       {/* ── Desktop Sidebar ── */}
       <aside
-        className={`hidden md:flex flex-col border-r border-white/[0.06] bg-zinc-950/50 backdrop-blur-xl transition-all duration-300 ease-in-out light:border-zinc-200 light:bg-white/50 ${
+        className={`hidden md:flex flex-col border-r border-[var(--clr-border)] bg-[var(--clr-surface)] transition-all duration-200 ease-out ${
           collapsed ? 'w-[var(--sidebar-w-collapsed)]' : 'w-[var(--sidebar-w)]'
         }`}
       >
@@ -83,7 +74,8 @@ const Layout = ({ children }) => {
         <div className="flex h-16 items-center px-4">
           <button
             onClick={() => goToPath('/dashboard')}
-            className="flex items-center gap-3 overflow-hidden"
+            className="flex items-center gap-3 overflow-hidden rounded-lg text-left"
+            aria-label="Go to Vector dashboard"
           >
             <BrandMark className="h-8 w-8 shrink-0" />
             {!collapsed && (
