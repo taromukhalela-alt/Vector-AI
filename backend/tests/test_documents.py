@@ -2,6 +2,9 @@ from backend.documents.processing import content_to_ir, equation_text, plain_tex
 from backend.documents.renderers import BuiltinPdfRenderer, ReportLabRenderer, validate_pdf
 from backend.documents.service import DocumentService
 from backend.documents.themes import THEMES
+from backend.pdf import StyledPdfRenderer, build_css, callout, cover_page, section_header
+from backend.pdf import table_html, formula_box, question_block, answer_block
+from backend.pdf.renderer import validate_pdf as styled_validate_pdf
 
 
 def test_content_is_converted_to_structured_ir():
@@ -84,6 +87,110 @@ def test_builtin_renderer_preserves_math_and_validation():
     assert b"E_k" in pdf
     assert br"\\frac" in pdf
     assert b"$E_k" not in pdf
+
+
+def test_reportlab_renderer_produces_valid_pdf_with_math():
+    document = content_to_ir(
+        "Worked example",
+        r"# Velocity" "\n"
+        r"Initial speed $v_0 = 5 ~m/s$ and final $v = 2v_0$." "\n"
+        r"$$ E_k = \frac{1}{2}mv^2 $$",
+    )
+    pdf = ReportLabRenderer().render(document)
+    assert validate_pdf(pdf)
+    assert b"%PDF-" in pdf
+    assert b"%%EOF" in pdf
+
+
+# --- Styled PDF renderer (backend.pdf) ---------------------------------------
+
+def test_styled_renderer_build_css_has_expected_sections():
+    css = build_css("default")
+    assert "@page" in css
+    assert "@page cover" in css
+    assert "counter(page)" in css
+    assert "A4" in css
+    assert "DejaVu Serif" in css or "serif" in css
+
+
+def test_styled_renderer_components_render_valid_html():
+    doc = content_to_ir("T", "# H")
+    cover = cover_page(doc)
+    assert 'class="cover"' in cover
+    assert "Vector AI" in cover
+
+    header = section_header("01", "MECHANICS")
+    assert 'section-number' in header
+    assert "MECHANICS" in header
+
+    call = callout("definition", "Definition", "<p>x</p>")
+    assert 'callout definition' in call
+    assert "Definition" in call
+
+
+def test_styled_renderer_table_component():
+    html = table_html(
+        ["Quantity", "Symbol", "SI Unit"],
+        [["Force", "F", "N"], ["Mass", "m", "kg"]],
+        caption="Table caption",
+    )
+    assert "<thead>" in html
+    assert "<tbody>" in html
+    assert "Quantity" in html
+    assert "Table caption" in html
+
+
+def test_styled_renderer_formula_question_answer_components():
+    eq = formula_box("KINETIC ENERGY", "<img class='math-img'/>")
+    assert "formula" in eq
+    assert "KINETIC ENERGY" in eq
+
+    q = question_block("<p>Find F.</p>", number=3)
+    assert "question" in q
+    assert "Question 3" in q
+
+    a = answer_block("<p>F = 10 N</p>")
+    assert "answer" in a
+    assert "Answer" in a
+
+
+def test_styled_renderer_rejects_missing_weasyprint():
+    try:
+        StyledPdfRenderer()
+    except RuntimeError as exc:
+        assert "weasyprint" in str(exc).lower()
+    else:
+        raise AssertionError("expected StyledPdfRenderer to require weasyprint here")
+
+
+def test_styled_renderer_html_pipes_math_into_svg_images():
+    doc = content_to_ir(
+        "Math test",
+        "Inline $F = ma$ and display $$E_k = \frac{1}{2}mv^2$$",
+    )
+    html = StyledPdfRenderer.render_html(doc)
+    assert "data:image/svg+xml" in html
+    assert "math-img" in html
+    assert "equation-display" in html
+
+
+def test_styled_renderer_html_escapes_malformed_math():
+    doc = content_to_ir(
+        "Bad math",
+        "Here is $\notacommand{foo}$ and normal text.",
+    )
+    html = StyledPdfRenderer.render_html(doc)
+    assert "math-fallback" in html
+    assert "foo" in html
+    assert "notacommand" in html
+
+
+def test_styled_renderer_html_carries_canonical_pipeline_docstring():
+    import backend.pdf
+    doc = backend.pdf.__doc__
+    assert "Canonical pipeline" in doc
+    assert "WeasyPrint" in doc
+    assert "SVG" in doc
 
 
 def test_reportlab_renderer_produces_valid_pdf_with_math():
