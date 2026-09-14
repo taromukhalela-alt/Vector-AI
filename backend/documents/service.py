@@ -1,8 +1,18 @@
 import hashlib
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from .processing import content_to_ir
 from .renderers import ReportLabRenderer, validate_pdf
+
+logger = logging.getLogger(__name__)
+
+try:
+    from backend.pdf.renderer import StyledPdfRenderer
+    _DEFAULT_RENDERER = StyledPdfRenderer()
+except Exception:
+    _DEFAULT_RENDERER = None
+
 
 
 class ContentHasher:
@@ -18,7 +28,7 @@ class DocumentService:
     def __init__(self, app, storage, renderer=None, db=None, model=None, hasher=None):
         self.app = app
         self.storage = storage
-        self.renderer = renderer or ReportLabRenderer()
+        self.renderer = renderer or _DEFAULT_RENDERER or ReportLabRenderer()
         self.db = db
         self.model = model
         self.hasher = hasher or ContentHasher()

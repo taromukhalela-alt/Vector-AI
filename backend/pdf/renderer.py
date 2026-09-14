@@ -1,0 +1,589 @@
+"""Styled, print-first PDF renderer using WeasyPrint + server-side math SVG.
+
+Architecture
+------------
+
+    AI content  ->  content_to_ir()  (documents.processing)
+                  ->  render_html()   (this module)  IR -> styled HTML
+                  ->  WeasyPrint      HTML + CSS -> A4 PDF bytes
+
+Math is rendered to vector SVG by :mod:`backend.pdf.math` and embedded as
+data-URI images so the final PDF is font-independent and crisp at print
+resolution.  The whole pipeline is offline: no browser, no TeX binary and no
+external CDN request are required at render time.
+
+Design rules enforced here
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* One canonical styled path -- the old dependency-free BuiltinPdfRenderer in
+  :mod:`documents.renderers` remains untouched for the /api/documents/download
+  contract; this module is the styled path used by the PDF-endpoint override.
+* The HTML/CSS layer is the document layout layer; LaTeX is the math layer.
+* A bad equation degrades to a styled fallback and never aborts the document.
+* Temporary files are cleaned up even when rendering raises.
+"""
+
+from __future__ import annotations
+
+import html as _html
+import logging
+import os
+import re
+from typing import List, Optional
+
+from ..documents.processing import DocumentIR, content_to_ir
+
+logger = logging.getLogger(__name__)
+
+try:
+    from weasyprint import HTML as _WeasyHTML
+    from weasyprint import CSS as _WeasyCSS
+except (ImportError, OSError):
+    _WeasyHTML = None
+    _WeasyCSS = None
+
+# ---------------------------------------------------------------------------
+# Helpers --------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+def _esc(value: Optional[str]) -> str:
+    """Escape text for safe HTML insertion."""
+    return _html.escape(str(value or ""), quote=False)
+
+
+def _meta(document: DocumentIR, key: str, default: str = "") -> str:
+    """Pull a metadata value off the document IR."""
+    value = document.metadata.get(key, default)
+    return str(value or default)
+
+
+# ---------------------------------------------------------------------------
+# Inline markdown emphasis ---------------------------------------------------
+# ---------------------------------------------------------------------------
+
+#: Bold, italic, inline code -- applied to non-math segments only.
+_BOLD = re.compile(r"\*\*(.+?)\*\*")
+_ITALIC = re.compile(r"(?<!\*)\*([^*]+?)\*(?!\*)")
+_INLINE_CODE = re.compile(r"`([^`]+?)`")
+
+
+def _apply_emphasis(text: str) -> str:
+    """Convert ``**bold**``, ``*italic*``, and backtick code to HTML tags.
+
+    Applied to already-escaped text segments (i.e. *after* ``_esc``).
+    """
+    text = _BOLD.sub(r"<strong>\1</strong>", text)
+    text = _ITALIC.sub(r"<em>\1</em>", text)
+    text = _INLINE_CODE.sub(r'<code>\1</code>', text)
+    return text
+
+
+# ---------------------------------------------------------------------------
+# CSS -----------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+from .styles import ACCENTS, _BASE
+
+
+def build_css(theme_name: str = "default") -> str:
+    """Return the full stylesheet string for *theme_name*."""
+    theme = ACCENTS.get(theme_name, ACCENTS["default"])
+    _VAR = (
+        ":root {\n"
+        f"  --accent: {theme['accent']};\n"
+        f"  --accent-strong: {theme['accent-strong']};\n"
+        f"  --accent-soft: {theme['accent-soft']};\n"
+        f"  --accent-line: {theme['accent-line']};\n"
+        f"  --heading: {theme['heading']};\n"
+        "}\n"
+    )
+    return _VAR + "\n" + _BASE
+
+
+# ---------------------------------------------------------------------------
+# Components -----------------------------------------------------------------
+# ---------------------------------------------------------------------------
+def cover_page(document: DocumentIR) -> str:
+    """Full-bleed cover page for the document."""
+    title = _esc(document.title)
+    subject = _esc(_meta(document, "subject", ""))
+    topic = _esc(_meta(document, "topic", ""))
+    grade = _esc(_meta(document, "grade", ""))
+    learner = _esc(_meta(document, "learner", ""))
+    doc_type = _esc(_meta(document, "document_type", ""))
+    subtitle = _esc(_meta(document, "subtitle", ""))
+    generated = _meta(document, "generated", "")
+    if generated:
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(generated)
+            date_str = dt.strftime("%d %B %Y")
+        except Exception:
+            date_str = generated
+    else:
+        from datetime import datetime
+        date_str = datetime.now().strftime("%d %B %Y")
+
+    lines: List[str] = []
+    lines.append('<section class="cover">')
+    lines.append('<div class="cover-rule"></div>')
+    if subject:
+        lines.append(f'<div class="cover-brand">{subject}</div>')
+    lines.append('<div class="cover-title-block">')
+    if doc_type:
+        lines.append(f'<div class="cover-subject">{doc_type}</div>')
+    lines.append(f'<h1 class="cover-title">{title}</h1>')
+    if subtitle:
+        lines.append(f'<p class="cover-subtitle">{subtitle}</p>')
+    if topic or grade:
+        meta_chunks: List[str] = []
+        if topic:
+            meta_chunks.append(topic)
+        if grade:
+            meta_chunks.append(f"Grade {grade}")
+        lines.append(
+            f'<p class="cover-subtitle">{"  \u00b7  ".join(meta_chunks)}</p>'
+        )
+    lines.append('</div>')
+    lines.append('<div class="cover-meta">')
+    lines.append('<div class="cover-meta-item">')
+    if learner:
+        lines.append(
+            f'<span class="cover-meta-label">Learner</span>{learner}'
+        )
+    lines.append(
+        f'<span class="cover-meta-label">Generated</span>{date_str}'
+    )
+    lines.append('</div>')
+    lines.append('<div class="cover-meta-item">')
+    lines.append('<span class="cover-meta-label">Vector AI</span>Powered by AI')
+    lines.append('</div>')
+    lines.append('</div>')
+    lines.append('</section>')
+    return "\n".join(lines)
+
+
+def section_header(number: str, name: str) -> str:
+    """Styled ``01 / MECHANICS``-style section header."""
+    return (
+        '<div class="section-header">'
+        f'<div class="section-number">{_esc(number)}</div>'
+        f'<div class="section-name">{_esc(name)}</div>'
+        '</div>'
+    )
+
+
+def callout(kind: str, title: str, body_html: str) -> str:
+    """A single styled callout panel (definition / formula / example / note / question / answer)."""
+    cls = {
+        "definition": "definition",
+        "formula": "formula",
+        "example": "example",
+        "worked-example": "example",
+        "worked_example": "example",
+        "note": "note",
+        "tip": "tip",
+        "warning": "warning",
+        "question": "question",
+        "answer": "answer",
+    }.get(kind, "")
+    title_html = f'<div class="callout-title">{_esc(title)}</div>' if title else ""
+    return (
+        f'<div class="callout {cls}">'
+        f'{title_html}'
+        f'<div class="callout-body">{body_html}</div>'
+        '</div>'
+    )
+
+
+def formula_box(title: str, equation_html: str) -> str:
+    """A dedicated formula box: label + centered rendered equation."""
+    return (
+        '<div class="callout formula">'
+        f'<div class="callout-title">{_esc(title)}</div>'
+        f'<div class="formula-equation">{equation_html}</div>'
+        '</div>'
+    )
+
+
+def question_block(text_html: str, number: Optional[int] = None) -> str:
+    """A styled question block for worksheets / mock exams."""
+    prefix = (
+        f"<div class='callout-title'>Question {number}</div>"
+        if number else "<div class='callout-title'>Question</div>"
+    )
+    return (
+        f'<div class="question">{prefix}'
+        f'<div class="callout-body">{text_html}</div></div>'
+    )
+
+
+def answer_block(text_html: str) -> str:
+    """A styled answer block for memoranda."""
+    return (
+        '<div class="answer">'
+        '<div class="callout-title">Answer</div>'
+        f'<div class="callout-body">{text_html}</div>'
+        '</div>'
+    )
+
+
+def table_html(headers: List[str], rows: List[List[str]], caption: str = "") -> str:
+    """Print-safe table with repeating header row.
+
+    Cell content is rendered through the math pipeline so inline
+    expressions like ``$F = ma$`` are turned into SVG images.
+    """
+    parts: List[str] = []
+    if caption:
+        parts.append(f'<div class="figure-caption">{_esc(caption)}</div>')
+    parts.append("<table>")
+    if headers:
+        parts.append("<thead><tr>")
+        for h in headers:
+            parts.append(f"<th>{_render_inline(h)}</th>")
+        parts.append("</tr></thead>")
+    parts.append("<tbody>")
+    for row in rows:
+        parts.append("<tr>")
+        for cell in row:
+            parts.append(f"<td>{_render_inline(cell)}</td>")
+        parts.append("</tr>")
+    parts.append("</tbody></table>")
+    return "\n".join(parts)
+
+
+def list_html(items: List[str], ordered: bool = False) -> str:
+    """Render a list block to HTML with math-aware items."""
+    tag = "ol" if ordered else "ul"
+    parts: List[str] = [f"<{tag}>"]
+    for item in items:
+        inner = _render_inline(item)
+        parts.append(f"<li>{inner}</li>")
+    parts.append(f"</{tag}>")
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# HTML body rendering --------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+def _render_inline(value: str) -> str:
+    """Render a single text value (possibly with inline math / emphasis) to HTML.
+
+    Unlike ``_render_block_value`` this does *not* wrap the result in ``<p>``;
+    it is used for table cells, list items, and other inline contexts.
+    """
+    from .math import render_math, split_math
+
+    if not value:
+        return ""
+    chunks: List[str] = []
+    for is_math, token in split_math(value):
+        if is_math:
+            display = token.startswith("$$") or token.startswith("\\[")
+            chunks.append(render_math(token, display=display))
+        else:
+            text = token.replace("\n", " ").strip()
+            if text:
+                text = _esc(text)
+                text = _apply_emphasis(text)
+                chunks.append(text)
+    return " ".join(chunks)
+
+
+def _render_block_value(value: str) -> str:
+    """Render a paragraph value (possibly with inline math) to HTML.
+
+    Inline math spans are detected and rendered through the math pipeline;
+    the remaining text is escaped, emphasis is applied, and wrapped in ``<p>``.
+    """
+    from .math import render_math, split_math
+
+    if not value:
+        return ""
+    chunks: List[str] = []
+    for is_math, token in split_math(value):
+        if is_math:
+            display = token.startswith("$$") or token.startswith("\\[")
+            chunks.append(render_math(token, display=display))
+        else:
+            text = token.replace("\n", " ").strip()
+            if text:
+                text = _esc(text)
+                text = _apply_emphasis(text)
+                chunks.append(text)
+    joined = " ".join(chunks)
+    if not joined:
+        return ""
+    return f"<p>{joined}</p>"
+
+
+def render_html(document: DocumentIR) -> str:
+    """Convert a ``DocumentIR`` into a complete styled HTML document string.
+
+    The returned HTML is ready to be handed to WeasyPrint (or any HTML->PDF
+    engine) together with the stylesheet from :func:`build_css`.
+    """
+    from .math import render_math, reset_equation_counter, split_math
+
+    reset_equation_counter()
+
+    # Running header/footer carriers (hidden, set named strings)
+    doc_type = _meta(document, "document_type", "")
+    subject = _meta(document, "subject", "")
+    grade = _meta(document, "grade", "")
+    footer_bits: List[str] = []
+    if subject:
+        footer_bits.append(_esc(subject))
+    if grade:
+        footer_bits.append(f"Grade {grade}")
+    if doc_type:
+        footer_bits.append(_esc(doc_type))
+    footer_text = "  \u00b7  ".join(footer_bits) if footer_bits else "Vector AI"
+
+    parts: List[str] = []
+    parts.append("<!DOCTYPE html>")
+    parts.append('<html lang="en"><head><meta charset="utf-8">')
+    parts.append('<title>%s</title>' % _html.escape(document.title, quote=True))
+    parts.append("</head><body>")
+
+    # ---- Cover page ---------------------------------------------------------
+    parts.append(cover_page(document))
+
+    # ---- Carrier for running header/footer ---------------------------------
+    parts.append(
+        '<div class="str-carrier">'
+        f'{_esc(document.title)}|{footer_text}'
+        '</div>'
+    )
+
+    # ---- Body blocks -------------------------------------------------------
+    section_counter = 0
+    for block in document.blocks:
+        kind = block.get("type", "paragraph")
+        value = str(block.get("text", "") or "")
+
+        if kind == "page-break":
+            parts.append("<div class='page-break'></div>")
+            continue
+
+        if kind == "section":
+            section_counter += 1
+            sec_num = block.get("number", f"{section_counter:02d}")
+            sec_name = block.get("name") or block.get("title") or ""
+            if not sec_name:
+                sec_name = value
+            parts.append(section_header(sec_num, sec_name))
+            continue
+
+        if kind == "heading":
+            level = min(int(block.get("level", 1)), 6)
+            tag = f"h{min(level, 3)}"
+            parts.append(f"<{tag}>{_esc(value)}</{tag}>")
+            continue
+
+        if kind == "equation":
+            equation_html = render_math(value, display=True)
+            parts.append(equation_html)
+            continue
+
+        if kind == "callout":
+            body_html = _render_block_value(value)
+            parts.append(callout(
+                block.get("kind", ""), block.get("title", "") or "", body_html
+            ))
+            continue
+
+        if kind == "table":
+            headers = block.get("headers", [])
+            rows = block.get("rows", [])
+            caption = block.get("caption", "")
+            parts.append(table_html(headers, rows, caption))
+            continue
+
+        if kind == "list":
+            items = block.get("items", [])
+            ordered = block.get("ordered", False)
+            parts.append(list_html(items, ordered))
+            continue
+
+        if kind == "rule":
+            parts.append('<hr class="rule">')
+            continue
+
+        if kind == "code":
+            parts.append(f"<pre>{_html.escape(str(value))}</pre>")
+            continue
+
+        if kind in ("diagram", "image"):
+            body_html = _render_block_value(value)
+            alt = str(block.get("alt", "diagram"))
+            parts.append(
+                '<div class="figure">'
+                f'{body_html}'
+                f'<div class="figure-caption">{_esc(alt)}</div>'
+                '</div>'
+            )
+            continue
+
+        # paragraph / sub-paragraph
+        body_html = _render_block_value(value)
+        parts.append(body_html)
+
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+# ---------------------------------------------------------------------------
+# Renderer class -------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+class StyledPdfRenderer:
+    """WeasyPrint-based renderer producing styled A4 PDFs.
+
+    Usage::
+
+        r = StyledPdfRenderer()
+        pdf_bytes = r.render(document_ir)
+        # or
+        pdf_bytes = r.render_content(title="...", content="...", **meta)
+    """
+
+    def __init__(self, theme: str = "default", quiet: bool = True):
+        if _WeasyHTML is None:
+            raise RuntimeError(
+                "weasyprint is required for the styled PDF renderer. "
+                "Install it with: pip install weasyprint"
+            )
+        self.theme = theme
+        self.quiet = quiet
+
+    def render(self, document: DocumentIR) -> bytes:
+        """Render a ``DocumentIR`` to styled A4 PDF bytes."""
+        html_text = render_html(document)
+        css_text = build_css(self.theme)
+        return _html_to_pdf(html_text, css_text)
+
+    @staticmethod
+    def render_html(document: DocumentIR) -> str:
+        """Module-level helper as a classmethod for testability.
+
+        Converts a ``DocumentIR`` into a complete styled HTML document string
+        without rendering to PDF.  This mirrors the :func:`render_html`
+        function so callers can use either :class:`StyledPdfRenderer` or the
+        module-level function interchangeably.
+        """
+        return render_html(document)
+
+    def render_content(
+        self,
+        title: str,
+        content: str,
+        document_type: str = "Study Notes",
+        subject: str = "",
+        topic: str = "",
+        grade: str = "",
+        learner: str = "",
+        subtitle: str = "",
+        theme: str = "default",
+        metadata: Optional[dict] = None,
+    ) -> bytes:
+        """Convenience: content string -> styled A4 PDF bytes.
+
+        This is the main entry point used by the PDF endpoint.  It runs the
+        IR pipeline internally so the caller does not need to build a
+        ``DocumentIR`` by hand.
+        """
+        meta = {
+            "document_type": document_type,
+            "subject": subject,
+            "topic": topic,
+            "grade": grade,
+            "learner": learner,
+            "subtitle": subtitle,
+            "generated": "",
+            **(metadata or {}),
+        }
+        ir = content_to_ir(title, content, theme)
+        ir.metadata.update(meta)
+        return self.render(ir)
+
+def get_default_renderer() -> StyledPdfRenderer:
+    """Return the shared styled renderer instance used by the PDF endpoint."""
+    return StyledPdfRenderer(theme="default")
+
+
+def render_html_stub(document: DocumentIR) -> str:
+    """Module-level alias for ``render_html``.
+
+    Kept for backwards compatibility with any code that imports
+    ``render_html`` from :mod:`backend.pdf`.
+    """
+    return render_html(document)
+
+# ---------------------------------------------------------------------------
+# PDF generation step --------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+def _html_to_pdf(html_text: str, css_text: str) -> bytes:
+    """Run WeasyPrint on the styled HTML and return PDF bytes.
+
+    Temporary files are used so WeasyPrint can resolve relative paths if
+    needed, and are cleaned up in a ``finally`` block.
+    """
+    import tempfile
+
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".html", prefix="vector_pdf_")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
+            fh.write(html_text)
+
+        css_tmp_fd, css_tmp_path = tempfile.mkstemp(suffix=".css", prefix="vector_pdf_")
+        try:
+            with os.fdopen(css_tmp_fd, "w", encoding="utf-8") as fh:
+                fh.write(css_text)
+
+            _doc = _WeasyHTML(filename=tmp_path)
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_tmp:
+                pdf_tmp_path = pdf_tmp.name
+            try:
+                _doc.write_pdf(
+                    pdf_tmp_path,
+                    stylesheets=[_WeasyCSS(filename=css_tmp_path)],
+                )
+                with open(pdf_tmp_path, "rb") as fh:
+                    return fh.read()
+            finally:
+                try:
+                    os.unlink(pdf_tmp_path)
+                except OSError:
+                    pass
+        finally:
+            try:
+                os.unlink(css_tmp_path)
+            except OSError:
+                pass
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+# ---------------------------------------------------------------------------
+# Validation -----------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+def validate_pdf(data: bytes) -> bool:
+    """Conservative check that *data* looks like a complete PDF.
+
+    This mirrors the conservative validation already used by the built-in
+    ReportLab/Builtin renderers so callers can swap implementations without
+    changing their error handling.
+    """
+    if not isinstance(data, bytes) or not data.startswith(b"%PDF-"):
+        raise ValueError("Renderer did not produce a PDF")
+    if b"%%EOF" not in data[-1024:] or b"startxref" not in data[-2048:]:
+        raise ValueError("PDF is incomplete")
+    if b"/Type /Catalog" not in data or b"/Type /Pages" not in data:
+        raise ValueError("PDF structure is invalid")
+    return True
