@@ -41,10 +41,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-100">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Loading Vector AI...</span>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--clr-bg)] text-[var(--clr-text-1)]">
+        <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-xl border border-[var(--clr-border)] bg-[var(--clr-surface)] p-8 text-center shadow-[var(--shadow-sm)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--clr-primary)] text-lg font-bold text-white">V</div>
+          <div><p className="text-sm font-semibold">Loading your workspace</p><p className="mt-1 text-xs text-[var(--clr-text-3)]">Preparing Vector AI</p></div>
+          <div className="h-1 w-24 overflow-hidden rounded-full bg-[var(--clr-surface-3)]"><div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--clr-primary)]" /></div>
         </div>
       </div>
     );
