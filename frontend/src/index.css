@@ -73,6 +73,16 @@ html.dark {
 [class*="bg-white/[0.0"], [class*="bg-white/\[0.0"] { background-color: transparent !important; }
 [class*="border-white"] { border-color: var(--clr-border) !important; }
 
+/* Older screen modules still carry dark-only Tailwind text utilities. Keep
+   light mode legible while those modules are progressively tokenised. */
+html:not(.dark) [class*="text-zinc-50"],
+html:not(.dark) [class*="text-zinc-100"],
+html:not(.dark) [class*="text-zinc-200"] { color: var(--clr-text-1) !important; }
+html:not(.dark) [class*="text-zinc-300"],
+html:not(.dark) [class*="text-zinc-400"] { color: var(--clr-text-2) !important; }
+html:not(.dark) [class*="text-zinc-500"],
+html:not(.dark) [class*="text-zinc-600"] { color: var(--clr-text-3) !important; }
+
 .page-enter { animation: page-enter 180ms ease-out both; }
 @keyframes page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
