@@ -3570,6 +3570,16 @@ def _document_payload(record):
     return payload
 
 
+def _stored_document_is_available(record):
+    """Check that a completed database record still has a readable PDF."""
+    if not record.storage_path:
+        return False
+    try:
+        return bool(DOCUMENT_STORAGE.open(record.storage_path))
+    except (OSError, ValueError):
+        return False
+
+
 @app.route("/documents", methods=["POST"])
 @app.route("/api/documents", methods=["POST"])
 @login_required
@@ -3589,6 +3599,12 @@ def create_document():
         user_id=current_user.id, content_hash=digest
     ).filter(Document.status.in_(["queued", "processing", "completed"])).first()
     if existing:
+        if existing.status == "completed" and not _stored_document_is_available(existing):
+            existing.status = "queued"
+            existing.storage_path = None
+            existing.error = "Stored PDF was unavailable and is being regenerated."
+            db.session.commit()
+            document_service.enqueue(existing, existing.title, existing.content or "", existing.theme, existing.metadata_json or {})
         payload = _document_payload(existing)
         return jsonify({"success": True, "document": payload, "id": existing.id,
                         "status": existing.status, "deduplicated": True}), 200

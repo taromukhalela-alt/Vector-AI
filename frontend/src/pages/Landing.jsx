@@ -510,35 +510,41 @@ const Landing = ({ onNavigate }) => {
       <ScientificBackground />
 
       {/* Navbar */}
-      <header className="sticky top-0 z-50 px-4 pt-4">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/[0.08] bg-[#070908]/10 px-4 py-2.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300/20 bg-emerald-400 text-zinc-950 shadow-[0_8px_25px_-10px_rgba(52,211,153,.8)]">
-              <Zap className="h-4 w-4" strokeWidth={2.4} />
-            </div>
-            <div className="text-left leading-none">
-              <span className="block text-[14px] font-semibold tracking-tight text-zinc-50">Vector AI</span>
-              <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-400/80">STEM learning system</span>
-            </div>
-          </button>
+{/* Navbar Wrapper: Handles the floating layout, centering, and size limits */}
+<header className="fixed top-0 left-1/2 z-[5000] mt-4 w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2">
+  
+  {/* Navbar Card: Inherits the constraints and displays the styling */}
+  <nav className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#070908]/70 px-4 py-2.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
+    
+    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300/20 bg-emerald-400 text-zinc-950 shadow-[0_8px_25px_-10px_rgba(52,211,153,.8)]">
+        <Zap className="h-4 w-4" strokeWidth={2.4} />
+      </div>
+      <div className="text-left leading-none">
+        <span className="block text-[14px] font-semibold tracking-tight text-zinc-50">Vector AI</span>
+        <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-400/80">STEM learning system</span>
+      </div>
+    </button>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={go}
-              className="hidden px-3 py-2 text-[12px] font-medium text-zinc-500 transition-colors hover:text-zinc-100 sm:block"
-            >
-              Sign in
-            </button>
-            <button
-              onClick={go}
-              className="group inline-flex items-center gap-1.5 rounded-lg bg-emerald-400 px-3.5 py-2 text-[12px] font-bold text-zinc-950 transition-all hover:bg-emerald-300"
-            >
-              Start learning
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          </div>
-        </nav>
-      </header>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={go}
+        className="hidden px-3 py-2 text-[12px] font-medium text-zinc-500 transition-colors hover:text-zinc-100 sm:block"
+      >
+        Sign in
+      </button>
+      <button
+        onClick={go}
+        className="group inline-flex items-center gap-1.5 rounded-lg bg-emerald-400 px-3.5 py-2 text-[12px] font-bold text-zinc-950 transition-all hover:bg-emerald-300"
+      >
+        Start learning
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+      </button>
+    </div>
+    
+  </nav>
+</header>
+
 
       {/* Hero */}
       <main className="relative z-10">

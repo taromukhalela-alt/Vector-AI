@@ -262,21 +262,27 @@ const Notes = () => {
         body: JSON.stringify({ title: selectedNote.title || 'Study Note', content: selectedNote.content || '', theme: 'default' }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'PDF generation failed');
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'PDF generation failed');
       let status = payload.status;
+      let generationError = payload.document?.error || payload.error || '';
       // Bounded wait: without a deadline a stuck job polled this endpoint forever.
       const deadline = Date.now() + 60000;
       while (status !== 'completed') {
-        if (status === 'failed') throw new Error(payload.error || 'PDF generation failed');
+        if (status === 'failed') throw new Error(generationError || 'PDF generation failed');
         if (Date.now() > deadline) throw new Error('PDF generation is taking too long. Please try again.');
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const poll = await fetch(`/api/documents/${encodeURIComponent(payload.id)}/status`);
         const data = await poll.json();
         if (!poll.ok) throw new Error(data.error || 'Unable to check PDF status');
         status = data.status;
+        generationError = data.error || generationError;
       }
+      if (status !== 'completed') throw new Error('PDF generation returned an unexpected status. Please try again.');
       const download = await fetch(`/api/documents/${encodeURIComponent(payload.id)}/download`);
-      if (!download.ok) throw new Error('Generated PDF is unavailable');
+      if (!download.ok) {
+        const failure = await download.json().catch(() => ({}));
+        throw new Error(failure.error || 'Generated PDF is unavailable');
+      }
       const url = URL.createObjectURL(await download.blob());
       const link = document.createElement('a');
       link.href = url;
