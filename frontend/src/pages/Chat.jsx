@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Bookmark, X, Sparkles, Mic, MicOff,
   Loader2, Zap, Brain, Trash2, RefreshCw, Tag, BookOpen,
   TrendingUp, Target, Clock, ChevronDown, ChevronUp,
+  AlertCircle, Square, Copy, Check,
 } from 'lucide-react';
 
 // ─── Memory Panel Component ────────────────────────────────────────────────────
@@ -183,6 +184,12 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  // The in-flight request can be cancelled by the learner ("Stop"), and a
+  // failed exchange is surfaced as a retryable banner instead of being written
+  // into the conversation as a fake assistant turn.
+  const abortRef = useRef(null);
+  const [failedRequest, setFailedRequest] = useState(null);
+  const [copiedIndex, setCopiedIndex] = useState(null);
 
   // Memory/RAG state
   const [memory, setMemory] = useState(null);
@@ -488,19 +495,26 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     }
   };
 
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, historyOverride) => {
     const question = (text || inputValue).trim();
     if (!question || isSending) return;
+    // `historyOverride` lets "Regenerate" rebuild from a trimmed history without
+    // waiting for the messages state to settle.
+    const baseMessages = historyOverride || messages;
     setInputValue('');
     setIsSending(true);
     setIsThinking(true);
-    const updatedMessages = [...messages, { role: 'user', content: question }];
+    setFailedRequest(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const updatedMessages = [...baseMessages, { role: 'user', content: question }];
     setMessages(updatedMessages);
 
     try {
       trackEvent('chat_message_sent', { route: '/chat', message_length: question.length });
       const response = await fetch('/api/chat', {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken,
@@ -509,10 +523,32 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         },
         body: JSON.stringify({
           message: question,
-          history: messages,
+          history: baseMessages,
           stream: true,
         }),
       });
+
+      // Animation matching is resolved server-side from the same keyword pass
+      // the backend already runs, so the extra round-trip only happens when the
+      // server could not decide.
+      const settleAnimation = async () => {
+        const headerAnimation = response.headers.get('X-Vector-Animation');
+        if (headerAnimation && onMatchAnimation) {
+          onMatchAnimation(headerAnimation, response.headers.get('X-Vector-Animation-Label') || '');
+          return;
+        }
+        try {
+          const matchRes = await fetch('/match-animation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ question }),
+          });
+          const matchData = await matchRes.json();
+          if (matchData?.animation_id && onMatchAnimation) {
+            onMatchAnimation(matchData.animation_id, matchData.animation_label);
+          }
+        } catch (matchError) { console.warn('Simulation match failed', matchError); }
+      };
 
       if (response.headers.get('content-type')?.includes('application/json')) {
         const data = await response.json();
@@ -520,19 +556,9 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           trackEvent('chat_response_received', { route: '/chat' });
           setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
           loadMemory();
-          try {
-            const matchRes = await fetch('/match-animation', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-              body: JSON.stringify({ question }),
-            });
-            const matchData = await matchRes.json();
-            if (matchData?.animation_id && onMatchAnimation) {
-              onMatchAnimation(matchData.animation_id, matchData.animation_label);
-            }
-          } catch (matchError) { console.warn('Simulation match failed', matchError); }
+          await settleAnimation();
         } else {
-          setMessages([...updatedMessages, { role: 'assistant', content: "I'm having a bit of trouble responding right now. Please try again." }]);
+          setFailedRequest({ question, history: baseMessages });
         }
         loadSessions();
         return;
@@ -562,25 +588,56 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
 
       trackEvent('chat_response_received', { route: '/chat' });
       loadMemory();
-      try {
-        const matchRes = await fetch('/match-animation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-          body: JSON.stringify({ question }),
-        });
-        const matchData = await matchRes.json();
-        if (matchData?.animation_id && onMatchAnimation) {
-          onMatchAnimation(matchData.animation_id, matchData.animation_label);
-        }
-      } catch (matchError) { console.warn('Simulation match failed', matchError); }
+      await settleAnimation();
       loadSessions();
-    } catch {
-      setMessages([...updatedMessages, { role: 'assistant', content: 'Connection issue. Could not reach AI Tutor.' }]);
+    } catch (error) {
+      // A cancelled request is a deliberate learner action, not a failure.
+      if (error?.name === 'AbortError') {
+        trackEvent('chat_generation_stopped', { route: '/chat' });
+      } else {
+        trackEvent('chat_request_failed', { route: '/chat' });
+        setFailedRequest({ question, history: baseMessages });
+      }
     } finally {
+      abortRef.current = null;
       setIsSending(false);
       setIsThinking(false);
     }
   };
+
+  const handleStopGeneration = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsSending(false);
+    setIsThinking(false);
+  }, []);
+
+  const handleRegenerate = useCallback(() => {
+    if (isSending) return;
+    const lastUserIndex = messages.map((msg) => msg.role).lastIndexOf('user');
+    if (lastUserIndex === -1) return;
+    const question = messages[lastUserIndex].content;
+    handleSendMessage(question, messages.slice(0, lastUserIndex));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSending, messages]);
+
+  const handleCopyMessage = useCallback(async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex((current) => (current === index ? null : current)), 1800);
+    } catch (copyError) {
+      console.warn('Copy failed', copyError);
+    }
+  }, []);
+
+  const handleRetryFailed = useCallback(() => {
+    if (!failedRequest || isSending) return;
+    const { question, history } = failedRequest;
+    setFailedRequest(null);
+    handleSendMessage(question, history);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [failedRequest, isSending]);
 
   useEffect(() => {
     const scheduledPrompt = typeof window !== 'undefined'
@@ -826,6 +883,8 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 sm:gap-6">
               {messages.map((msg, index) => {
                 const isUser = msg.role === 'user';
+                // A cancelled generation can leave an empty assistant bubble.
+                if (!isUser && !msg.content) return null;
                 return (
                   <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full sm:max-w-[88%]`}>
@@ -839,13 +898,38 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                       ) : (
                         <div className="rounded-2xl rounded-tl-sm px-3.5 sm:px-4 py-2.5 sm:py-3 bg-zinc-900/50 border border-white/[0.06] text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words w-full">
                           <MarkdownRenderer content={msg.content} dark={true} />
-                          <button
-                            onClick={() => handleSaveAsNote(msg.content)}
-                            className="mt-2.5 sm:mt-3 inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
-                          >
-                            <Bookmark className="w-3 h-3" strokeWidth={2} />
-                            Save to notes
-                          </button>
+                          {/* Message actions stay tucked away until hover/tap so the
+                              answer keeps the reading focus. */}
+                          <div className="mt-2.5 sm:mt-3 flex flex-wrap items-center gap-1.5">
+                            <button
+                              onClick={() => handleSaveAsNote(msg.content)}
+                              className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
+                            >
+                              <Bookmark className="w-3 h-3" strokeWidth={2} />
+                              Save to notes
+                            </button>
+                            <button
+                              onClick={() => handleCopyMessage(msg.content, index)}
+                              className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
+                              aria-label="Copy answer"
+                            >
+                              {copiedIndex === index ? (
+                                <><Check className="w-3 h-3 text-emerald-400" strokeWidth={2.4} />Copied</>
+                              ) : (
+                                <><Copy className="w-3 h-3" strokeWidth={2} />Copy</>
+                              )}
+                            </button>
+                            {index === messages.length - 1 && !isSending && (
+                              <button
+                                onClick={handleRegenerate}
+                                className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
+                                aria-label="Regenerate answer"
+                              >
+                                <RefreshCw className="w-3 h-3" strokeWidth={2} />
+                                Regenerate
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -880,6 +964,13 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                             ))}
                           </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={handleStopGeneration}
+                          className="ml-1 rounded-lg border border-emerald-400/25 bg-white/[0.04] px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-100/90 transition hover:bg-white/[0.09]"
+                        >
+                          Stop
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -893,6 +984,38 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         {/* ── Composer ──────────────────────────────────────────────────────── */}
         <div className="shrink-0 px-3 sm:px-4 pb-3 sm:pb-4 pt-2 bg-zinc-950 border-t border-white/[0.04]">
           <div className="mx-auto max-w-3xl">
+            {failedRequest && (
+              <div
+                role="alert"
+                className="mb-2 flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/[0.07] px-3 py-2.5 text-[12.5px] text-red-200"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-red-100">That answer didn&apos;t come through</p>
+                  <p className="mt-0.5 leading-relaxed text-red-200/80">
+                    Your question was kept — retry it without retyping.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleRetryFailed}
+                    disabled={isSending}
+                    className="rounded-lg bg-red-500/20 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-red-100 transition hover:bg-red-500/30 disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFailedRequest(null)}
+                    aria-label="Dismiss"
+                    className="rounded-lg p-1.5 text-red-200/70 transition hover:bg-red-500/20 hover:text-red-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 focus-within:border-emerald-500/30 focus-within:bg-zinc-900/60 transition-colors backdrop-blur-md">
               <textarea
                 ref={textareaRef}
@@ -929,19 +1052,30 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                       : <Mic className="w-4 h-4" strokeWidth={1.8} />
                     }
                   </button>
-                  {/* Send button */}
-                  <button
-                    onClick={() => handleSendMessage()}
-                    disabled={isSending || !inputValue.trim()}
-                    className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-center ${
-                      !isSending && inputValue.trim()
-                        ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_4px_12px_-2px_rgba(16,185,129,0.4)]'
-                        : 'bg-white/[0.04] text-zinc-600'
-                    }`}
-                    aria-label="Send message"
-                  >
-                    <Send className="w-4 h-4" strokeWidth={2.25} />
-                  </button>
+                  {/* Send / Stop */}
+                  {isSending ? (
+                    <button
+                      onClick={handleStopGeneration}
+                      className="p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-center bg-white/[0.08] text-zinc-200 hover:bg-white/[0.14] border border-white/10"
+                      aria-label="Stop generating"
+                      title="Stop generating"
+                    >
+                      <Square className="w-3.5 h-3.5 fill-current" strokeWidth={0} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSendMessage()}
+                      disabled={!inputValue.trim()}
+                      className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-center ${
+                        inputValue.trim()
+                          ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_4px_12px_-2px_rgba(16,185,129,0.4)]'
+                          : 'bg-white/[0.04] text-zinc-600'
+                      }`}
+                      aria-label="Send message"
+                    >
+                      <Send className="w-4 h-4" strokeWidth={2.25} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

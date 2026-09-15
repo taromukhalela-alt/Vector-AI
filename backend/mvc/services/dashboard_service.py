@@ -13,6 +13,10 @@ CHEMISTRY_INTENTS = {
     "electrochemistry",
 }
 
+# The dashboard only describes recent activity, so it reads a bounded window of
+# conversation rows instead of every row the learner has ever produced.
+DASHBOARD_CONVERSATION_WINDOW = 300
+
 
 def _topic_key(value):
     return " ".join(str(value or "").strip().lower().replace("_", " ").split())
@@ -39,20 +43,24 @@ class DashboardService:
         latency_reader,
         session_builder=lambda _history: [],
         repository=None,
+        conversation_window=DASHBOARD_CONVERSATION_WINDOW,
     ):
         self._latency_reader = latency_reader
         self._session_builder = session_builder
         self._repository = repository or DashboardRepository()
+        self._conversation_window = conversation_window
 
     def build(self, user_id):
         now = datetime.now()
         notes_count = self._repository.note_count(user_id)
-        conversation_reader = getattr(self._repository, "all_conversations", None)
-        conversations = (
-            conversation_reader(user_id)
-            if conversation_reader
-            else self._repository.recent_conversations(user_id)
-        )
+        conversation_reader = getattr(self._repository, "recent_conversations", None)
+        if conversation_reader is not None:
+            conversations = conversation_reader(
+                user_id, limit=self._conversation_window
+            )
+        else:
+            legacy_reader = getattr(self._repository, "all_conversations", None)
+            conversations = legacy_reader(user_id) if legacy_reader else []
         conversation_count_reader = getattr(self._repository, "conversation_count", None)
         questions_count = conversation_count_reader(user_id) if conversation_count_reader else len(conversations)
         confidences = [item.confidence for item in conversations if item.confidence is not None]

@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from backend.mvc.services.dashboard_service import DashboardService
+from backend.mvc.services.dashboard_service import (
+    DASHBOARD_CONVERSATION_WINDOW,
+    DashboardService,
+)
 
 
 class FakeDashboardRepository:
@@ -11,7 +14,9 @@ class FakeDashboardRepository:
 
     def recent_conversations(self, user_id, limit=100):
         assert user_id == "learner-1"
-        assert limit == 100
+        # The dashboard reads a bounded window of recent activity, never every
+        # row a learner has produced.
+        assert limit == DASHBOARD_CONVERSATION_WINDOW
         return [
             FakeConversation("forces", 80.0),
             FakeConversation("forces", 60.0),
@@ -70,7 +75,7 @@ def test_dashboard_service_does_not_fabricate_topics_for_empty_data():
             return 0
 
         def recent_conversations(self, _user_id, limit=100):
-            assert limit == 100
+            assert limit == DASHBOARD_CONVERSATION_WINDOW
             return []
 
         def note_topic_counts(self, _user_id):

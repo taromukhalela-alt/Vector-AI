@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import GridDistortion from '../components/GridDistortion';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight,
@@ -18,6 +17,23 @@ import {
   Check,
   CircleDot,
 } from 'lucide-react';
+
+// The hero backdrop is the only consumer of three.js on this page, so it is
+// split out and fetched after the first paint instead of blocking it.
+const GridDistortion = lazy(() => import('../components/GridDistortion'));
+
+// Placeholder for the deferred backdrop. Same depth and hue family as the
+// shader so the swap is not visible as a "pop in".
+const HeroBackdropFallback = () => (
+  <div
+    className="absolute inset-0"
+    aria-hidden="true"
+    style={{
+      background:
+        'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(16,185,129,0.10) 0%, rgba(7,9,8,0.90) 55%, rgba(7,9,8,1) 100%)',
+    }}
+  />
+);
 
 /* ─────────────────────────────────────────────────────────────
   Ambient background
@@ -401,6 +417,23 @@ const Landing = ({ onNavigate }) => {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // ── Deferred WebGL backdrop ───────────────────────────────────
+  // GridDistortion pulls in three.js and decodes a large texture. Neither is
+  // needed for the first paint, so the shader only mounts once the browser is
+  // idle (or after a short fallback delay) behind a cheap CSS-gradient
+  // placeholder. This keeps the hero text as the LCP element.
+  const [backdropReady, setBackdropReady] = useState(false);
+  useEffect(() => {
+    const schedule = typeof window !== 'undefined' && window.requestIdleCallback
+      ? window.requestIdleCallback
+      : (cb) => window.setTimeout(cb, 300);
+    const cancel = typeof window !== 'undefined' && window.cancelIdleCallback
+      ? window.cancelIdleCallback
+      : window.clearTimeout;
+    const handle = schedule(() => setBackdropReady(true), { timeout: 1500 });
+    return () => cancel(handle);
+  }, []);
+
   const features = [
     {
       icon: Mic,
@@ -519,13 +552,19 @@ const Landing = ({ onNavigate }) => {
               overflow: 'hidden',
             }}
           >
-            <GridDistortion
-              imageSrc="/background.png"
-              grid={17}
-              mouse={0.52}
-              strength={0.19}
-              relaxation={0.92}
-            />
+            {backdropReady ? (
+              <Suspense fallback={<HeroBackdropFallback />}>
+                <GridDistortion
+                  imageSrc="/background.webp"
+                  grid={17}
+                  mouse={0.52}
+                  strength={0.19}
+                  relaxation={0.92}
+                />
+              </Suspense>
+            ) : (
+              <HeroBackdropFallback />
+            )}
             {/* Dark overlay to keep text legible */}
             <div
               style={{

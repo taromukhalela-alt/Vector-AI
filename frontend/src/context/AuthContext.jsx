@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message || 'Login failed' };
       }
     } catch (e) {
-      return { success: false, message: 'An error occurred during login' };
+      return { success: false, message: "We couldn't reach Vector AI. Check your connection and try again." };
     }
   };
 
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message || 'Registration failed' };
       }
     } catch (e) {
-      return { success: false, message: 'An error occurred during registration' };
+      return { success: false, message: "We couldn't reach Vector AI. Check your connection and try again." };
     }
   };
 

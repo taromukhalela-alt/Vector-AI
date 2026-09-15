@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useAuth } from './context/AuthContext';
@@ -7,18 +7,41 @@ import useAnalytics from './useAnalytics';
 import Layout from './components/Layout';
 import ToastProvider from './components/ToastProvider';
 import Onboarding from './components/Onboarding';
-import Landing from './pages/Landing';
-import Auth from './pages/Auth';
-import Chat from './pages/Chat';
-import Voice from './pages/Voice';
-import Lab from './pages/Lab';
-import Notes from './pages/Notes';
-import History from './pages/History';
-import Topics from './pages/Topics';
-import Dashboard from './pages/Dashboard';
+
+// ── Route-level code splitting ────────────────────────────────────────────────
+// Each screen is fetched on demand so a learner only downloads the surface they
+// actually open (the Landing hero and the Voice avatar pull three.js, and the
+// Lab/Notes screens are substantial — none of that belongs in the entry chunk).
+const Landing = lazy(() => import('./pages/Landing'));
+const Auth = lazy(() => import('./pages/Auth'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Voice = lazy(() => import('./pages/Voice'));
+const Lab = lazy(() => import('./pages/Lab'));
+const Notes = lazy(() => import('./pages/Notes'));
+const History = lazy(() => import('./pages/History'));
+const Topics = lazy(() => import('./pages/Topics'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 const ScreenReaderTitle = ({ children }) => (
   <h1 className="sr-only">{children}</h1>
+);
+
+// Skeleton shown while a route chunk is in flight. It intentionally mirrors the
+// page padding rhythm so the transition feels instant rather than blank.
+const RouteSkeleton = () => (
+  <div className="min-h-dvh bg-zinc-950 px-5 py-8 sm:px-8 sm:py-10" role="status" aria-live="polite">
+    <span className="sr-only">Loading screen</span>
+    <div className="mx-auto max-w-5xl animate-pulse space-y-6">
+      <div className="h-5 w-32 rounded-full bg-white/[0.06]" />
+      <div className="h-9 w-2/3 max-w-md rounded-lg bg-white/[0.06]" />
+      <div className="h-4 w-1/2 max-w-sm rounded bg-white/[0.04]" />
+      <div className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2, 3, 4, 5].map((key) => (
+          <div key={key} className="h-32 rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
+        ))}
+      </div>
+    </div>
+  </div>
 );
 
 function App() {
@@ -63,10 +86,12 @@ function App() {
   if (!isAuthenticated) {
     return (
       <ToastProvider>
-        <Routes>
-          <Route path="/auth" element={<Auth onNavigate={handleAuthNavigation} />} />
-          <Route path="*" element={<Landing onNavigate={handleAuthNavigation} />} />
-        </Routes>
+        <Suspense fallback={<RouteSkeleton />}>
+          <Routes>
+            <Route path="/auth" element={<Auth onNavigate={handleAuthNavigation} />} />
+            <Route path="*" element={<Landing onNavigate={handleAuthNavigation} />} />
+          </Routes>
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </ToastProvider>
@@ -76,7 +101,9 @@ function App() {
   if (location.pathname === '/') {
     return (
       <ToastProvider>
-        <Landing onNavigate={handleAuthNavigation} />
+        <Suspense fallback={<RouteSkeleton />}>
+          <Landing onNavigate={handleAuthNavigation} />
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </ToastProvider>
@@ -97,9 +124,10 @@ function App() {
     <ToastProvider>
       {showOnboarding && <Onboarding onComplete={() => setShowOnboarding(false)} />}
       <Layout>
-        <Routes>
-          <Route
-            path="/chat"
+        <Suspense fallback={<RouteSkeleton />}>
+          <Routes>
+            <Route
+              path="/chat"
             element={(
               <>
                 <ScreenReaderTitle>Vector AI Tutor</ScreenReaderTitle>
@@ -168,7 +196,8 @@ function App() {
           />
           <Route path="/auth" element={<Navigate to="/chat" replace />} />
           <Route path="*" element={<Navigate to="/chat" replace />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </Layout>
       <Analytics />
       <SpeedInsights />

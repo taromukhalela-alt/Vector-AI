@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, AlertCircle, Zap, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, AlertCircle, Zap, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const Auth = ({ onNavigate }) => {
   const { login, register } = useAuth();
@@ -11,6 +11,7 @@ const Auth = ({ onNavigate }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,8 +88,8 @@ const Auth = ({ onNavigate }) => {
             </h1>
             <p className="text-[13px] text-zinc-400 mt-1.5 leading-relaxed">
               {isRegister
-                ? 'Server is currently down. Difficulties may occur.'
-                : 'Server is currently down. Difficulties may occur'}
+                ? 'Start studying CAPS Physical Sciences with a tutor that remembers your progress.'
+                : 'Sign in to continue your CAPS Physical Sciences revision.'}
             </p>
           </div>
 
@@ -101,10 +102,54 @@ const Auth = ({ onNavigate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {isRegister && (
-              <Field icon={User} label="Full name" type="text" placeholder="Your name here..." value={name} onChange={setName} />
+              <Field
+                icon={User}
+                name="name"
+                autoComplete="name"
+                label="Full name"
+                type="text"
+                placeholder="e.g. Thandi Mokoena"
+                value={name}
+                onChange={setName}
+              />
             )}
-            <Field icon={Mail} label="Email" type="email" placeholder="you@example.com" value={email} onChange={setEmail} />
-            <Field icon={Lock} label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} />
+            <Field
+              icon={Mail}
+              name="email"
+              autoComplete="email"
+              inputMode="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={setEmail}
+            />
+            <Field
+              icon={Lock}
+              name="password"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder={isRegister ? 'At least 8 characters' : '••••••••'}
+              value={password}
+              onChange={setPassword}
+              trailing={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition hover:text-emerald-300 focus-visible:text-emerald-300"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+            />
+            {isRegister && (
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                Passwords need at least 8 characters.
+              </p>
+            )}
 
             <button
               type="submit"
@@ -141,19 +186,24 @@ const Auth = ({ onNavigate }) => {
   );
 };
 
-const Field = ({ icon: Icon, label, type, placeholder, value, onChange }) => (
+const Field = ({ icon: Icon, label, type, placeholder, value, onChange, name, autoComplete, inputMode, trailing }) => (
   <div className="space-y-1.5">
-    <label className="text-[11px] font-medium text-zinc-400 block">{label}</label>
+    <label className="text-[11px] font-medium text-zinc-400 block" htmlFor={name}>{label}</label>
     <div className="relative">
       <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-zinc-500" strokeWidth={1.8} />
       <input
+        id={name}
+        name={name}
         type={type}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-11 bg-white/[0.03] border border-white/[0.07] focus:border-emerald-500/40 focus:bg-white/[0.04] focus:ring-4 focus:ring-emerald-500/[0.08] rounded-lg pl-10 pr-3.5 text-[13.5px] text-zinc-100 placeholder:text-zinc-600 outline-none transition-all"
+        className={`w-full h-11 bg-white/[0.03] border border-white/[0.07] focus:border-emerald-500/40 focus:bg-white/[0.04] focus:ring-4 focus:ring-emerald-500/[0.08] rounded-lg pl-10 text-[13.5px] text-zinc-100 placeholder:text-zinc-600 outline-none transition-all ${trailing ? 'pr-11' : 'pr-3.5'}`}
         required
       />
+      {trailing}
     </div>
   </div>
 );
