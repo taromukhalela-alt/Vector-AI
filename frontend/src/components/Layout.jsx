@@ -75,7 +75,7 @@ const Layout = ({ children }) => {
 
       {/* ── Desktop Sidebar ── */}
       <aside
-        className={`hidden md:flex flex-col border-r border-white/[0.06] bg-zinc-950/50 backdrop-blur-xl transition-all duration-300 ease-in-out light:border-zinc-200 light:bg-white/50 ${
+        className={`hidden md:flex flex-col border-r border-white/[0.06] bg-zinc-950/50 backdrop-blur-xl transition-[width] duration-300 ease-in-out light:border-zinc-200 light:bg-white/50 ${
           collapsed ? 'w-[var(--sidebar-w-collapsed)]' : 'w-[var(--sidebar-w)]'
         }`}
       >
@@ -149,7 +149,7 @@ const Layout = ({ children }) => {
               {!collapsed && (
                 <div className="anim-fade-in flex-1 overflow-hidden text-left">
                   <p className="truncate text-xs font-semibold">{user?.name || 'Learner'}</p>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-tight">Grade 12 Student</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-tight">CAPS learner</p>
                 </div>
               )}
             </button>
@@ -182,7 +182,7 @@ const Layout = ({ children }) => {
         </main>
 
         {/* Mobile Bottom Nav (Polished) */}
-        <nav className="flex h-16 items-center border-t border-white/[0.06] bg-zinc-950/90 backdrop-blur-xl md:hidden pb-safe light:border-zinc-200 light:bg-white/90">
+        <nav className="flex min-h-16 items-stretch border-t border-white/[0.06] bg-zinc-950/90 backdrop-blur-xl md:hidden pb-safe light:border-zinc-200 light:bg-white/90">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = location.pathname === item.path;

@@ -30,6 +30,7 @@ import requests
 import secrets
 from sqlalchemy.exc import IntegrityError
 from collections import Counter, defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from backend.services.generator import MAX_HISTORY, normalize_history
@@ -206,8 +207,34 @@ if database_uri.startswith("postgres"):
 
 db.init_app(app)
 
+
+# Additive, idempotent indexes for the hot read paths. ``db.create_all()`` only
+# creates indexes on brand-new tables, so existing deployments need this to pick
+# them up. ``IF NOT EXISTS`` keeps it safe to run on every boot.
+HOT_INDEXES = (
+    ("ix_conversations_user_timestamp", "conversations", "user_id, timestamp"),
+    ("ix_conversations_user_chat", "conversations", "user_id, chat_id"),
+    ("ix_notes_user_updated", "notes", "user_id, updated_at"),
+)
+
+
+def ensure_hot_indexes():
+    """Create missing read-path indexes without failing application startup."""
+    from sqlalchemy import text
+
+    for name, table, columns in HOT_INDEXES:
+        statement = f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({columns})"
+        try:
+            db.session.execute(text(statement))
+            db.session.commit()
+        except Exception as exc:  # pragma: no cover - depends on the backend
+            db.session.rollback()
+            logger.warning("Could not ensure index %s: %s", name, exc)
+
+
 with app.app_context():
     db.create_all()
+    ensure_hot_indexes()
 
 # Initialize Auth
 from backend.controllers.auth import init_auth
@@ -238,18 +265,34 @@ cache = Cache(app, config={"CACHE_TYPE": "SimpleCache"})
 GROQ_CLIENT = None
 
 
-def _stream_reply_chunks(reply_text, chunk_size=18):
-    """Yield response text in small chunks so the UI can stream each token."""
+def _stream_reply_chunks(reply_text, chunk_size=18, budget_seconds=1.2):
+    """Yield the finished reply in visually progressive chunks.
+
+    The text has already been fully generated before this generator runs, so
+    this is purely a presentation concern. The previous implementation slept
+    20 ms per word, which means a 900-word tutor answer kept the learner waiting
+    ~18 s *after* the model had finished. Chunks are now sized so the whole
+    reply is revealed inside ``budget_seconds`` regardless of its length, and
+    word boundaries are still respected so the text never breaks mid-word.
+    """
     if not reply_text:
         return
+
     # Split on word boundaries where possible so the UI feels natural while
     # still supporting incremental rendering in the browser.
     parts = re.findall(r"\S+\s*|\s+", reply_text)
-    for part in parts:
-        if not part:
-            continue
-        yield part
-        time.sleep(0.02)
+    if not parts:
+        return
+
+    target_frames = 60
+    per_frame = max(chunk_size, -(-len(parts) // target_frames))
+    frames = -(-len(parts) // per_frame)
+    sleep_for = min(0.02, budget_seconds / frames) if frames else 0.0
+
+    for index in range(0, len(parts), per_frame):
+        yield "".join(parts[index:index + per_frame])
+        if sleep_for > 0:
+            time.sleep(sleep_for)
 
 
 def get_groq_client(api_key):
@@ -285,6 +328,9 @@ NOTE_TITLE_MAX_CHARS = env_int("NOTE_TITLE_MAX_CHARS", 160, min_value=20, max_va
 NOTE_TOPIC_MAX_CHARS = env_int("NOTE_TOPIC_MAX_CHARS", 120, min_value=20, max_value=300)
 NOTE_CONTENT_MAX_CHARS = env_int("NOTE_CONTENT_MAX_CHARS", 50000, min_value=1000)
 NOTE_LIST_LIMIT = env_int("NOTE_LIST_LIMIT", 200, min_value=20, max_value=1000)
+# How many recent conversation rows the History list may read. Session bodies
+# are fetched per session, so this window only needs to cover recent activity.
+HISTORY_LIST_LIMIT = env_int("HISTORY_LIST_LIMIT", 400, min_value=20, max_value=5000)
 
 CHAT_RATE_LIMIT_COUNT = env_int("CHAT_RATE_LIMIT_COUNT", 20, min_value=1)
 CHAT_RATE_LIMIT_WINDOW = env_int("CHAT_RATE_LIMIT_WINDOW", 60, min_value=1)
@@ -752,6 +798,38 @@ Use short strings only. Do not include markdown.
         ),
     }
     user.memory_summary = json.dumps(sanitized, ensure_ascii=True)
+
+
+# Learner-memory refreshes are a second provider round-trip. Running them inline
+# doubled the latency of every chat message, so they now run on a small bounded
+# executor and never block the tutor reply.
+MEMORY_UPDATE_POOL = ThreadPoolExecutor(
+    max_workers=env_int("MEMORY_UPDATE_WORKERS", 2, min_value=1, max_value=8),
+    thread_name_prefix="vector-memory",
+)
+
+
+def _memory_update_worker(user_id, history, intent):
+    """Refresh one learner's memory profile outside the request lifecycle."""
+    try:
+        with app.app_context():
+            user = db.session.get(User, user_id)
+            if user is None:
+                return
+            update_learner_memory_profile(user, history, intent)
+            db.session.commit()
+    except Exception as exc:  # pragma: no cover - defensive, never fatal
+        logger.warning("Background memory update failed: %s", exc)
+
+
+def schedule_memory_update(user_id, history, intent):
+    """Queue a memory refresh; failures are logged and never surfaced to chat."""
+    if not user_id:
+        return
+    try:
+        MEMORY_UPDATE_POOL.submit(_memory_update_worker, user_id, list(history or []), intent)
+    except Exception as exc:  # pragma: no cover - pool exhausted/shutting down
+        logger.warning("Could not queue memory update: %s", exc)
 
 
 def weak_areas_for_user(user_id, limit=3):
@@ -2080,6 +2158,68 @@ def build_sessions(history):
     return sessions
 
 
+def load_session_summaries(user_id, limit=None):
+    """Return lightweight session metadata for the History list.
+
+    Only the columns the list actually renders are selected: the large tutor
+    reply bodies are never loaded, and the scan is bounded to the most recent
+    rows. Full transcripts stay behind ``/api/session/<chat_id>``, which the UI
+    already calls when a session is opened.
+    """
+    if not user_id:
+        return []
+    window = limit or HISTORY_LIST_LIMIT
+    rows = (
+        Conversation.query.with_entities(
+            Conversation.chat_id, Conversation.message, Conversation.timestamp
+        )
+        .filter_by(user_id=user_id)
+        .order_by(Conversation.timestamp.desc())
+        .limit(window)
+        .all()
+    )
+
+    grouped = {}
+    for chat_id, message, timestamp in rows:
+        key = chat_id or "legacy"
+        bucket = grouped.get(key)
+        if bucket is None:
+            bucket = {
+                "chat_id": key,
+                "count": 0,
+                "title": "",
+                "last_timestamp": timestamp,
+                "first_timestamp": timestamp,
+            }
+            grouped[key] = bucket
+        bucket["count"] += 1
+        # Rows arrive newest-first, so the last assignment is the session opener.
+        bucket["first_timestamp"] = timestamp
+        if message and message.strip():
+            bucket["title"] = message.strip()[:48]
+
+    def _sort_key(bucket):
+        try:
+            return bucket["last_timestamp"].timestamp()
+        except (AttributeError, ValueError, OSError):
+            return 0.0
+
+    ordered = sorted(grouped.values(), key=_sort_key, reverse=True)
+    return [
+        {
+            "chat_id": bucket["chat_id"],
+            "title": bucket["title"] or "Session",
+            "last_time": (
+                _format_time(bucket["last_timestamp"].isoformat())
+                if bucket["last_timestamp"]
+                else ""
+            ),
+            "count": bucket["count"],
+        }
+        for bucket in ordered
+    ]
+
+
 @app.route("/metrics")
 def metrics():
     """Simple monitoring endpoint."""
@@ -2256,8 +2396,10 @@ def check_auth():
 @app.route("/api/history")
 @login_required
 def api_history():
-    history = load_user_history(current_user.id)
-    return jsonify({"success": True, "sessions": build_sessions(history)})
+    # Metadata only: shipping every message and reply body here made the payload
+    # grow without bound as a learner's account aged.
+    sessions = load_session_summaries(current_user.id)
+    return jsonify({"success": True, "sessions": sessions}), 200, {"Cache-Control": "no-store"}
 
 
 @app.route("/api/session/<chat_id>")
@@ -2533,13 +2675,10 @@ def chat():
             reply = limit_text(reply, output_limit)
             history[-1]["content"] = reply
 
-        # Auto-save memory summary for next session
+        # Refresh the learner memory off the request path: it is a second
+        # provider round-trip and must never delay the tutor reply.
         if current_user.is_authenticated:
-            try:
-                update_learner_memory_profile(current_user, history, intent)
-                db.session.commit()
-            except Exception as e:
-                logger.error(f"Failed to update memory summary: {e}")
+            schedule_memory_update(current_user.id, history, intent)
     except Exception as e:
         logger.error("Chat Error: %s", e)
         reply = "I hit a temporary issue. Please re-articulate your question."
@@ -2554,6 +2693,23 @@ def chat():
         user_message, intent, chat_id=chat_id, reply=reply, confidence=confidence
     )
 
+    latency_ms = (time.perf_counter() - chat_started) * 1000
+    response_headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "X-Vector-Intent": str(intent)[:40],
+        "X-Vector-Latency-Ms": f"{latency_ms:.0f}",
+    }
+    # A cheap keyword match lets the client skip the follow-up /match-animation
+    # request (which can otherwise trigger an extra provider call).
+    try:
+        keyword_animation = match_animation_from_keywords(user_message)
+    except Exception:
+        keyword_animation = None
+    if keyword_animation:
+        response_headers["X-Vector-Animation"] = keyword_animation["animation_id"]
+        response_headers["X-Vector-Animation-Label"] = keyword_animation["animation_label"]
+
     should_stream = (
         payload.get("stream") is True
         or request.headers.get("X-Stream") == "1"
@@ -2563,7 +2719,7 @@ def chat():
         return Response(
             stream_with_context(_stream_reply_chunks(reply)),
             mimetype="text/plain",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            headers=response_headers,
         )
 
     return jsonify(
@@ -2573,8 +2729,9 @@ def chat():
             "confidence": confidence,
             "intent": intent,
             "tool_metadata": tool_metadata,
+            "latency_ms": round(latency_ms, 1),
         }
-    )
+    ), 200, response_headers
 
 
 # ============ MEMORY / RAG API ============

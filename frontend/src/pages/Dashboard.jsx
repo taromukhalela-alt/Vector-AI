@@ -21,9 +21,49 @@ import { useAuth } from '../context/AuthContext';
 const metricIcons = {
   questions_asked: MessageSquare,
   notes_saved: FileText,
+  sessions_count: Activity,
   avg_confidence: Target,
   inference_latency_ms: Timer,
 };
+
+// Renders whatever relationship shape the API returns as readable rows instead
+// of dumping raw JSON into a <pre> block.
+const KnowledgeMapView = ({ value }) => {
+  const entries = Array.isArray(value)
+    ? value.map((item, index) => {
+        if (item && typeof item === 'object') {
+          const label = item.title || item.name || item.topic || item.source || `Connection ${index + 1}`;
+          const related = item.related || item.target || item.to || item.topics || item.connections;
+          const detail = Array.isArray(related) ? related.join(' · ') : related;
+          return {
+            label: String(label),
+            detail: typeof detail === 'string' && detail ? detail : (item.description || item.relation || ''),
+          };
+        }
+        return { label: String(item), detail: '' };
+      })
+    : Object.entries(value || {}).map(([key, item]) => ({
+        label: key.replace(/_/g, ' '),
+        detail: Array.isArray(item) ? item.join(' · ') : String(item ?? ''),
+      }));
+
+  if (!entries.length) return null;
+
+  return (
+    <ul className="space-y-2">
+      {entries.map((entry, index) => (
+        <li
+          key={`${entry.label}-${index}`}
+          className="flex flex-col gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="text-sm font-semibold capitalize text-zinc-100">{entry.label}</span>
+          {entry.detail ? <span className="text-xs text-zinc-400">{entry.detail}</span> : null}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 
 const formatMetric = (metric) => {
   if (metric.value === null || metric.value === undefined) return 'No data';
@@ -123,16 +163,45 @@ const Dashboard = () => {
     ? knowledgeMap.length > 0
     : Boolean(knowledgeMap && typeof knowledgeMap === 'object' && Object.keys(knowledgeMap).length > 0);
   const hasActivity = (stats?.questions_asked || 0) > 0 || (stats?.notes_saved || 0) > 0;
+  // Only learner-meaningful numbers are surfaced. The raw model-internals
+  // ("average confidence", inference latency in ms) mean nothing to a learner,
+  // so the API keeps returning them but the UI no longer leads with them.
+  const learnerMetrics = [
+    metrics.find((metric) => metric.key === 'questions_asked'),
+    metrics.find((metric) => metric.key === 'notes_saved'),
+    stats?.sessions_count !== undefined
+      ? {
+          key: 'sessions_count',
+          label: 'Study sessions',
+          value: stats.sessions_count,
+          unit: '',
+          desc: 'Tutor conversations saved to your account',
+        }
+      : null,
+  ].filter(Boolean);
   const firstName = user?.name?.trim().split(/\s+/)[0];
 
   if (loading && !data) {
+    // Skeleton rather than a spinner: the layout is known, so the page can show
+    // its shape immediately instead of a blank screen.
     return (
-      <div className="flex min-h-full items-center justify-center bg-zinc-950 px-6">
-        <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-400" aria-hidden="true" />
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
-            Loading your progress
-          </span>
+      <div className="min-h-full bg-zinc-950 px-5 py-7 sm:px-8 sm:py-10">
+        <div className="mx-auto max-w-7xl animate-pulse space-y-8" role="status" aria-live="polite">
+          <span className="sr-only">Loading your progress</span>
+          <div className="space-y-3 border-b border-white/[0.06] pb-7">
+            <div className="h-5 w-40 rounded-full bg-white/[0.06]" />
+            <div className="h-9 w-72 max-w-full rounded-lg bg-white/[0.06]" />
+            <div className="h-4 w-96 max-w-full rounded bg-white/[0.04]" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((key) => (
+              <div key={key} className="h-36 rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
+            ))}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="h-48 rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
+            <div className="h-48 rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
+          </div>
         </div>
       </div>
     );
@@ -197,16 +266,16 @@ const Dashboard = () => {
           </div>
         ) : null}
 
-        {metrics.length > 0 ? (
+        {learnerMetrics.length > 0 ? (
           <section aria-labelledby="account-metrics">
             <div className="mb-3 flex items-center justify-between">
               <h2 id="account-metrics" className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
-                Account activity
+                Your study activity
               </h2>
               {loading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-400" aria-label="Refreshing" /> : null}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metrics.map((metric) => <MetricCard key={metric.key || metric.label} metric={metric} />)}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {learnerMetrics.map((metric) => <MetricCard key={metric.key || metric.label} metric={metric} />)}
             </div>
           </section>
         ) : null}
@@ -487,9 +556,7 @@ const Dashboard = () => {
             </div>
             <div className="p-5 sm:p-6">
               {hasKnowledgeMap ? (
-                <pre className="overflow-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-xs text-zinc-300">
-                  {JSON.stringify(knowledgeMap, null, 2)}
-                </pre>
+                <KnowledgeMapView value={knowledgeMap} />
               ) : (
                 <EmptyState
                   icon={BrainCircuit}

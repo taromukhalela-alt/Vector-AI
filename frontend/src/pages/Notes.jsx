@@ -264,8 +264,11 @@ const Notes = () => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'PDF generation failed');
       let status = payload.status;
+      // Bounded wait: without a deadline a stuck job polled this endpoint forever.
+      const deadline = Date.now() + 60000;
       while (status !== 'completed') {
         if (status === 'failed') throw new Error(payload.error || 'PDF generation failed');
+        if (Date.now() > deadline) throw new Error('PDF generation is taking too long. Please try again.');
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const poll = await fetch(`/api/documents/${encodeURIComponent(payload.id)}/status`);
         const data = await poll.json();

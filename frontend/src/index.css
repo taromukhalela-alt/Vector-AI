@@ -1,8 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant light (&:where(.light, .light *));
+
+/* Safe-area helper for the mobile bottom navigation. Previously `pb-safe` was
+   referenced in the layout but never defined, so iOS home-indicator insets were
+   ignored and the nav sat under the system gesture bar. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 
 /* ============================================================
    VECTOR AI – STEM OS  |  Design System v2.0
@@ -106,7 +112,9 @@
     font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
 
-  /* Smoothly transition all surface containers and interactive elements */
+  /* Interactive surfaces animate paint-cheap properties only. A blanket
+     `transition-all` here forced every button/nav/aside to animate every
+     property on each interaction (layout + repaint work on the hot paths). */
   #root,
   .glass,
   .glass-surface,
@@ -116,7 +124,9 @@
   footer,
   nav,
   button {
-    @apply transition-all duration-300;
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   ::selection {
