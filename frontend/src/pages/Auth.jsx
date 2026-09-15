@@ -62,8 +62,8 @@ const Auth = ({ onNavigate }) => {
           backgroundImage:
             'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
           backgroundSize: '56px 56px',
-          WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 90%)',
-          maskImage: 'radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 90%)',
+          WebkitMaskImage: 'none',
+          maskImage: 'none',
         }}
       />
       <div className="absolute top-[30%] left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-emerald-500/[0.07] blur-[140px] pointer-events-none z-0" />

@@ -30,7 +30,7 @@ const HeroBackdropFallback = () => (
     aria-hidden="true"
     style={{
       background:
-        'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(16,185,129,0.10) 0%, rgba(7,9,8,0.90) 55%, rgba(7,9,8,1) 100%)',
+        '#111111',
     }}
   />
 );
@@ -52,9 +52,9 @@ const ScientificBackground = () => (
           'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
         backgroundSize: '64px 64px',
         maskImage:
-          'radial-gradient(ellipse 75% 48% at 50% 0%, black 5%, transparent 78%)',
+          'none',
         WebkitMaskImage:
-          'radial-gradient(ellipse 75% 48% at 50% 0%, black 5%, transparent 78%)',
+          'none',
       }}
     />
   </div>
@@ -506,7 +506,7 @@ const Landing = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[#070908] text-zinc-100 selection:bg-emerald-400/20 selection:text-emerald-200">
+    <div className="min-h-dvh overflow-x-hidden bg-[var(--background)] text-[var(--ink)] selection:bg-[var(--lime)] selection:text-[var(--ink)]">
       <ScientificBackground />
 
       {/* Navbar */}
@@ -514,10 +514,10 @@ const Landing = ({ onNavigate }) => {
 <header className="fixed top-0 left-1/2 z-[5000] mt-4 w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2">
   
   {/* Navbar Card: Inherits the constraints and displays the styling */}
-  <nav className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-[#070908]/70 px-4 py-2.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
+  <nav className="neo-border neo-shadow flex items-center justify-between bg-[var(--surface)] px-4 py-2.5">
     
     <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300/20 bg-emerald-400 text-zinc-950 shadow-[0_8px_25px_-10px_rgba(52,211,153,.8)]">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300/20 bg-[var(--lime)] text-[var(--ink)] shadow-[3px_3px_0_var(--border)]">
         <Zap className="h-4 w-4" strokeWidth={2.4} />
       </div>
       <div className="text-left leading-none">
@@ -535,7 +535,7 @@ const Landing = ({ onNavigate }) => {
       </button>
       <button
         onClick={go}
-        className="group inline-flex items-center gap-1.5 rounded-lg bg-emerald-400 px-3.5 py-2 text-[12px] font-bold text-zinc-950 transition-all hover:bg-emerald-300"
+        className="gumroad-hover group inline-flex items-center gap-1.5 border-2 border-[var(--border)] bg-[var(--accent)] px-3.5 py-2 text-[12px] font-bold text-[var(--ink)] shadow-[4px_4px_0_var(--border)]"
       >
         Start learning
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -576,7 +576,7 @@ const Landing = ({ onNavigate }) => {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(7,9,8,0.5) 0%, rgba(7,9,8,0.82) 70%, rgba(7,9,8,0.97) 100%)',
+                background: 'rgba(17,17,17,0.82)',
                 pointerEvents: 'none',
               }}
             />
@@ -763,8 +763,8 @@ const Landing = ({ onNavigate }) => {
                           backgroundImage:
                             'linear-gradient(rgba(52,211,153,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(52,211,153,.08) 1px, transparent 1px)',
                           backgroundSize: '42px 42px',
-                          maskImage: 'radial-gradient(circle at 50% 45%, black, transparent 72%)',
-                          WebkitMaskImage: 'radial-gradient(circle at 50% 45%, black, transparent 72%)',
+                          maskImage: 'none',
+                          WebkitMaskImage: 'none',
                         }}
                       />
                     </div>

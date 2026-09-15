@@ -945,7 +945,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                       <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(52,211,153,0.14)_45%,transparent_75%)] animate-[shimmer_1.8s_linear_infinite]" />
                       <div className="relative flex items-center gap-3">
                         <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-emerald-400/30 bg-emerald-500/10">
-                          <span className="absolute inset-1 rounded-full bg-[radial-gradient(circle,_rgba(52,211,153,0.45),_transparent_68%)] animate-pulse" />
+                          <span className="absolute inset-1 rounded-full bg-[var(--accent)] animate-pulse" />
                           <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.9)] animate-[pulse_1.4s_ease-in-out_infinite]" />
                         </div>
                         <div className="flex items-center gap-2">
