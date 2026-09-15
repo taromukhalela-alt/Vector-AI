@@ -15,7 +15,7 @@ const Topics = ({ onSelectTopic }) => {
   ];
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto px-4 py-8 select-none sm:px-8 bg-zinc-950">
+    <div className="workspace-page h-full min-h-0 overflow-y-auto px-4 py-8 select-none sm:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="anim-fade-up d-100 mb-10">
