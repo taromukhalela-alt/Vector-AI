@@ -46,7 +46,7 @@ const Auth = ({ onNavigate }) => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 font-sans p-6 overflow-hidden">
+    <div className="auth-page relative min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 font-sans p-6 overflow-hidden">
       {/* Back to landing */}
       <Link
         to="/"
@@ -76,7 +76,7 @@ const Auth = ({ onNavigate }) => {
             <Zap className="w-4 h-4 text-zinc-950" strokeWidth={2.75} />
           </div>
           <div className="leading-none">
-            <div className="font-semibold text-[15px] tracking-tight text-zinc-50">Vector AI</div>
+            <div className="font-semibold text-[15px] tracking-tight text-zinc-50">Vector AI</div><span className="redesign-tag mt-2 text-emerald-400">redesign</span>
             <div className="text-[10px] tracking-[0.18em] text-emerald-400/90 font-medium uppercase mt-1">STEM OS</div>
           </div>
         </div>

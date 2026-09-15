@@ -141,7 +141,7 @@ const Onboarding = ({ onComplete }) => {
   const Icon = step.icon;
 
   return (
-    <div className={`fixed inset-0 z-[600] transition-all duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`onboarding-page fixed inset-0 z-[600] transition-all duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       {/* Dim Overlay with Spotlight Hole */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]">
         {spotlightRect && (

@@ -15,8 +15,8 @@ const tabs = [
 ];
 
 const BrandMark = ({ className }) => (
-  <div className={`flex items-center justify-center rounded-lg bg-[var(--clr-primary)] text-white ${className || 'h-8 w-8'}`} aria-hidden="true">
-    <span className="text-lg font-bold leading-none">V</span>
+  <div className={`neo-mark flex items-center justify-center border-2 border-[var(--clr-border)] bg-[var(--clr-accent)] text-[var(--clr-text-1)] shadow-[3px_3px_0_var(--clr-border)] ${className || 'h-8 w-8'}`} aria-hidden="true">
+    <span className="text-lg font-black leading-none">↗</span>
   </div>
 );
 
@@ -46,6 +46,7 @@ const Layout = ({ children }) => {
           <button onClick={() => goToPath('/dashboard')} className="flex items-center gap-3 rounded-lg text-left" aria-label="Go to Vector dashboard">
             <BrandMark className="h-9 w-9 shrink-0" />
             {!collapsed && <span className="text-base font-bold tracking-tight">Vector<span className="text-[var(--clr-primary)]">.</span>AI</span>}
+            {!collapsed && <span className="redesign-tag ml-auto">new</span>}
           </button>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-5" aria-label="Main navigation">
