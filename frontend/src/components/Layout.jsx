@@ -43,7 +43,7 @@ const Layout = ({ children }) => {
     <div className="flex h-dvh overflow-hidden bg-[var(--clr-bg)] text-[var(--clr-text-1)]">
       <aside className={`hidden md:flex shrink-0 flex-col border-r border-[var(--clr-border)] bg-[var(--clr-surface)] transition-[width] duration-200 ${collapsed ? 'w-[var(--sidebar-w-collapsed)]' : 'w-[var(--sidebar-w)]'}`}>
         <div className="flex h-20 items-center border-b border-[var(--clr-border)] px-4">
-          <button onClick={() => goToPath('/dashboard')} className="flex items-center gap-3 rounded-lg text-left" aria-label="Go to Vector dashboard">
+          <button onClick={() => goToPath('/dashboard')} className="gumroad-hover flex items-center gap-3 rounded-lg text-left" aria-label="Go to Vector dashboard">
             <BrandMark className="h-9 w-9 shrink-0" />
             {!collapsed && <span className="text-base font-bold tracking-tight">Vector<span className="text-[var(--clr-primary)]">.</span>AI</span>}
             {!collapsed && <span className="redesign-tag ml-auto">new</span>}
