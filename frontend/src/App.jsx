@@ -28,19 +28,21 @@ const ScreenReaderTitle = ({ children }) => (
 
 // Skeleton shown while a route chunk is in flight. It intentionally mirrors the
 // page padding rhythm so the transition feels instant rather than blank.
-const RouteSkeleton = () => (
-  <div className="min-h-dvh bg-zinc-950 px-5 py-8 sm:px-8 sm:py-10" role="status" aria-live="polite">
-    <span className="sr-only">Loading screen</span>
-    <div className="mx-auto max-w-5xl animate-pulse space-y-6">
-      <div className="h-5 w-32 rounded-full bg-white/[0.06]" />
-      <div className="h-9 w-2/3 max-w-md rounded-lg bg-white/[0.06]" />
-      <div className="h-4 w-1/2 max-w-sm rounded bg-white/[0.04]" />
-      <div className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[0, 1, 2, 3, 4, 5].map((key) => (
-          <div key={key} className="h-32 rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
-        ))}
-      </div>
+const VectorLoader = ({ label = 'Loading Vector AI' }) => (
+  <div className="flex flex-col items-center gap-5" role="status" aria-live="polite">
+    <span className="sr-only">{label}</span>
+    <div className="vector-loader" aria-hidden="true">
+      {[0, 1, 2, 3].map((key) => (
+        <span className="loader-circle" key={key}><span className="loader-dot" /><span className="loader-outline" /></span>
+      ))}
     </div>
+    <span className="font-mono text-[10px] font-medium uppercase tracking-[.18em] text-[var(--clr-text-3)]">{label}</span>
+  </div>
+);
+
+const RouteSkeleton = () => (
+  <div className="flex min-h-dvh items-center justify-center bg-[var(--clr-bg)] px-5" role="status" aria-live="polite">
+    <VectorLoader label="Loading workspace" />
   </div>
 );
 
@@ -65,11 +67,7 @@ function App() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--clr-bg)] text-[var(--clr-text-1)]">
-        <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-xl border border-[var(--clr-border)] bg-[var(--clr-surface)] p-8 text-center shadow-[var(--shadow-sm)]">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--clr-primary)] text-lg font-bold text-white">V</div>
-          <div><p className="text-sm font-semibold">Loading your workspace</p><p className="mt-1 text-xs text-[var(--clr-text-3)]">Preparing Vector AI</p></div>
-          <div className="h-1 w-24 overflow-hidden rounded-full bg-[var(--clr-surface-3)]"><div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--clr-primary)]" /></div>
-        </div>
+        <VectorLoader label="Preparing workspace" />
       </div>
     );
   }

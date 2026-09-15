@@ -547,7 +547,7 @@ const Landing = ({ onNavigate }) => {
 
 
       {/* Hero */}
-      <main className="relative z-10">
+      <main className="landing-page relative z-10">
         {/* Full-bleed GridDistortion background for the hero */}
         <div className="relative -mt-[72px] pt-[72px]">
           <div
