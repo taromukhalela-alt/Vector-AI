@@ -1,80 +1,59 @@
 import { BookOpen, ArrowRight, Atom, FlaskConical } from 'lucide-react';
 import { trackEvent } from '../useAnalytics';
+import { PageHeader } from '../components/ui';
 
-const Topics = ({ onSelectTopic }) => {
-  const topics = [
-    { title: "Projectile Motion", desc: "Kinematics equations, gravity acceleration, and flight times.", tag: "Physics", prompt: "Explain projectile motion for Grade 11 CAPS Physical Sciences." },
-    { title: "Gas Laws", desc: "Boyle's, Charles's, and the ideal gas equation relationships.", tag: "Chemistry", prompt: "Explain gas laws and ideal gases." },
-    { title: "Reaction Rates", desc: "Collision theory, catalysts, and why reactions speed up.", tag: "Chemistry", prompt: "Explain collision theory and reaction rates." },
-    { title: "Newton's Laws", desc: "Force, mass, and acceleration in action.", tag: "Physics", prompt: "Explain Newton's second law with a simple example." },
-    { title: "Waves", desc: "Frequency, wavelength, and speed with CAPS examples.", tag: "Physics", prompt: "Explain wave motion and the Doppler effect." },
-    { title: "Electric Fields", desc: "Charges and the field lines between them.", tag: "Physics", prompt: "How do electric fields work?" },
-    { title: "Bonding", desc: "Ionic and covalent bonding with particle-level explanations.", tag: "Chemistry", prompt: "Explain ionic and covalent bonding." },
-    { title: "Acids and Bases", desc: "pH, neutralisation, and acid-base behavior in solution.", tag: "Chemistry", prompt: "Explain acids, bases, and pH." },
-    { title: "Electrochemistry", desc: "Redox reactions, cells, and electron flow.", tag: "Chemistry", prompt: "Explain electrochemistry and galvanic cells." }
-  ];
+const TOPIC_GROUPS = [
+  { group: 'Mechanics', items: [
+    { title: 'Kinematics', desc: 'Displacement, velocity, acceleration and motion graphs.', tag: 'Physics', prompt: 'Explain kinematics for Grade 10 CAPS Physical Sciences with worked examples.' },
+    { title: 'Projectile Motion', desc: 'Launch angles, range, height and flight time.', tag: 'Physics', prompt: 'Explain projectile motion for Grade 11 CAPS Physical Sciences.' },
+    { title: "Newton's Laws", desc: 'Inertia, F=ma, action-reaction and free-body diagrams.', tag: 'Physics', prompt: "Explain Newton's laws with a simple CAPS example." },
+    { title: 'Momentum', desc: 'Impulse, conservation and collisions.', tag: 'Physics', prompt: 'Explain momentum and impulse for CAPS Physical Sciences.' },
+    { title: 'Energy', desc: 'Work, kinetic and potential energy, power.', tag: 'Physics', prompt: 'Explain work, energy and power for CAPS.' } ]},
+  { group: 'Waves, Fields and Matter', items: [
+    { title: 'Waves', desc: 'Frequency, wavelength, speed and Doppler effect.', tag: 'Physics', prompt: 'Explain wave motion and the Doppler effect.' },
+    { title: 'Electricity', desc: 'Current, voltage, resistance and circuits.', tag: 'Physics', prompt: 'Explain electric circuits and Ohms law for CAPS.' },
+    { title: 'Electric Fields', desc: 'Charge, field lines and Coulomb forces.', tag: 'Physics', prompt: 'How do electric fields work?' },
+    { title: 'Magnetism and Optics', desc: 'Fields, induction, reflection and refraction.', tag: 'Physics', prompt: 'Explain magnetism and optics basics for CAPS.' } ]},
+  { group: 'Chemistry', items: [
+    { title: 'Gas Laws', desc: 'Boyle, Charles and the ideal gas equation.', tag: 'Chemistry', prompt: 'Explain gas laws and ideal gases.' },
+    { title: 'Reaction Rates', desc: 'Collision theory, catalysts and rate factors.', tag: 'Chemistry', prompt: 'Explain collision theory and reaction rates.' },
+    { title: 'Bonding', desc: 'Ionic, covalent and metallic bonding.', tag: 'Chemistry', prompt: 'Explain ionic and covalent bonding.' },
+    { title: 'Acids and Bases', desc: 'pH, neutralisation and titrations.', tag: 'Chemistry', prompt: 'Explain acids, bases and pH.' },
+    { title: 'Electrochemistry', desc: 'Redox, cells and electron flow.', tag: 'Chemistry', prompt: 'Explain electrochemistry and galvanic cells.' } ]},
+];
 
-  return (
-    <div className="workspace-page h-full min-h-0 overflow-y-auto px-4 py-8 select-none sm:px-8">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="anim-fade-up d-100 mb-10">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-emerald-400 text-[10.5px] font-medium tracking-wider uppercase mb-4">
-            <BookOpen className="w-3 h-3" strokeWidth={2.25} />
-            Syllabus
-          </div>
-          <h1 className="text-[26px] sm:text-[32px] font-semibold tracking-tight text-zinc-50 leading-tight">
-            Pick a topic to revise
-          </h1>
-          <p className="text-[14px] text-zinc-400 mt-2 max-w-2xl leading-relaxed">
-            CAPS-aligned Physics and Chemistry topics. Click any card to start a focused tutoring session with worked examples.
-          </p>
+const Topics = ({ onSelectTopic }) => (
+  <div className="flex flex-col gap-8">
+    <PageHeader kicker="Syllabus · CAPS" title="Topics" intro="Pick a topic to start a focused tutoring session. Every prompt opens the AI Tutor with CAPS worked examples." />
+    {TOPIC_GROUPS.map((section) => (
+      <section key={section.group} aria-label={section.group}>
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center border-2 border-[var(--border)] bg-[var(--surface)]"><BookOpen className="h-5 w-5 text-[var(--emerald)]" aria-hidden="true" /></span>
+          <h2 className="text-xl font-black uppercase tracking-tight text-[var(--ink)]">{section.group}</h2>
+          <hr className="rule-heavy flex-1" />
         </div>
-
-        {/* Grid */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {topics.map((topic, idx) => {
-            const isChem = topic.tag === 'Chemistry';
-            const Icon = isChem ? FlaskConical : Atom;
-            const delayClass = `d-${(idx % 9 + 2) * 50}`;
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {section.items.map((topic) => {
+            const Icon = topic.tag === 'Chemistry' ? FlaskConical : Atom;
             return (
-              <button
-                key={idx}
-                onClick={() => {
-                  trackEvent('topic_revision_started', { route: '/topics', topic: topic.title });
-                  onSelectTopic(topic.prompt);
-                }}
-                className={`anim-fade-up ${delayClass} group relative text-left p-5 rounded-xl bg-zinc-900/40 border border-white/[0.05] hover:border-emerald-500/30 hover:bg-zinc-900/60 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer overflow-hidden`}
-              >
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                <div className="flex items-start justify-between mb-5">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isChem ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'}`}>
-                    <Icon className="w-4 h-4" strokeWidth={1.8} />
-                  </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isChem ? 'text-emerald-300/90 bg-emerald-500/[0.06] border border-emerald-500/15' : 'text-emerald-300/90 bg-emerald-500/[0.06] border border-emerald-500/15'}`}>
-                    {topic.tag}
-                  </span>
+              <button key={topic.title} onClick={() => { trackEvent('topic_revision_started', { route: '/topics', topic: topic.title }); onSelectTopic(topic.prompt); }}
+                className="neo-card group flex min-h-[190px] flex-col p-5 text-left hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_var(--border)]">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center border-2 border-[var(--border)] bg-[var(--surface-muted)]"><Icon className="h-5 w-5 text-[var(--ink)]" aria-hidden="true" /></span>
+                  <span className="neo-tag">{topic.tag}</span>
                 </div>
-
-                <h3 className="text-[15px] font-semibold text-zinc-100 tracking-tight group-hover:text-emerald-300 transition-colors">
-                  {topic.title}
-                </h3>
-                <p className="text-[13px] text-zinc-400 mt-1.5 leading-relaxed line-clamp-2">
-                  {topic.desc}
-                </p>
-
-                <div className="mt-5 pt-4 border-t border-white/[0.05] flex items-center justify-between text-[11.5px] text-zinc-500 group-hover:text-emerald-400 transition-colors">
-                  <span className="font-medium">Start session</span>
-                  <ArrowRight className="w-3.5 h-3.5 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" strokeWidth={2.25} />
-                </div>
+                <h3 className="mt-4 text-lg font-black uppercase leading-tight text-[var(--ink)]">{topic.title}</h3>
+                <p className="mt-2 text-[14px] font-medium leading-relaxed text-[var(--ink-muted)]">{topic.desc}</p>
+                <span className="mt-auto flex items-center justify-between border-t-2 border-[var(--border)] pt-3 text-xs font-black uppercase tracking-widest text-[var(--ink)]">
+                  Start session <ArrowRight className="h-4 w-4 text-[var(--emerald)]" aria-hidden="true" />
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
-    </div>
-  );
-};
+      </section>
+    ))}
+  </div>
+);
 
 export default Topics;

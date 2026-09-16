@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
+import { PageHeader, EmptyState, ErrorState, VectorLoader } from '../components/ui';
 import {
   FileText,
   Search,
@@ -310,350 +311,138 @@ const Notes = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, editTitle, editContent, editTopic]);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-      {/* Mobile sidebar overlay */}
-      {sidebarVisible && !isDesktop && (
-        <div
-          className="no-print fixed inset-0 z-130 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside
-        className={`no-print shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col transition-all duration-300 ${sidebarVisible
-          ? 'fixed inset-y-0 left-0 z-140 w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
-          : 'hidden'
-          }`}
-      >
-        {/* Sidebar header */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-              Study Vault
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleCreateNote}
-              className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-500/10 transition-colors"
-              title="New note"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => {
-                setSidebarPinned(false);
-                localStorage.setItem('vector_notes_sidebar_pinned', 'false');
-                setSidebarOpen(false);
-              }}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-              title="Close panel"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+    <div className="flex flex-col gap-6">
+      <PageHeader kicker="Create · Textbook" title="Notes" intro="A digital textbook for CAPS Physical Sciences. Select a note or generate one with AI." />
+      <div className="neo-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-4">
+          <p className="section-label">Study vault · {notes.length}</p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={toggleSidebar} className="neo-btn px-4 py-2 text-xs">Library</button>
+            <button onClick={handleCreateNote} className="neo-btn neo-btn-primary px-4 py-2 text-xs"><Plus className="mr-2 h-4 w-4" aria-hidden="true" />New note</button>
           </div>
         </div>
-
-        {/* Search */}
-        <div className="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search notes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 rounded-lg py-1.5 pl-7 pr-3 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500/50 transition-colors"
-            />
-          </form>
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr]">
+          {sidebarVisible && (
+            <aside className="border-b-[3px] border-[var(--border)] bg-[var(--surface)] md:border-b-0 md:border-r-[3px]" aria-label="Notes">
+              <div className="border-b-2 border-[var(--border)] p-3">
+                <form onSubmit={handleSearchSubmit} className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+                  <input type="text" placeholder="Search notes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="neo-input py-2.5 pl-10 pr-3 text-sm font-semibold" aria-label="Search notes" />
+                </form>
+              </div>
+              <div className="max-h-96 overflow-y-auto p-3 md:max-h-[560px]">
+                {isLoadingNotes ? (<VectorLoader label="Loading notes" />) : loadError ? (<ErrorState title="Unable to load notes" body={loadError} onRetry={fetchNotes} />) : notes.length === 0 ? (
+                  <EmptyState icon={FileText} title="No notes yet" body="Generate your first study guide." actionLabel="New note" onAction={handleCreateNote} />
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {notes.map((note) => {
+                      const isActive = selectedNote?.id === note.id;
+                      return (
+                        <button key={note.id} onClick={() => handleSelectNote(note)} className={`border-2 border-[var(--border)] p-3 text-left shadow-[2px_2px_0_var(--border)] ${isActive ? 'bg-[var(--emerald)] text-white' : 'bg-[var(--paper)] hover:bg-[var(--surface-muted)]'}`}>
+                          <span className="flex items-center gap-2 text-sm font-extrabold"><FileText className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{note.title}</span></span>
+                          <span className={`mt-2 block text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-[var(--ink-muted)]'}`}>{note.topic || 'General'} · {formatRelativeDate(note.updated_at)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="border-t-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-3">
+                <p className="section-label mb-2">AI study guide</p>
+                <input type="text" placeholder="e.g. Newton's second law" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="neo-input py-2.5 px-3 text-sm font-semibold" aria-label="AI note topic" />
+                <button onClick={handleGenerateAINote} disabled={isGenerating || !aiTopic.trim()} className="neo-btn neo-btn-primary mt-2 w-full px-4 py-2.5 text-xs">{isGenerating ? 'Generating...' : (<><Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />Generate</>)}</button>
+              </div>
+            </aside>
+          )}
+          <div className="min-w-0">
+            {selectedNote ? (<NotesReader selectedNote={selectedNote} notes={notes} isEditing={isEditing} setIsEditing={setIsEditing} editTitle={editTitle} setEditTitle={setEditTitle} editTopic={editTopic} setEditTopic={setEditTopic} editContent={editContent} textareaRef={textareaRef} wordCount={wordCount} handleSaveNote={handleSaveNote} isSavingNote={isSavingNote} handleDownloadPDF={handleDownloadPDF} isExporting={isExporting} handleDeleteNote={handleDeleteNote} />) : (
+              <div className="p-4 md:p-6">
+                <EmptyState icon={BookOpen} title="Select a study note" body="Review saved chapters or generate a comprehensive CAPS study guide." actionLabel="New note" onAction={handleCreateNote} />
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+      {sidebarVisible && !isDesktop && (<button className="no-print fixed inset-0 z-[130] bg-black/50 md:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close notes" />)}
+    </div>
+  );
+};
 
-        {/* Notes list */}
-        <div className="flex-1 overflow-y-auto py-1.5 px-2 space-y-0.5">
-          {isLoadingNotes ? (
-            <div className="flex items-center justify-center py-8 text-[10px] text-zinc-400">
-              <span className="mr-2 h-3.5 w-3.5 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
-              Loading notes…
-            </div>
-          ) : loadError ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-[10px] text-red-600 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
-              {loadError}
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mb-3" />
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">No notes yet</p>
-              <button
-                onClick={handleCreateNote}
-                className="mt-3 text-[11px] text-emerald-500 font-semibold hover:underline"
-              >
-                Create your first note
-              </button>
+// ─── Reader: digital textbook presentation ───────────────────────────────────
+const NotesReader = ({ selectedNote, isEditing, setIsEditing, editTitle, setEditTitle, editTopic, setEditTopic, editContent, textareaRef, wordCount, handleSaveNote, isSavingNote, handleDownloadPDF, isExporting, handleDeleteNote }) => {
+  const chapterNo = String(Math.abs((selectedNote.title || 'note').split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 24 + 1).padStart(2, '0');
+
+  return (
+    <div className="flex min-h-[480px] flex-col border-[3px] border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)]">
+
+      {/* Textbook spine header */}
+      <header className="no-print flex items-stretch justify-between border-b-[3px] border-[var(--border)] bg-[var(--ink)] text-[var(--paper)]">
+        <div className="flex min-w-0 items-center gap-4 px-4 py-3 md:px-6">
+          <span className="hidden shrink-0 border-2 border-[var(--paper)] px-2 py-1 font-mono text-xs font-bold sm:block" aria-hidden="true">CH.{chapterNo}</span>
+          {isEditing ? (
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+              <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Note title…" aria-label="Note title"
+                className="min-w-0 flex-1 border-2 border-[var(--paper)] bg-transparent px-3 py-1.5 text-sm font-extrabold text-[var(--paper)] placeholder:text-[var(--ink-muted)] focus:outline-none" />
+              <input type="text" value={editTopic} onChange={(e) => setEditTopic(e.target.value)} placeholder="Topic…" aria-label="Note topic"
+                className="w-full border-2 border-[var(--paper)] bg-transparent px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--paper)] placeholder:text-[var(--ink-muted)] focus:outline-none sm:w-36" />
             </div>
           ) : (
-            notes.map((note) => {
-              const isActive = selectedNote?.id === note.id;
-              const isAi = note.source === 'ai' || note.ai_generated;
-              return (
-                <button
-                  key={note.id}
-                  onClick={() => handleSelectNote(note)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer group ${isActive
-                    ? 'bg-emerald-500/10 dark:bg-emerald-500/12 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-transparent'
-                    }`}
-                >
-                  <div className="flex items-start justify-between gap-1.5">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <FileText className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isActive ? 'text-emerald-500' : 'text-zinc-400'}`} />
-                      <div className="min-w-0">
-                        <p className={`font-semibold truncate leading-snug ${isActive ? '' : 'text-zinc-700 dark:text-zinc-200'}`}>
-                          {note.title}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {note.topic && (
-                            <span className={`text-[9.5px] font-bold uppercase tracking-wider ${isActive ? 'text-emerald-500' : 'text-zinc-400'}`}>
-                              {note.topic}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      {isAi && (
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
-                      )}
-                      <span className={`text-[9px] ${isActive ? 'text-emerald-400/70' : 'text-zinc-400'}`}>
-                        {formatRelativeDate(note.updated_at)}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })
+            <div className="min-w-0">
+              <p className="section-label" style={{ color: 'var(--ink-muted)' }}>{selectedNote.topic || 'General'}</p>
+              <h2 className="truncate text-lg font-black uppercase leading-tight md:text-xl">{selectedNote.title}</h2>
+            </div>
           )}
         </div>
-
-        {/* AI Generator panel */}
-        <div className="border-t border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/80 dark:bg-zinc-900/60">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Sparkles className="w-3 h-3 text-emerald-500" />
-            <span className="text-[9.5px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
-              AI Guide Generator
-            </span>
-          </div>
-          <input
-            type="text"
-            placeholder="e.g. Newton's Laws, Waves…"
-            value={aiTopic}
-            onChange={(e) => setAiTopic(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleGenerateAINote()}
-            className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 rounded-lg py-1.5 px-2.5 text-xs text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 focus:outline-none focus:border-emerald-500/50 transition-colors mb-2"
-          />
-          <button
-            onClick={handleGenerateAINote}
-            disabled={isGenerating || !aiTopic.trim()}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg py-2 text-[10px] tracking-widest uppercase flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
-          >
-            {isGenerating ? (
-              <>
-                <span className="w-2.5 h-2.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3 h-3" />
-                Generate
-              </>
-            )}
+        <div className="no-print flex shrink-0 items-stretch border-l-[3px] border-[var(--paper)]">
+          <button onClick={() => setIsEditing(!isEditing)} title={isEditing ? 'Preview note' : 'Edit note'} aria-label={isEditing ? 'Preview note' : 'Edit note'}
+            className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--paper)]/10 md:w-14">
+            {isEditing ? <Eye className="h-5 w-5" aria-hidden="true" /> : <Edit3 className="h-5 w-5" aria-hidden="true" />}
+          </button>
+          <button onClick={handleDownloadPDF} disabled={isExporting} title="Export as PDF" aria-label="Export as PDF"
+            className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--paper)]/10 disabled:opacity-50 md:w-14">
+            {isExporting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--paper)]/40 border-t-[var(--paper)]" aria-hidden="true" /> : <Download className="h-5 w-5" aria-hidden="true" />}
+          </button>
+          <button onClick={() => handleDeleteNote(selectedNote.id)} title="Delete note" aria-label="Delete note"
+            className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--danger)] md:w-14">
+            <Trash2 className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-      </aside>
+      </header>
 
-      {/* ── Main content area ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 min-w-0">
-        {selectedNote ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Toolbar */}
-            <div className="no-print shrink-0 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/90 backdrop-blur-sm px-3 py-2">
-              {/* Left: sidebar toggle + title */}
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <button
-                  onClick={toggleSidebar}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-800 px-2 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  title={sidebarVisible ? 'Hide notes' : 'Show notes'}
-                >
-                  {sidebarVisible ? (
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                  <span className="hidden sm:inline">Notes</span>
-                </button>
-
-                {isEditing ? (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="Note title…"
-                      className="flex-1 min-w-0 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-lg py-1.5 px-3 text-sm font-bold focus:outline-none focus:border-emerald-500/50 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 transition-colors"
-                    />
-                    <input
-                      type="text"
-                      value={editTopic}
-                      onChange={(e) => setEditTopic(e.target.value)}
-                      placeholder="Topic…"
-                      className="w-24 sm:w-28 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-lg py-1.5 px-2.5 text-xs font-semibold focus:outline-none focus:border-emerald-500/50 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 transition-colors"
-                    />
-                  </div>
-                ) : (
-                  <div className="min-w-0">
-                    <h2 className="truncate font-extrabold text-sm tracking-tight text-zinc-800 dark:text-zinc-100">
-                      {selectedNote.title}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9.5px] font-bold text-emerald-500 uppercase tracking-widest">
-                        {selectedNote.topic || 'General'}
-                      </span>
-                      {selectedNote.updated_at && (
-                        <span className="text-[9.5px] text-zinc-400 flex items-center gap-0.5">
-                          <Clock className="w-2.5 h-2.5" />
-                          {formatRelativeDate(selectedNote.updated_at)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right: action buttons */}
-              <div className="no-print flex shrink-0 items-center gap-1.5">
-                {/* Edit/Preview toggle */}
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-[10.5px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
-                >
-                  {isEditing ? (
-                    <><Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Preview</span></>
-                  ) : (
-                    <><Edit3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Edit</span></>
-                  )}
-                </button>
-
-                {/* Save (only when editing) */}
-                {isEditing && (
-                  <button
-                    onClick={handleSaveNote}
-                    disabled={isSavingNote}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
-                  >
-                    {isSavingNote ? (
-                      <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                    ) : (
-                      <Save className="w-3.5 h-3.5" />
-                    )}
-                    <span className="hidden sm:inline">{isSavingNote ? 'Saving…' : 'Save'}</span>
-                  </button>
-                )}
-
-                {/* Export PDF */}
-                <button
-                  onClick={handleDownloadPDF}
-                  disabled={isExporting}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-[10.5px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="Export as PDF"
-                >
-                  {isExporting ? (
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-zinc-400/40 border-t-zinc-500 animate-spin" />
-                  ) : (
-                    <Download className="w-3.5 h-3.5" />
-                  )}
-                  <span className="hidden sm:inline">{isExporting ? 'Exporting…' : 'PDF'}</span>
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDeleteNote(selectedNote.id)}
-                  className="p-1.5 border border-zinc-200 dark:border-zinc-700 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 rounded-lg transition-colors cursor-pointer text-zinc-400"
-                  title="Delete note"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+      {/* Content */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {isEditing ? (
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--border)] bg-[var(--surface-muted)] px-4 py-1.5">
+              <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-[var(--ink-muted)]">
+                <AlignLeft className="h-3 w-3" aria-hidden="true" /> {wordCount} words
+              </span>
+              <span className="hidden font-mono text-[11px] font-bold text-[var(--ink-muted)] sm:inline">Markdown · $E=mc^2$ · Ctrl+S saves</span>
+              <button onClick={handleSaveNote} disabled={isSavingNote} className="neo-btn neo-btn-primary px-3 py-1 text-[11px]">
+                {isSavingNote ? 'Saving…' : (<><Save className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />Save</>)}
+              </button>
             </div>
-
-            {/* Content area */}
-            <div className="flex-1 overflow-y-auto">
-              {isEditing ? (
-                <div className="h-full flex flex-col">
-                  {/* Editor status bar */}
-                  <div className="shrink-0 flex items-center justify-between px-4 py-1.5 bg-zinc-100/60 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-                        <AlignLeft className="w-2.5 h-2.5" />
-                        {wordCount} words
-                      </span>
-                      <span className="text-[10px] text-zinc-400 hidden sm:inline">
-                        Markdown + LaTeX ($…$ and $$…$$)
-                      </span>
-                    </div>
-                    <span className="text-[9.5px] text-zinc-400 hidden sm:inline">
-                      Ctrl+S to save
-                    </span>
-                  </div>
-                  {/* Textarea */}
-                  <textarea
-                    ref={textareaRef}
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="flex-1 w-full bg-white dark:bg-zinc-950 border-0 resize-none focus:outline-none text-sm leading-relaxed font-mono text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 p-4 sm:p-6"
-                    placeholder="Write your study notes in Markdown…&#10;&#10;Math: $E = mc^2$ or display: $$F = ma$$&#10;Headers: # Title, ## Section&#10;Lists: - item or 1. item"
-                    spellCheck={false}
-                  />
-                </div>
-              ) : (
-                <div className="p-4 sm:p-6 md:p-8">
-                  <div id="print-note-root" className="mx-auto max-w-3xl">
-                    <MarkdownRenderer content={selectedNote.content || ''} />
-                  </div>
-                </div>
-              )}
-            </div>
+            <textarea ref={textareaRef} value={editContent} onChange={(e) => setEditContent(e.target.value)} spellCheck={false}
+              placeholder={'Write your study notes in Markdown…\n\nMath: $E = mc^2$ or display: $$F = ma$$\nHeaders: # Title, ## Section'}
+              aria-label="Note content"
+              className="min-h-[420px] flex-1 resize-none border-0 bg-[var(--surface)] p-4 font-mono text-sm leading-relaxed text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:outline-none sm:p-6" />
           </div>
         ) : (
-          /* Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <button
-              onClick={toggleSidebar}
-              className="mb-6 inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              {sidebarVisible ? 'Hide notes' : 'Open notes'}
-            </button>
-
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/8 border border-emerald-500/15 flex items-center justify-center mb-5">
-              <BookOpen className="w-7 h-7 text-emerald-400" strokeWidth={1.5} />
+          <article className="px-4 py-6 sm:px-8 sm:py-8 md:px-12">
+            <div id="print-note-root" className="mx-auto max-w-3xl">
+              {selectedNote.updated_at && (
+                <p className="mb-6 flex items-center gap-2 border-b-2 border-[var(--border)] pb-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)]">
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" /> Updated {formatRelativeDate(selectedNote.updated_at)}
+                </p>
+              )}
+              <MarkdownRenderer content={selectedNote.content || ''} />
+              <div className="mt-10 border-t-[3px] border-[var(--border)] pt-3">
+                <p className="section-label">End of chapter · Vector AI Notes</p>
+              </div>
             </div>
-            <h3 className="font-extrabold text-base text-zinc-800 dark:text-zinc-100 mb-2">
-              Select a Study Note
-            </h3>
-            <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-6">
-              Review saved summaries, draft practice guides, or use the AI helper to generate comprehensive study notes on any CAPS topic.
-            </p>
-            <button
-              onClick={handleCreateNote}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Note
-            </button>
-          </div>
+          </article>
         )}
       </div>
     </div>
@@ -661,3 +450,5 @@ const Notes = () => {
 };
 
 export default Notes;
+
+

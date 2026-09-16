@@ -4,11 +4,11 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
 import {
-  Send, Plus, MessageSquare, History,
-  ChevronLeft, ChevronRight, Bookmark, X, Sparkles, Mic, MicOff,
-  Loader2, Zap, Brain, Trash2, RefreshCw, Tag, BookOpen,
+  Send, Plus,
+  ChevronLeft, ChevronRight, Bookmark, X, Mic, MicOff,
+  Loader2, Brain, Trash2, RefreshCw, Tag,
   TrendingUp, Target, Clock, ChevronDown, ChevronUp,
-  AlertCircle, Square, Copy, Check,
+  AlertCircle, Square, Copy, Check, ArrowRight
 } from 'lucide-react';
 
 // ─── Memory Panel Component ────────────────────────────────────────────────────
@@ -17,10 +17,10 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
   if (isLoading) {
     return (
-      <div className="px-3 py-3 border-b border-white/[0.05]">
-        <div className="flex items-center gap-2 text-zinc-500">
-          <Brain className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
-          <span className="text-[11px]">Loading memory…</span>
+      <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
+        <div className="flex items-center gap-2 text-[var(--ink-muted)]">
+          <Brain className="w-5 h-5 animate-pulse text-[var(--emerald)]" />
+          <span className="text-xs font-bold uppercase tracking-widest">Loading memory…</span>
         </div>
       </div>
     );
@@ -28,21 +28,21 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
   if (!memory) {
     return (
-      <div className="px-3 py-3 border-b border-white/[0.05]">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <Brain className="w-3.5 h-3.5 text-zinc-600" />
-            <span className="text-[10.5px] font-semibold text-zinc-500">Student Memory</span>
+      <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-[var(--ink)]" />
+            <span className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">Student Memory</span>
           </div>
           <button
             onClick={onRefresh}
-            className="p-1 rounded text-zinc-600 hover:text-emerald-400 transition-colors"
+            className="p-1 border-2 border-[var(--border)] shadow-[2px_2px_0_var(--border)] bg-[var(--surface)] hover:bg-[var(--emerald-soft)] active:translate-y-[2px] active:shadow-none transition-all"
             title="Refresh memory"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[10px] text-zinc-600 leading-relaxed">
+        <p className="text-xs font-bold text-[var(--ink-muted)] leading-relaxed">
           No memory yet. Start chatting and the AI will remember your learning profile.
         </p>
       </div>
@@ -53,38 +53,34 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
   const hasContent = focus_topics.length || strengths.length || needs_practice.length || recent_context || study_preferences.length;
 
   return (
-    <div className="border-b border-white/[0.05]">
+    <div className="border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+        className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface)] transition-colors border-b-2 border-transparent"
       >
-        <div className="flex items-center gap-1.5">
-          <Brain className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-[10.5px] font-semibold text-zinc-300">
+        <div className="flex items-center gap-2">
+          <Brain className="w-5 h-5 text-[var(--emerald)]" />
+          <span className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">
             {userName ? `${userName.split(' ')[0]}'s Memory` : 'Student Memory'}
           </span>
           {hasContent && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Memory active" />
+            <span className="w-2 h-2 rounded-full bg-[var(--emerald)] shrink-0 border border-[var(--border)]" title="Memory active" />
           )}
         </div>
-        {expanded ? (
-          <ChevronUp className="w-3 h-3 text-zinc-500" />
-        ) : (
-          <ChevronDown className="w-3 h-3 text-zinc-500" />
-        )}
+        {expanded ? <ChevronUp className="w-5 h-5 text-[var(--ink)]" /> : <ChevronDown className="w-5 h-5 text-[var(--ink)]" />}
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 space-y-2.5">
+        <div className="px-4 pb-4 space-y-4 pt-2">
           {focus_topics.length > 0 && (
             <div>
-              <div className="flex items-center gap-1 mb-1">
-                <Tag className="w-2.5 h-2.5 text-emerald-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Focus Topics</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="w-4 h-4 text-[var(--emerald)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Focus Topics</span>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
                 {focus_topics.map((t, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/[0.10] border border-emerald-500/20 text-[9.5px] text-emerald-300 font-medium">
+                  <span key={i} className="px-2 py-1 border-2 border-[var(--border)] bg-[var(--surface)] text-[10px] font-bold text-[var(--ink)] shadow-[2px_2px_0_var(--border)]">
                     {t}
                   </span>
                 ))}
@@ -94,14 +90,14 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {strengths.length > 0 && (
             <div>
-              <div className="flex items-center gap-1 mb-1">
-                <TrendingUp className="w-2.5 h-2.5 text-emerald-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Strengths</span>
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-[var(--emerald)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Strengths</span>
               </div>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {strengths.slice(0, 3).map((s, i) => (
-                  <li key={i} className="text-[10px] text-zinc-400 leading-snug flex items-start gap-1">
-                    <span className="text-emerald-400 mt-0.5 shrink-0">·</span>{s}
+                  <li key={i} className="text-xs font-bold text-[var(--ink-muted)] flex items-start gap-2">
+                    <span className="text-[var(--emerald)] font-black">→</span>{s}
                   </li>
                 ))}
               </ul>
@@ -110,14 +106,14 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {needs_practice.length > 0 && (
             <div>
-              <div className="flex items-center gap-1 mb-1">
-                <Target className="w-2.5 h-2.5 text-emerald-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Needs Practice</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="w-4 h-4 text-[var(--danger)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Needs Practice</span>
               </div>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {needs_practice.slice(0, 3).map((n, i) => (
-                  <li key={i} className="text-[10px] text-zinc-400 leading-snug flex items-start gap-1">
-                    <span className="text-emerald-400 mt-0.5 shrink-0">·</span>{n}
+                  <li key={i} className="text-xs font-bold text-[var(--ink-muted)] flex items-start gap-2">
+                    <span className="text-[var(--danger)] font-black">→</span>{n}
                   </li>
                 ))}
               </ul>
@@ -126,45 +122,27 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {recent_context && (
             <div>
-              <div className="flex items-center gap-1 mb-1">
-                <Clock className="w-2.5 h-2.5 text-zinc-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-zinc-500">Recent Context</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-[var(--ink-muted)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Recent Context</span>
               </div>
-              <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-3">{recent_context}</p>
-            </div>
-          )}
-
-          {study_preferences.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1 mb-1">
-                <BookOpen className="w-2.5 h-2.5 text-emerald-400" />
-                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-400">Preferences</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {study_preferences.map((p, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded-md bg-emerald-500/[0.08] border border-emerald-500/20 text-[9.5px] text-emerald-300 font-medium">
-                    {p}
-                  </span>
-                ))}
-              </div>
+              <p className="text-xs font-bold text-[var(--ink-muted)] leading-relaxed border-l-4 border-[var(--border)] pl-2">{recent_context}</p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-1 border-t border-white/[0.04]">
+          <div className="flex items-center gap-4 pt-4 border-t-2 border-[var(--border)]">
             <button
               onClick={onRefresh}
-              className="flex items-center gap-1 text-[9.5px] text-zinc-500 hover:text-emerald-400 transition-colors"
+              className="neo-btn flex items-center gap-2 px-3 py-2 text-[10px]"
             >
-              <RefreshCw className="w-2.5 h-2.5" />
-              Refresh
+              <RefreshCw className="w-3 h-3" /> Refresh
             </button>
             <button
               onClick={onClear}
-              className="flex items-center gap-1 text-[9.5px] text-zinc-500 hover:text-red-400 transition-colors"
+              className="neo-btn bg-[var(--danger)] text-white flex items-center gap-2 px-3 py-2 text-[10px]"
             >
-              <Trash2 className="w-2.5 h-2.5" />
-              Clear memory
+              <Trash2 className="w-3 h-3" /> Clear
             </button>
           </div>
         </div>
@@ -184,14 +162,10 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
-  // The in-flight request can be cancelled by the learner ("Stop"), and a
-  // failed exchange is surfaced as a retryable banner instead of being written
-  // into the conversation as a fake assistant turn.
   const abortRef = useRef(null);
   const [failedRequest, setFailedRequest] = useState(null);
   const [copiedIndex, setCopiedIndex] = useState(null);
 
-  // Memory/RAG state
   const [memory, setMemory] = useState(null);
   const [memoryLoading, setMemoryLoading] = useState(true);
 
@@ -264,14 +238,15 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
 
   const cambVoices = [{ id: '147320', name: 'Silas Blackwood' }];
 
-  const promptChips = [
-    { title: "Projectile motion", sub: "Grade 11 CAPS, with worked example", prompt: "Explain projectile motion for Grade 11 CAPS." },
-    { title: "Newton's second law", sub: "F = ma with intuition", prompt: "Explain Newton's second law with a worked example." },
-    { title: "Reaction rates", sub: "Collision theory & catalysts", prompt: "Explain collision theory and reaction rates." },
-    { title: "Electric fields", sub: "Coulomb's law visualised", prompt: "How do electric fields and Coulomb's Law work?" },
+  const educationalActions = [
+    { label: "Explain differently", prompt: "Explain this concept in a different, simpler way." },
+    { label: "Give an example", prompt: "Give me a real-world example of this." },
+    { label: "Test me", prompt: "Give me a question to test my understanding." },
+    { label: "Harder question", prompt: "Give me a more difficult question on this topic." },
+    { label: "Make notes", prompt: "Summarize this into a study guide." },
+    { label: "Show experiment", prompt: "Describe a laboratory experiment that demonstrates this." }
   ];
 
-  // ─── Load memory ────────────────────────────────────────────────────────────
   const loadMemory = useCallback(async () => {
     setMemoryLoading(true);
     try {
@@ -371,7 +346,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   }, [browserVoices, ttsProvider]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     syncVoiceSelection();
   }, [syncVoiceSelection]);
 
@@ -387,12 +361,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending]);
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
   }, [inputValue]);
 
   const handleNewSession = async () => {
@@ -424,9 +397,9 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   }, [isDesktop]);
 
   const stopDictation = () => {
-    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch { /* noop */ } }
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch { } }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      try { mediaRecorderRef.current.stop(); } catch { /* noop */ }
+      try { mediaRecorderRef.current.stop(); } catch { }
     }
     setIsRecording(false);
   };
@@ -498,8 +471,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   const handleSendMessage = async (text, historyOverride) => {
     const question = (text || inputValue).trim();
     if (!question || isSending) return;
-    // `historyOverride` lets "Regenerate" rebuild from a trimmed history without
-    // waiting for the messages state to settle.
     const baseMessages = historyOverride || messages;
     setInputValue('');
     setIsSending(true);
@@ -528,9 +499,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         }),
       });
 
-      // Animation matching is resolved server-side from the same keyword pass
-      // the backend already runs, so the extra round-trip only happens when the
-      // server could not decide.
       const settleAnimation = async () => {
         const headerAnimation = response.headers.get('X-Vector-Animation');
         if (headerAnimation && onMatchAnimation) {
@@ -591,7 +559,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       await settleAnimation();
       loadSessions();
     } catch (error) {
-      // A cancelled request is a deliberate learner action, not a failure.
       if (error?.name === 'AbortError') {
         trackEvent('chat_generation_stopped', { route: '/chat' });
       } else {
@@ -618,7 +585,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     if (lastUserIndex === -1) return;
     const question = messages[lastUserIndex].content;
     handleSendMessage(question, messages.slice(0, lastUserIndex));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSending, messages]);
 
   const handleCopyMessage = useCallback(async (text, index) => {
@@ -636,7 +602,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     const { question, history } = failedRequest;
     setFailedRequest(null);
     handleSendMessage(question, history);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [failedRequest, isSending]);
 
   useEffect(() => {
@@ -652,7 +617,6 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       window.sessionStorage.removeItem('vector_dashboard_prompt');
     }
     handleSendMessage(promptToSend);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);
 
   useEffect(() => {
@@ -677,61 +641,37 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
     } catch (err) { console.error(err); }
   };
 
-  const selectClass = "w-full bg-white/[0.03] border border-white/[0.07] rounded-md px-2.5 py-1.5 text-[12px] text-zinc-200 outline-none focus:border-emerald-500/40 cursor-pointer";
+  const selectClass = "w-full border-2 border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-bold uppercase outline-none focus:border-[var(--emerald)] shadow-[2px_2px_0_var(--border)]";
 
-  // ─── Memory-aware greeting ──────────────────────────────────────────────────
   const getGreeting = () => {
     const name = user?.name?.split(' ')[0];
-    if (name) return `How can I help you study today, ${name}?`;
-    return 'How can I help you study today?';
-  };
-
-  const getSubGreeting = () => {
-    if (memory?.focus_topics?.length) {
-      return `I remember you've been working on ${memory.focus_topics.slice(0, 2).join(' and ')}. Ready to continue?`;
-    }
-    if (memory?.needs_practice?.length) {
-      return `You've been practising ${memory.needs_practice[0]}. Want to keep going?`;
-    }
-    return 'Ask anything about CAPS Physical Sciences or Chemistry. Worked examples, formulas, and visual simulations included.';
+    if (name) return `Vector AI Tutor. Welcome, ${name}.`;
+    return 'Vector AI Tutor.';
   };
 
   return (
-    <>
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-120%); }
-          100% { transform: translateX(120%); }
-        }
-      `}</style>
-      <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="relative flex h-full min-h-0 overflow-hidden bg-[var(--paper)] text-[var(--ink)] font-sans">
+      
       {/* Mobile overlay */}
       {sidebarVisible && !isDesktop && (
-        <div
-          className="fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── Sidebar ──────────────────────────────────────────────────────────── */}
-      <aside className={`shrink-0 flex flex-col transition-all duration-300 bg-zinc-950/98 border-r border-white/[0.05] backdrop-blur-md ${
+      <aside className={`shrink-0 flex flex-col transition-all duration-300 border-r-4 border-[var(--border)] bg-[var(--surface)] ${
         sidebarVisible
-          ? 'fixed inset-y-0 left-0 z-[140] w-72 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none'
+          ? 'fixed inset-y-0 left-0 z-50 w-72 md:static md:z-auto md:w-80 shadow-[4px_0_0_var(--border)] md:shadow-none'
           : 'hidden'
       }`}>
-        {/* Sidebar header */}
-        <div className="px-3 py-3 border-b border-white/[0.05] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-emerald-400" strokeWidth={1.8} />
-            <h2 className="text-[12.5px] font-semibold text-zinc-100">Sessions</h2>
-          </div>
-          <div className="flex items-center gap-0.5">
+        <div className="p-4 border-b-4 border-[var(--border)] flex items-center justify-between">
+          <h2 className="text-xl font-black uppercase tracking-tight text-[var(--ink)]">Sessions</h2>
+          <div className="flex gap-2">
             <button
               onClick={handleNewSession}
-              className="p-1.5 rounded-md text-emerald-300 hover:bg-emerald-500/[0.08] transition-colors"
+              className="neo-btn px-2 py-1 flex items-center bg-[var(--emerald-soft)] shadow-[2px_2px_0_var(--border)]"
               title="New session"
             >
-              <Plus className="w-4 h-4" strokeWidth={2.25} />
+              <Plus className="w-5 h-5" />
             </button>
             <button
               onClick={() => {
@@ -739,15 +679,14 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                 localStorage.setItem('vector_chat_sidebar_pinned', 'false');
                 setSidebarOpen(false);
               }}
-              className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
+              className="neo-btn px-2 py-1 flex items-center shadow-[2px_2px_0_var(--border)]"
               title="Close"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Memory panel (RAG) */}
         <MemoryPanel
           memory={memory}
           isLoading={memoryLoading}
@@ -756,12 +695,10 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           userName={user?.name}
         />
 
-        {/* Sessions list */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {sessions.length === 0 ? (
             <div className="text-center py-10">
-              <MessageSquare className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
-              <p className="text-[11.5px] text-zinc-500">No previous sessions</p>
+              <p className="text-sm font-bold uppercase text-[var(--ink-muted)]">No previous sessions</p>
             </div>
           ) : (
             sessions.map((sess) => {
@@ -770,30 +707,28 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                 <button
                   key={sess.chat_id}
                   onClick={() => handleResumeSession(sess.chat_id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-[13px] font-medium truncate flex items-center gap-2 cursor-pointer transition-colors ${
+                  className={`w-full text-left p-4 border-2 border-[var(--border)] font-bold transition-all shadow-[4px_4px_0_var(--border)] ${
                     active
-                      ? 'bg-emerald-500/[0.08] text-emerald-300 border border-emerald-500/20'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.03] border border-transparent'
+                      ? 'bg-[var(--emerald)] text-white translate-x-[2px] translate-y-[2px] shadow-[2px_2px_0_var(--border)]'
+                      : 'bg-[var(--surface)] hover:bg-[var(--surface-muted)] text-[var(--ink)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none'
                   }`}
                 >
-                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" strokeWidth={1.8} />
-                  <span className="truncate">{sess.title || 'Untitled session'}</span>
+                  <span className="truncate block uppercase tracking-wider text-sm">{sess.title || 'Untitled session'}</span>
                 </button>
               );
             })
           )}
         </div>
 
-        {/* Voice settings */}
-        <div className="p-3 space-y-2.5 border-t border-white/[0.05]">
+        <div className="p-4 space-y-4 border-t-4 border-[var(--border)] bg-[var(--surface-muted)]">
           <div>
-            <label className="text-[10.5px] font-medium text-zinc-500 block mb-1">Voice synth</label>
+            <label className="text-xs font-black uppercase text-[var(--ink)] block mb-2">Voice synth</label>
             <select value={ttsProvider} onChange={e => setTtsProvider(e.target.value)} className={selectClass}>
               {voiceProviders.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[10.5px] font-medium text-zinc-500 block mb-1">Speaker</label>
+            <label className="text-xs font-black uppercase text-[var(--ink)] block mb-2">Speaker</label>
             <select value={voiceId} onChange={e => setVoiceId(e.target.value)} className={selectClass}>
               {ttsProvider === 'camb' && cambVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               {ttsProvider === 'elevenlabs' && elevenLabsVoices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -804,129 +739,103 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       </aside>
 
       {/* ── Main workspace ──────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-[var(--paper)]">
         {/* Toolbar */}
-        <div className="flex h-12 shrink-0 items-center justify-between px-3 sm:px-4 border-b border-white/[0.05] bg-zinc-950/90 backdrop-blur-md">
-          <button
-            onClick={toggleSidebar}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 sm:px-2.5 py-1.5 text-[11.5px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-colors cursor-pointer"
-          >
-            {sidebarVisible ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-            <span className="hidden xs:inline">Sessions</span>
-          </button>
-
-          {/* Memory indicator badge (mobile) */}
-          {memory && !sidebarVisible && (
+        <div className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 border-b-4 border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex items-center gap-4">
             <button
               onClick={toggleSidebar}
-              className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/[0.08] border border-emerald-500/20 text-[10px] text-emerald-400 font-medium"
-              title="View your learning memory"
+              className="neo-btn px-3 py-2 flex items-center gap-2 text-sm shadow-[2px_2px_0_var(--border)]"
             >
-              <Brain className="w-3 h-3" />
-              <span className="hidden sm:inline">Memory active</span>
+              {sidebarVisible ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              <span className="hidden sm:inline font-bold uppercase">Sessions</span>
             </button>
-          )}
+
+            {memory && !sidebarVisible && (
+              <span className="hidden md:inline-flex items-center gap-2 px-3 py-2 border-2 border-[var(--border)] bg-[var(--emerald-soft)] shadow-[2px_2px_0_var(--border)] text-xs font-bold uppercase">
+                <Brain className="w-4 h-4 text-[var(--ink)]" />
+                Memory Active
+              </span>
+            )}
+          </div>
 
           <button
             onClick={handleNewSession}
-            className="inline-flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-[11.5px] font-medium bg-emerald-500/[0.10] border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/[0.16] transition-colors cursor-pointer"
+            className="neo-btn neo-btn-primary px-4 py-2 flex items-center gap-2 text-sm shadow-[2px_2px_0_var(--border)]"
           >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
-            <span className="hidden xs:inline">New chat</span>
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            <span className="hidden sm:inline">New Chat</span>
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-5 sm:px-6 sm:py-6 bg-zinc-950">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-8 sm:px-8 bg-[var(--paper)]">
           {messages.length === 0 ? (
-            <div className="mx-auto flex min-h-full max-w-2xl flex-col items-center justify-center py-8 text-center px-4">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-emerald-500/[0.08] border border-emerald-500/15">
-                <Zap className="w-6 h-6 text-emerald-400" strokeWidth={1.6} />
-              </div>
-              <h2 className="text-[18px] sm:text-[22px] font-semibold tracking-tight text-zinc-50 mb-2">
-                {getGreeting()}
-              </h2>
-              <p className="text-zinc-400 text-[13px] sm:text-[13.5px] leading-relaxed mb-7 max-w-md">
-                {getSubGreeting()}
+            <div className="mx-auto flex flex-col max-w-4xl pt-8 pb-16">
+              <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">{getGreeting()}</h1>
+              <p className="text-lg font-bold text-[var(--ink-muted)] mb-12">
+                Ask a question, request a summary, or let's solve a problem step by step.
               </p>
 
-              {/* Memory context chips */}
-              {memory?.focus_topics?.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-1.5 mb-6">
-                  {memory.focus_topics.slice(0, 4).map((topic, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSendMessage(`Explain ${topic} in detail with examples.`)}
-                      className="px-2.5 py-1 rounded-full bg-emerald-500/[0.08] border border-emerald-500/20 text-[11px] text-emerald-300 hover:bg-emerald-500/[0.15] transition-colors cursor-pointer"
-                    >
-                      {topic}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-2">
-                {promptChips.map((chip, idx) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {educationalActions.map((action, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleSendMessage(chip.prompt)}
-                    className="group rounded-xl p-3.5 sm:p-4 text-left transition-all cursor-pointer bg-zinc-900/40 hover:bg-zinc-900/70 border border-white/[0.05] hover:border-emerald-500/20"
+                    onClick={() => handleSendMessage(action.prompt)}
+                    className="neo-card p-6 text-left hover:bg-[var(--emerald-soft)] transition-colors group cursor-pointer active:translate-y-[4px] active:translate-x-[4px] active:shadow-none"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 mb-2 opacity-80" strokeWidth={2.25} />
-                    <div className="text-[13px] sm:text-[13.5px] font-semibold text-zinc-100 leading-snug group-hover:text-emerald-300 transition-colors">{chip.title}</div>
-                    <div className="text-[11.5px] sm:text-[12px] text-zinc-500 mt-1">{chip.sub}</div>
+                    <span className="block text-lg font-black uppercase tracking-tight text-[var(--ink)] group-hover:text-[var(--emerald-dark)] mb-2">
+                      {action.label}
+                    </span>
+                    <ArrowRight className="h-6 w-6 text-[var(--ink)] group-hover:translate-x-2 transition-transform" />
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 sm:gap-6">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-8">
               {messages.map((msg, index) => {
                 const isUser = msg.role === 'user';
-                // A cancelled generation can leave an empty assistant bubble.
                 if (!isUser && !msg.content) return null;
                 return (
                   <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full sm:max-w-[88%]`}>
-                      <div className="text-[10px] sm:text-[10.5px] font-medium uppercase tracking-wider text-zinc-500 mb-1.5 px-1">
+                    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full sm:max-w-[85%]`}>
+                      <div className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">
                         {isUser ? (user?.name?.split(' ')[0] || 'You') : 'Vector AI'}
                       </div>
                       {isUser ? (
-                        <div className="rounded-2xl rounded-tr-sm px-3.5 sm:px-4 py-2.5 sm:py-3 bg-emerald-500/[0.10] border border-emerald-500/20 text-zinc-100 text-[13.5px] sm:text-[14px] leading-relaxed break-words max-w-full">
+                        <div className="p-6 border-4 border-[var(--border)] bg-[var(--emerald-soft)] shadow-[6px_6px_0_var(--border)] text-[var(--ink)] text-lg font-bold leading-relaxed break-words">
                           <p className="whitespace-pre-line">{msg.content}</p>
                         </div>
                       ) : (
-                        <div className="rounded-2xl rounded-tl-sm px-3.5 sm:px-4 py-2.5 sm:py-3 bg-zinc-900/50 border border-white/[0.06] text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words w-full">
-                          <MarkdownRenderer content={msg.content} dark={true} />
-                          {/* Message actions stay tucked away until hover/tap so the
-                              answer keeps the reading focus. */}
-                          <div className="mt-2.5 sm:mt-3 flex flex-wrap items-center gap-1.5">
+                        <div className="p-6 md:p-8 border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] text-[var(--ink)] text-base md:text-lg leading-relaxed break-words w-full">
+                          <div className="prose prose-lg max-w-none prose-headings:font-black prose-headings:uppercase prose-a:text-[var(--emerald)] prose-a:font-bold prose-strong:font-black">
+                            <MarkdownRenderer content={msg.content} />
+                          </div>
+                          
+                          <div className="mt-8 pt-6 border-t-2 border-[var(--border)] flex flex-wrap items-center gap-4">
                             <button
                               onClick={() => handleSaveAsNote(msg.content)}
-                              className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
+                              className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
                             >
-                              <Bookmark className="w-3 h-3" strokeWidth={2} />
-                              Save to notes
+                              <Bookmark className="w-4 h-4" /> Save as note
                             </button>
                             <button
                               onClick={() => handleCopyMessage(msg.content, index)}
-                              className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
-                              aria-label="Copy answer"
+                              className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
                             >
                               {copiedIndex === index ? (
-                                <><Check className="w-3 h-3 text-emerald-400" strokeWidth={2.4} />Copied</>
+                                <><Check className="w-4 h-4 text-[var(--emerald)]" /> Copied</>
                               ) : (
-                                <><Copy className="w-3 h-3" strokeWidth={2} />Copy</>
+                                <><Copy className="w-4 h-4" /> Copy text</>
                               )}
                             </button>
                             {index === messages.length - 1 && !isSending && (
                               <button
                                 onClick={handleRegenerate}
-                                className="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 hover:text-emerald-300 transition-colors rounded-md px-2 py-1 border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04]"
-                                aria-label="Regenerate answer"
+                                className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
                               >
-                                <RefreshCw className="w-3 h-3" strokeWidth={2} />
-                                Regenerate
+                                <RefreshCw className="w-4 h-4" /> Regenerate
                               </button>
                             )}
                           </div>
@@ -939,39 +848,17 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
 
               {(isSending || isThinking) && (
                 <div className="flex justify-start">
-                  <div className="flex flex-col items-start">
-                    <div className="text-[10.5px] font-medium uppercase tracking-wider text-zinc-500 mb-1.5 px-1">Vector AI</div>
-                    <div className="relative overflow-hidden rounded-2xl rounded-tl-sm border border-emerald-500/20 bg-gradient-to-r from-emerald-500/10 via-zinc-900/80 to-zinc-900/80 px-4 py-3 shadow-[0_0_24px_rgba(16,185,129,0.12)]">
-                      <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(52,211,153,0.14)_45%,transparent_75%)] animate-[shimmer_1.8s_linear_infinite]" />
-                      <div className="relative flex items-center gap-3">
-                        <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-emerald-400/30 bg-emerald-500/10">
-                          <span className="absolute inset-1 rounded-full bg-[radial-gradient(circle,_rgba(52,211,153,0.45),_transparent_68%)] animate-pulse" />
-                          <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.9)] animate-[pulse_1.4s_ease-in-out_infinite]" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-medium text-emerald-100">Vector is thinking</span>
-                          <div className="flex items-end gap-1">
-                            {[0, 1, 2].map((dot) => (
-                              <span
-                                key={dot}
-                                className="block h-1.5 w-1.5 rounded-full bg-emerald-400/90"
-                                style={{
-                                  animation: 'pulse 1.2s ease-in-out infinite',
-                                  animationDelay: `${dot * 0.18}s`,
-                                  transform: 'translateY(0)',
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleStopGeneration}
-                          className="ml-1 rounded-lg border border-emerald-400/25 bg-white/[0.04] px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-100/90 transition hover:bg-white/[0.09]"
-                        >
-                          Stop
-                        </button>
-                      </div>
+                  <div className="flex flex-col items-start w-full sm:max-w-[85%]">
+                    <div className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">Vector AI</div>
+                    <div className="p-6 border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] flex items-center gap-4">
+                      <div className="w-8 h-8 bg-[var(--emerald)] border-2 border-[var(--border)] animate-spin shadow-[2px_2px_0_var(--border)]" />
+                      <span className="text-xl font-black uppercase tracking-tight text-[var(--ink)]">Processing...</span>
+                      <button
+                        onClick={handleStopGeneration}
+                        className="neo-btn bg-[var(--danger)] text-white px-4 py-2 text-xs ml-auto shadow-[2px_2px_0_var(--border)]"
+                      >
+                        Stop
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -982,41 +869,22 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* ── Composer ──────────────────────────────────────────────────────── */}
-        <div className="shrink-0 px-3 sm:px-4 pb-3 sm:pb-4 pt-2 bg-zinc-950 border-t border-white/[0.04]">
-          <div className="mx-auto max-w-3xl">
+        <div className="shrink-0 p-4 md:p-6 bg-[var(--surface)] border-t-4 border-[var(--border)]">
+          <div className="mx-auto max-w-4xl">
             {failedRequest && (
-              <div
-                role="alert"
-                className="mb-2 flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/[0.07] px-3 py-2.5 text-[12.5px] text-red-200"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-red-100">That answer didn&apos;t come through</p>
-                  <p className="mt-0.5 leading-relaxed text-red-200/80">
-                    Your question was kept — retry it without retyping.
-                  </p>
+              <div className="mb-4 flex items-start gap-4 p-4 border-4 border-[var(--border)] bg-[var(--danger)] text-white shadow-[4px_4px_0_var(--border)]">
+                <AlertCircle className="mt-1 h-6 w-6 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-black uppercase text-lg">Error processing request</p>
+                  <p className="mt-1 font-bold">Your question was kept.</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleRetryFailed}
-                    disabled={isSending}
-                    className="rounded-lg bg-red-500/20 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-red-100 transition hover:bg-red-500/30 disabled:opacity-50"
-                  >
-                    Retry
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFailedRequest(null)}
-                    aria-label="Dismiss"
-                    className="rounded-lg p-1.5 text-red-200/70 transition hover:bg-red-500/20 hover:text-red-100"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                <div className="flex gap-2">
+                  <button onClick={handleRetryFailed} disabled={isSending} className="neo-btn bg-[var(--surface)] px-4 py-2 text-sm shadow-[2px_2px_0_var(--border)]">Retry</button>
+                  <button onClick={() => setFailedRequest(null)} className="neo-btn bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)]"><X className="h-5 w-5" /></button>
                 </div>
               </div>
             )}
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 focus-within:border-emerald-500/30 focus-within:bg-zinc-900/60 transition-colors backdrop-blur-md">
+            <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--paper)] shadow-[6px_6px_0_var(--border)] focus-within:shadow-[2px_2px_0_var(--border)] focus-within:translate-x-[4px] focus-within:translate-y-[4px] transition-all">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1028,62 +896,47 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Ask anything…"
-                className="w-full resize-none text-[13.5px] sm:text-[14px] py-3 sm:py-3.5 px-3.5 sm:px-4 bg-transparent text-zinc-100 placeholder:text-zinc-500 outline-none font-sans leading-relaxed"
-                style={{ minHeight: '44px', maxHeight: '120px' }}
+                placeholder="Ask Vector..."
+                className="w-full resize-none text-lg md:text-xl font-bold p-6 bg-transparent text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none"
+                style={{ minHeight: '80px', maxHeight: '200px' }}
               />
-              <div className="flex items-center justify-between px-2 pb-2">
-                <div className="flex items-center gap-1.5 ml-auto">
-                  {/* Mic button */}
+              <div className="flex items-center justify-between px-4 pb-4 bg-[var(--surface-muted)] pt-4 border-t-2 border-[var(--border)]">
+                <div className="flex gap-2">
                   <button
                     onClick={toggleDictation}
                     disabled={isProcessingAudio}
-                    className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-center ${
-                      isRecording
-                        ? 'bg-red-500/15 text-red-300 border border-red-500/30 animate-pulse'
-                        : 'text-zinc-400 hover:text-emerald-300 hover:bg-white/[0.04] border border-transparent'
+                    className={`neo-btn px-4 py-2 flex items-center shadow-[2px_2px_0_var(--border)] ${
+                      isRecording ? 'bg-[var(--danger)] text-white animate-pulse' : 'bg-[var(--surface)]'
                     }`}
-                    title={isRecording ? 'Stop recording' : 'Voice input'}
                   >
-                    {isProcessingAudio
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : isRecording
-                      ? <MicOff className="w-4 h-4" />
-                      : <Mic className="w-4 h-4" strokeWidth={1.8} />
-                    }
+                    {isProcessingAudio ? <Loader2 className="w-5 h-5 animate-spin" /> : isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
-                  {/* Send / Stop */}
-                  {isSending ? (
-                    <button
-                      onClick={handleStopGeneration}
-                      className="p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-center bg-white/[0.08] text-zinc-200 hover:bg-white/[0.14] border border-white/10"
-                      aria-label="Stop generating"
-                      title="Stop generating"
-                    >
-                      <Square className="w-3.5 h-3.5 fill-current" strokeWidth={0} />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSendMessage()}
-                      disabled={!inputValue.trim()}
-                      className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-center ${
-                        inputValue.trim()
-                          ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_4px_12px_-2px_rgba(16,185,129,0.4)]'
-                          : 'bg-white/[0.04] text-zinc-600'
-                      }`}
-                      aria-label="Send message"
-                    >
-                      <Send className="w-4 h-4" strokeWidth={2.25} />
-                    </button>
-                  )}
                 </div>
+                
+                {isSending ? (
+                  <button
+                    onClick={handleStopGeneration}
+                    className="neo-btn bg-[var(--danger)] text-white px-6 py-2 shadow-[2px_2px_0_var(--border)] flex items-center gap-2"
+                  >
+                    <Square className="w-5 h-5 fill-current" /> Stop
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputValue.trim()}
+                    className={`neo-btn px-8 py-3 text-lg flex items-center shadow-[4px_4px_0_var(--border)] ${
+                      inputValue.trim() ? 'bg-[var(--emerald)] text-white' : 'bg-[var(--surface-muted)] text-[var(--ink-muted)] opacity-50 cursor-not-allowed shadow-none'
+                    }`}
+                  >
+                    Send <Send className="ml-2 w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
-      </div>
-    </>
+    </div>
   );
 };
 

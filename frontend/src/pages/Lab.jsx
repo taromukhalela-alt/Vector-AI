@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PhysicsCanvas from '../components/PhysicsCanvas';
 import {
   Play, Pause, RotateCcw, Zap,
-  Orbit, CircleDot, Box, Clock, Activity, Rocket, Sparkles
+  Orbit, CircleDot, Box, Clock, Activity, Rocket, Sparkles, SlidersHorizontal, BarChart2
 } from 'lucide-react';
 
 const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
@@ -36,15 +36,18 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   const handleParamChange = (key, value) => setParams(prev => ({ ...prev, [key]: value }));
   const handleReset = () => onAnimChange(activeAnim);
 
-  const Slider = ({ label, unit, min, max, step, value, onChange, wide }) => (
-    <div className="flex items-center gap-2.5">
-      <label className="text-[11px] font-medium text-zinc-400 w-[88px] text-right tabular-nums">
-        {label} <span className="text-zinc-500">({value}{unit})</span>
-      </label>
+  const Slider = ({ label, unit, min, max, step, value, onChange }) => (
+    <div className="flex flex-col gap-1 mb-4">
+      <div className="flex justify-between items-end">
+        <label className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">
+          {label}
+        </label>
+        <span className="text-xs font-bold font-mono text-[var(--ink-muted)] border-2 border-[var(--border)] px-1 shadow-[1px_1px_0_var(--border)]">{value}{unit}</span>
+      </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className={`accent-emerald-500 h-1 rounded-full bg-white/[0.07] cursor-pointer ${wide ? 'flex-1 sm:w-32' : 'flex-1 sm:w-24'}`}
+        className="w-full accent-[var(--emerald)] h-2 border-2 border-[var(--border)] rounded-none cursor-pointer appearance-none bg-[var(--surface-muted)]"
       />
     </div>
   );
@@ -52,10 +55,10 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   const Toggle = ({ active, onClick, label }) => (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
+      className={`w-full neo-btn py-2 text-xs flex items-center justify-center shadow-[2px_2px_0_var(--border)] mb-4 ${
         active
-          ? 'bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-300'
-          : 'bg-white/[0.03] border border-white/[0.07] text-zinc-400 hover:text-zinc-200'
+          ? 'bg-[var(--emerald)] text-white'
+          : 'bg-[var(--surface)]'
       }`}
     >
       {label}
@@ -63,14 +66,16 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   );
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100">
-      {/* Sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col sm:flex z-20 bg-zinc-950/95 border-r border-white/[0.05] backdrop-blur-md">
-        <div className="p-4 border-b border-white/[0.05]">
-          <div className="text-[11px] font-semibold text-zinc-100">Visual labs</div>
-          <div className="text-[10.5px] text-zinc-500 mt-0.5">{labs.length} simulations</div>
+    <div className="flex flex-col h-full bg-[var(--paper)] text-[var(--ink)] p-4 md:p-6 overflow-y-auto">
+      
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b-4 border-[var(--border)] pb-6 mb-6">
+        <div>
+          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">Vector Lab Workspace</h2>
+          <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Physics Lab</h1>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        
+        <div className="mt-4 md:mt-0 flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
           {labs.map((lab) => {
             const Icon = lab.icon;
             const isActive = activeAnim === lab.id;
@@ -78,156 +83,152 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
               <button
                 key={lab.id}
                 onClick={() => onAnimChange(lab.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium cursor-pointer transition-colors ${
+                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 border-2 border-[var(--border)] font-bold uppercase text-xs transition-all ${
                   isActive
-                    ? 'bg-emerald-500/[0.08] text-emerald-300 border border-emerald-500/20'
-                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.03] border border-transparent'
+                    ? 'bg-[var(--emerald)] text-white shadow-[2px_2px_0_var(--border)] translate-y-[-2px]'
+                    : 'bg-[var(--surface)] hover:bg-[var(--surface-muted)] hover:translate-y-[-2px] hover:shadow-[2px_2px_0_var(--border)]'
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2.25 : 1.8} />
+                <Icon className="w-4 h-4" strokeWidth={2.5} />
                 {lab.label}
               </button>
             );
           })}
-        </nav>
-      </aside>
-
-      {/* Main viewport */}
-      <div
-        className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.06] blur-[120px] pointer-events-none"
-          style={{ width: 'min(600px, 90vw)', height: 'min(600px, 90vw)' }}
-        />
-
-        {/* HUD top-left */}
-        <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)] sm:left-5 sm:top-5 sm:max-w-md rounded-xl bg-zinc-950/85 border border-white/[0.06] backdrop-blur-md px-4 py-3 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
-          <div className="text-[9.5px] font-semibold text-emerald-400 uppercase tracking-[0.16em] flex items-center gap-1.5 mb-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            HUD
-          </div>
-          <h3 className="text-[14px] font-semibold text-zinc-100 tracking-tight leading-tight">{hudTitle}</h3>
-          <p className="mt-1 font-mono text-[11px] leading-relaxed text-zinc-400 truncate sm:whitespace-normal">{hudFormula}</p>
         </div>
+      </div>
 
-        {/* Telemetry top-right */}
-        {Object.keys(readout).length > 0 && (
-          <div className="absolute top-5 right-5 z-20 pointer-events-none px-4 py-3 rounded-xl hidden sm:block bg-zinc-950/85 border border-white/[0.06] min-w-[180px] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur-md">
-            <div className="text-[9.5px] font-semibold text-zinc-500 uppercase tracking-[0.16em] mb-2">Telemetry</div>
-            <div className="space-y-1.5 font-mono text-[11px]">
-              {Object.entries(readout).map(([key, val]) => (
-                <div key={key} className="flex justify-between gap-6 items-center">
-                  <span className="text-zinc-500 capitalize">{key}</span>
-                  <span className="text-emerald-300 tabular-nums">{val}</span>
-                </div>
-              ))}
+      {/* LAB GRID */}
+      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_300px] gap-6 flex-1 min-h-[500px]">
+        
+        {/* CANVAS AREA */}
+        <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] relative overflow-hidden flex-1 min-h-[400px]">
+          {/* Internal HUD */}
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-10">
+            <div className="border-2 border-[var(--border)] bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)]">
+              <div className="text-[10px] font-black uppercase tracking-widest text-[var(--emerald)] mb-1 flex items-center gap-2">
+                <span className="w-2 h-2 bg-[var(--emerald)] block rounded-none border border-[var(--border)]" /> HUD
+              </div>
+              <h3 className="text-lg font-black uppercase tracking-tight">{hudTitle}</h3>
+              <p className="font-mono text-xs font-bold text-[var(--ink-muted)]">{hudFormula}</p>
+            </div>
+            
+            <div className="border-2 border-[var(--border)] bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)] hidden sm:block">
+               <div className="text-[10px] font-black uppercase tracking-widest text-[var(--danger)] flex items-center gap-1">
+                 <Activity className="w-3 h-3" /> LIVE
+               </div>
             </div>
           </div>
-        )}
 
-        <div className="relative flex min-h-0 flex-1 items-center justify-center lab-canvas-container">
-          <PhysicsCanvas
-            animationId={activeAnim}
-            params={params}
-            speed={speed}
-            isPaused={isPaused}
-            onReadoutUpdate={setReadout}
-            onHUDUpdate={(title, formula) => { setHudTitle(title); setHudFormula(formula); }}
-          />
+          <div className="flex-1 w-full relative">
+            <PhysicsCanvas
+              animationId={activeAnim}
+              params={params}
+              speed={speed}
+              isPaused={isPaused}
+              onReadoutUpdate={setReadout}
+              onHUDUpdate={(title, formula) => { setHudTitle(title); setHudFormula(formula); }}
+            />
+          </div>
+
+          {/* TELEMETRY BAR */}
+          <div className="border-t-4 border-[var(--border)] bg-[var(--surface-muted)] p-4 overflow-x-auto">
+            <div className="flex items-center gap-6 min-w-max">
+              <div className="text-xs font-black uppercase tracking-widest text-[var(--ink-muted)] flex items-center gap-2">
+                <BarChart2 className="w-4 h-4" /> Telemetry
+              </div>
+              {Object.keys(readout).length > 0 ? (
+                Object.entries(readout).map(([key, val]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-[var(--ink)]">{key}</span>
+                    <span className="font-mono text-xs font-bold bg-[var(--surface)] border-2 border-[var(--border)] px-2 py-0.5 shadow-[1px_1px_0_var(--border)]">{val}</span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-xs font-bold text-[var(--ink-muted)] italic">Awaiting data...</span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Controls overlay */}
-        <div className="relative z-20 max-h-[45%] shrink-0 overflow-y-auto bg-zinc-950/95 border-t border-white/[0.05] backdrop-blur-md p-4 sm:p-5 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
-          <div className="mx-auto flex max-w-4xl flex-col gap-4">
-            <select
-              value={activeAnim}
-              onChange={(e) => onAnimChange(e.target.value)}
-              className="w-full rounded-lg border border-white/[0.07] bg-zinc-900/60 px-3 py-2 text-[13px] font-medium focus:outline-none sm:hidden"
+        {/* PARAMETERS PANEL */}
+        <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] flex-shrink-0">
+          <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)] flex items-center gap-2">
+            <SlidersHorizontal className="w-5 h-5 text-[var(--ink)]" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Parameters</h2>
+          </div>
+          
+          <div className="p-4 flex-1 overflow-y-auto">
+            {activeAnim === 'idle' && (
+              <p className="text-xs font-bold text-[var(--ink-muted)] uppercase">Select a simulation to adjust parameters.</p>
+            )}
+            
+            {activeAnim === 'projectile' && (
+              <>
+                <Slider label="Angle" unit="°" min={10} max={80} step={1} value={params.angle} onChange={(v) => handleParamChange('angle', v)} />
+                <Slider label="Velocity" unit=" m/s" min={5} max={25} step={0.5} value={params.velocity} onChange={(v) => handleParamChange('velocity', v)} />
+                <Slider label="Bounce" unit="" min={0} max={0.9} step={0.05} value={params.bounciness.toFixed(2)} onChange={(v) => handleParamChange('bounciness', v)} />
+                <Slider label="Height" unit="m" min={0} max={5} step={0.5} value={params.height} onChange={(v) => handleParamChange('height', v)} />
+                <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Show Vectors" />
+              </>
+            )}
+            {activeAnim === 'wave' && (
+              <>
+                <Slider label="Frequency" unit=" Hz" min={0.5} max={3.0} step={0.1} value={params.frequency} onChange={(v) => handleParamChange('frequency', v)} />
+                <Slider label="Amplitude" unit="m" min={0.5} max={2.5} step={0.1} value={params.amplitude} onChange={(v) => handleParamChange('amplitude', v)} />
+                <Toggle active={params.superposition} onClick={() => handleParamChange('superposition', !params.superposition)} label="Superposition" />
+              </>
+            )}
+            {activeAnim === 'pendulum' && (
+              <>
+                <Slider label="Length" unit="m" min={2} max={8} step={0.2} value={params.length} onChange={(v) => handleParamChange('length', v)} />
+                <Slider label="Angle" unit="°" min={10} max={75} step={1} value={params.angle ?? 30} onChange={(v) => handleParamChange('angle', v)} />
+                <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Show Vectors" />
+              </>
+            )}
+            {activeAnim === 'forces' && (
+              <>
+                <Slider label="Applied Force" unit=" N" min={-50} max={50} step={1} value={params.applied} onChange={(v) => handleParamChange('applied', v)} />
+                <Slider label="Friction (μ)" unit="" min={0} max={0.8} step={0.05} value={params.mu.toFixed(2)} onChange={(v) => handleParamChange('mu', v)} />
+                <Slider label="Mass" unit=" kg" min={1} max={20} step={0.5} value={params.mass} onChange={(v) => handleParamChange('mass', v)} />
+                <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Show Vectors" />
+              </>
+            )}
+            {activeAnim === 'collision' && (
+              <>
+                <Slider label="Mass A" unit=" kg" min={1} max={10} step={0.5} value={params.mass1} onChange={(v) => handleParamChange('mass1', v)} />
+                <Slider label="Mass B" unit=" kg" min={1} max={10} step={0.5} value={params.mass2} onChange={(v) => handleParamChange('mass2', v)} />
+                <Toggle active={params.elastic} onClick={() => handleParamChange('elastic', !params.elastic)} label={params.elastic ? 'Elastic Collision' : 'Inelastic Collision'} />
+              </>
+            )}
+            {activeAnim === 'orbit' && (
+              <Slider label="Eccentricity" unit="" min={0} max={0.85} step={0.05} value={params.eccentricity} onChange={(v) => handleParamChange('eccentricity', v)} />
+            )}
+            {activeAnim === 'electricity' && (
+              <Slider label="Separation" unit=" m" min={2} max={10} step={0.5} value={params.separation} onChange={(v) => handleParamChange('separation', v)} />
+            )}
+
+            <div className="mt-8 pt-4 border-t-2 border-[var(--border)]">
+              <Slider label="Time Scale" unit="x" min={0.25} max={2.0} step={0.05} value={speed} onChange={(v) => setSpeed(v)} />
+            </div>
+          </div>
+
+          <div className="p-4 border-t-4 border-[var(--border)] bg-[var(--surface-muted)] grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setIsPaused(!isPaused)}
+              className="neo-btn flex items-center justify-center gap-2 py-3 shadow-[2px_2px_0_var(--border)]"
             >
-              {labs.map((lab) => <option key={lab.id} value={lab.id}>{lab.label}</option>)}
-            </select>
-
-            <div className="flex flex-col sm:flex-wrap sm:flex-row sm:items-center gap-3 sm:justify-center">
-              {activeAnim === 'projectile' && (
-                <>
-                  <Slider label="Angle" unit="°" min={10} max={80} step={1} value={params.angle} onChange={(v) => handleParamChange('angle', v)} />
-                  <Slider label="Vel" unit="m/s" min={5} max={25} step={0.5} value={params.velocity} onChange={(v) => handleParamChange('velocity', v)} />
-                  <Slider label="Bounce" unit="" min={0} max={0.9} step={0.05} value={params.bounciness.toFixed(2)} onChange={(v) => handleParamChange('bounciness', v)} />
-                  <Slider label="Height" unit="m" min={0} max={5} step={0.5} value={params.height} onChange={(v) => handleParamChange('height', v)} />
-                  <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Vectors" />
-                </>
-              )}
-              {activeAnim === 'wave' && (
-                <>
-                  <Slider wide label="Freq" unit=" Hz" min={0.5} max={3.0} step={0.1} value={params.frequency} onChange={(v) => handleParamChange('frequency', v)} />
-                  <Slider wide label="Amp" unit="m" min={0.5} max={2.5} step={0.1} value={params.amplitude} onChange={(v) => handleParamChange('amplitude', v)} />
-                  <Toggle active={params.superposition} onClick={() => handleParamChange('superposition', !params.superposition)} label="Superposition" />
-                </>
-              )}
-              {activeAnim === 'pendulum' && (
-                <>
-                  <Slider wide label="Length" unit="m" min={2} max={8} step={0.2} value={params.length} onChange={(v) => handleParamChange('length', v)} />
-                  <Slider wide label="Angle" unit="°" min={10} max={75} step={1} value={params.angle ?? 30} onChange={(v) => handleParamChange('angle', v)} />
-                  <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Vectors" />
-                </>
-              )}
-              {activeAnim === 'forces' && (
-                <>
-                  <Slider wide label="Force" unit=" N" min={-50} max={50} step={1} value={params.applied} onChange={(v) => handleParamChange('applied', v)} />
-                  <Slider label="μ" unit="" min={0} max={0.8} step={0.05} value={params.mu.toFixed(2)} onChange={(v) => handleParamChange('mu', v)} />
-                  <Slider label="Mass" unit=" kg" min={1} max={20} step={0.5} value={params.mass} onChange={(v) => handleParamChange('mass', v)} />
-                  <Toggle active={params.vectors} onClick={() => handleParamChange('vectors', !params.vectors)} label="Vectors" />
-                </>
-              )}
-              {activeAnim === 'collision' && (
-                <>
-                  <Slider label="Mass A" unit=" kg" min={1} max={10} step={0.5} value={params.mass1} onChange={(v) => handleParamChange('mass1', v)} />
-                  <Slider label="Mass B" unit=" kg" min={1} max={10} step={0.5} value={params.mass2} onChange={(v) => handleParamChange('mass2', v)} />
-                  <Toggle active={params.elastic} onClick={() => handleParamChange('elastic', !params.elastic)} label={params.elastic ? 'Elastic' : 'Inelastic'} />
-                </>
-              )}
-              {activeAnim === 'orbit' && (
-                <Slider wide label="Eccentricity" unit="" min={0} max={0.85} step={0.05} value={params.eccentricity} onChange={(v) => handleParamChange('eccentricity', v)} />
-              )}
-              {activeAnim === 'electricity' && (
-                <Slider wide label="Separation" unit=" m" min={2} max={10} step={0.5} value={params.separation} onChange={(v) => handleParamChange('separation', v)} />
-              )}
-            </div>
-
-            {/* Global controls */}
-            <div className="flex items-center justify-between border-t border-white/[0.05] pt-4 flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <label className="text-[11px] font-medium text-zinc-400">Speed <span className="text-emerald-400 tabular-nums">({speed}x)</span></label>
-                <input
-                  type="range" min="0.25" max="2.0" step="0.05" value={speed}
-                  onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                  className="accent-emerald-500 h-1 rounded-full bg-white/[0.07] w-28 cursor-pointer"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPaused(!isPaused)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium bg-white/[0.04] border border-white/[0.07] text-zinc-200 hover:bg-white/[0.07] transition-colors"
-                >
-                  {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5 fill-current" />}
-                  {isPaused ? 'Resume' : 'Pause'}
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium bg-white/[0.04] border border-white/[0.07] text-zinc-400 hover:text-red-300 hover:bg-red-500/[0.08] hover:border-red-500/20 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reset
-                </button>
-              </div>
-            </div>
+              {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              onClick={handleReset}
+              className="neo-btn bg-[var(--danger)] text-white flex items-center justify-center gap-2 py-3 shadow-[2px_2px_0_var(--border)]"
+            >
+              <RotateCcw className="w-4 h-4" /> Reset
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 const PhysicsCanvas = ({ 
   animationId = 'idle', 
@@ -68,18 +68,11 @@ const PhysicsCanvas = ({
     };
 
     // Helper functions
-    const drawCircle = (x, y, radius, color, glow = false) => {
+        const drawCircle = (x, y, radius, color) => {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = color;
-      if (glow) {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = color;
-      } else {
-        ctx.shadowBlur = 0;
-      }
       ctx.fill();
-      ctx.shadowBlur = 0;
     };
 
     const drawLine = (x1, y1, x2, y2, color, width = 0.1, dashed = false) => {
@@ -162,7 +155,7 @@ const PhysicsCanvas = ({
         if (onHUDUpdate) onHUDUpdate('Idle Field', 'Particle Drift | 2D Simulation');
         
         // Draw center core
-        drawCircle(0, 0, 0.8, colors.bg, true);
+        drawCircle(0, 0, 0.8, colors.bg);
         ctx.strokeStyle = colors.aqua;
         ctx.lineWidth = 0.05;
         ctx.beginPath();
@@ -174,7 +167,7 @@ const PhysicsCanvas = ({
           const x = Math.cos(p.angle) * p.radius;
           const y = Math.sin(p.angle) * p.radius * 0.4 + Math.sin(t + p.yOffset) * 0.5;
           ctx.globalAlpha = 0.8;
-          drawCircle(x, y, p.size, colors[p.colorKey], true);
+          drawCircle(x, y, p.size, colors[p.colorKey]);
         });
         ctx.globalAlpha = 1.0;
         if (onReadoutUpdate) onReadoutUpdate({ Status: 'Simulating Particle Flow' });
@@ -245,7 +238,7 @@ const PhysicsCanvas = ({
         }
 
         // Draw projectile
-        drawCircle(projState.x, projState.y, 0.3, colors.orange, true);
+        drawCircle(projState.x, projState.y, 0.3, colors.orange);
 
         // Draw vectors if enabled
         if (cfg.vectors && !projState.isStopped) {
@@ -287,12 +280,9 @@ const PhysicsCanvas = ({
           if (x === -10) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = colors.blue;
+                ctx.strokeStyle = colors.blue;
         ctx.lineWidth = 0.15;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = colors.blue;
         ctx.stroke();
-        ctx.shadowBlur = 0;
 
         if (useSuper) {
           ctx.beginPath();
@@ -351,7 +341,7 @@ const PhysicsCanvas = ({
         drawCircle(pivotX, pivotY, 0.15, colors.fg);
 
         // Bob
-        drawCircle(bobX, bobY, 0.5, colors.green, true);
+        drawCircle(bobX, bobY, 0.5, colors.green);
 
         if (cfg.vectors) {
           // Velocity (tangent)
@@ -528,8 +518,8 @@ const PhysicsCanvas = ({
         drawLine(-10, -0.6, 10, -0.6, colors.dim, 0.1);
 
         // Objects
-        drawCircle(collState.x1, 0, r1, colors.orange, true);
-        drawCircle(collState.x2, 0, r2, colors.blue, true);
+        drawCircle(collState.x1, 0, r1, colors.orange);
+        drawCircle(collState.x2, 0, r2, colors.blue);
 
         // Render collision bursts
         for (let i = collState.bursts.length - 1; i >= 0; i--) {
@@ -590,8 +580,8 @@ const PhysicsCanvas = ({
         }
 
         // Sun & Planet
-        drawCircle(0, 0, 0.8, colors.yellow, true);
-        drawCircle(x, y, 0.3, colors.blue, true);
+        drawCircle(0, 0, 0.8, colors.yellow);
+        drawCircle(x, y, 0.3, colors.blue);
 
         // Vector arrow pointing to Star
         drawArrow(x, y, x - (x / r) * 1.5, y - (y / r) * 1.5, colors.orange, 0.05);
@@ -654,8 +644,8 @@ const PhysicsCanvas = ({
         }
 
         // Draw charges
-        drawCircle(x1, 0, 0.3, colors.red, true);   // positive
-        drawCircle(x2, 0, 0.3, colors.blue, true);  // negative
+        drawCircle(x1, 0, 0.3, colors.red);   // positive
+        drawCircle(x2, 0, 0.3, colors.blue);  // negative
 
         // Plus / Minus symbols
         drawLine(x1 - 0.1, 0, x1 + 0.1, 0, colors.fg, 0.04);
