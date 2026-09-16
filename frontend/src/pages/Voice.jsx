@@ -342,94 +342,81 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
   };
 
   const stateLabel = isListening ? 'Listening' : isSpeaking ? 'Speaking' : 'Idle';
-  const stateColor = isListening ? 'bg-emerald-400' : isSpeaking ? 'bg-emerald-400' : 'bg-zinc-500';
+    const stateColor = isListening ? 'bg-[var(--emerald)]' : isSpeaking ? 'bg-[var(--emerald-soft)]' : 'bg-[var(--ink-muted)]';
 
   return (
-    <div
-      className="relative flex h-full min-h-0 flex-col items-center justify-between overflow-hidden bg-zinc-950 px-4 py-6 select-none sm:px-8"
-      style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-        backgroundSize: '48px 48px',
-      }}
-    >
-      {/* Avatar */}
-      <div className="relative flex min-h-0 w-full max-w-lg flex-1 items-center justify-center">
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full blur-[100px] pointer-events-none transition-all duration-700 ${
-          isListening ? 'bg-emerald-500/15' : isSpeaking ? 'bg-emerald-500/20' : 'bg-emerald-500/[0.06]'
-        }`} />
+    <div className="flex h-full min-h-0 flex-col items-center gap-6 overflow-hidden bg-[var(--paper)] px-4 py-6 sm:px-8">
 
+      {/* Instrument stage - black panel keeps the avatar legible */}
+      <div className="relative flex min-h-0 w-full max-w-2xl flex-1 items-center justify-center overflow-hidden border-[3px] border-[var(--border)] bg-[#0A0C0A] shadow-[6px_6px_0_var(--border)]">
         <AvatarCanvas avatarState={avatarState} speakingAmplitude={speakingAmplitude} frequencyData={frequencyData} />
 
-        {/* Status pill */}
-        <div className="absolute top-6 px-3.5 py-1.5 rounded-full border bg-zinc-950/80 backdrop-blur-md text-[11.5px] font-medium flex items-center gap-2 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)] transition-colors"
-          style={{
-            borderColor: isListening ? 'rgba(96,165,250,0.3)' : isSpeaking ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)',
-            color: isListening ? '#93c5fd' : isSpeaking ? '#6ee7b7' : '#a1a1aa'
-          }}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${stateColor} ${avatarState === 'listening' ? 'animate-ping' : avatarState === 'speaking' ? 'animate-pulse' : ''}`} />
+        {/* Status readout */}
+        <div className="absolute left-4 top-4 flex items-center gap-2 border-2 border-[var(--paper)]/20 bg-black/60 px-3 py-1.5 text-[12px] font-bold text-[var(--paper)]">
+                    <span className={`h-2 w-2 rounded-full ${isListening ? 'animate-ping bg-[var(--emerald)]' : isSpeaking ? 'animate-pulse bg-[var(--emerald-soft)]' : 'bg-[var(--ink-muted)]'}`} aria-hidden="true" />
           {status}
-          <span className="text-zinc-600 mx-0.5">·</span>
-          <span className="text-zinc-500 text-[10.5px]">{stateLabel}</span>
+          <span className="text-[var(--ink-muted)]" aria-hidden="true">/</span>
+          <span className="text-[10.5px] font-semibold uppercase tracking-widest text-[var(--ink-muted)]">{stateLabel}</span>
         </div>
       </div>
 
-      {/* Transcripts + control */}
-      <div className="w-full max-w-2xl shrink-0 flex flex-col gap-4 z-10 pb-4">
-        <div className="w-full rounded-2xl overflow-hidden border border-white/[0.06] bg-zinc-900/40 backdrop-blur-md p-5"
-          style={{ maxHeight: 200, display: 'flex', flexDirection: 'column' }}
-        >
-          <div className="flex-1 overflow-y-auto">
-            {youTranscript ? (
-              <div className="mb-4">
-                <div className="text-[10.5px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">You</div>
-                <p className="text-[14px] text-zinc-200 leading-relaxed">"{youTranscript}"</p>
-              </div>
-            ) : (
-              <div className="text-center py-5 text-zinc-500 flex flex-col items-center gap-2">
-                <Volume2 className="w-5 h-5 opacity-50" strokeWidth={1.8} />
-                <span className="text-[12px]">Awaiting voice input…</span>
-              </div>
-            )}
-            {aiTranscript && (
-              <div className="pt-3 border-t border-white/[0.06]">
-                <div className="text-[10.5px] font-medium text-emerald-400 uppercase tracking-wider mb-1.5">Vector AI</div>
-                <p className="text-[14px] text-zinc-100 leading-relaxed">{aiTranscript}</p>
-              </div>
-            )}
-          </div>
+      {/* Transcripts */}
+      <div
+        className="w-full max-w-2xl shrink-0 border-[3px] border-[var(--border)] bg-[var(--surface)] p-5 shadow-[6px_6px_0_var(--border)]"
+        style={{ maxHeight: 200, display: 'flex', flexDirection: 'column' }}
+        aria-live="polite"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {youTranscript ? (
+            <div className="mb-4">
+              <p className="section-label mb-1">You</p>
+              <p className="text-[15px] font-medium leading-relaxed text-[var(--ink)]">"{youTranscript}"</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-4 text-[var(--ink-muted)]">
+              <Volume2 className="h-5 w-5" aria-hidden="true" />
+              <span className="text-[13px] font-bold">Awaiting voice input...</span>
+            </div>
+          )}
+          {aiTranscript && (
+            <div className="border-t-2 border-[var(--border)] pt-3">
+              <p className="section-label mb-1" style={{ color: 'var(--emerald)' }}>Vector AI</p>
+              <p className="text-[15px] font-medium leading-relaxed text-[var(--ink)]">{aiTranscript}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Control bar */}
+      <div className="relative flex w-full max-w-2xl shrink-0 items-center justify-between border-[3px] border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 shadow-[6px_6px_0_var(--border)] sm:px-5">
+        <p className="hidden items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)] sm:flex">
+          <Info className="h-3.5 w-3.5" aria-hidden="true" /> Optimised for short vocal queries
+        </p>
+
+        <div className="absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
+          <button
+            onClick={toggleMic}
+            aria-label={isListening ? 'Stop listening' : isSpeaking ? 'Cancel speech' : 'Start speaking'}
+            title={isListening ? 'Stop listening' : isSpeaking ? 'Cancel speech' : 'Start speaking'}
+            className={`flex h-16 w-16 items-center justify-center border-[3px] border-[var(--border)] shadow-[4px_4px_0_var(--border)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[3px_3px_0_var(--border)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none ${
+              isListening
+                ? 'bg-[var(--danger)] text-white'
+                : isSpeaking
+                ? 'bg-[var(--warning)] text-[var(--ink)]'
+                : 'bg-[var(--emerald)] text-white'
+            }`}
+          >
+            {isListening ? <Mic className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+              : isSpeaking ? <MicOff className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+              : <Mic className="h-6 w-6 fill-current" strokeWidth={2.25} aria-hidden="true" />}
+          </button>
+          <span className="neo-tag mt-2 bg-[var(--paper)]">{isListening ? 'Stop' : isSpeaking ? 'Cancel' : 'Tap to speak'}</span>
         </div>
 
-        {/* Control bar with centered mic */}
-        <div className="relative flex shrink-0 items-center justify-between px-5 py-4 rounded-2xl border border-white/[0.06] bg-zinc-900/40 backdrop-blur-md min-h-[68px]">
-          <div className="flex items-center gap-2 text-[11.5px] text-zinc-400">
-            <Info className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.8} />
-            <span className="hidden sm:inline">Optimised for short vocal queries.</span>
-            <span className="sm:hidden">Short queries.</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5 absolute left-1/2 -translate-x-1/2 -top-8">
-            <button
-              onClick={toggleMic}
-              className={`w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer border-4 border-zinc-950 ${
-                isListening
-                  ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_0_36px_-4px_rgba(16,185,129,0.6)]'
-                  : isSpeaking
-                  ? 'bg-red-500 hover:bg-red-400 text-white shadow-[0_0_36px_-4px_rgba(239,68,68,0.6)]'
-                  : 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-zinc-950 shadow-[0_0_36px_-4px_rgba(16,185,129,0.5)] hover:scale-105 hover:-translate-y-0.5'
-              }`}
-            >
-              {isListening ? <Mic className="w-6 h-6" strokeWidth={2.5} />
-                : isSpeaking ? <MicOff className="w-6 h-6" strokeWidth={2.5} />
-                : <Mic className="w-6 h-6 fill-current" strokeWidth={2.25} />}
-            </button>
-            <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider bg-zinc-950 px-2 py-0.5 rounded-full mt-1 border border-white/[0.06]">
-              {isListening ? 'Stop' : isSpeaking ? 'Cancel' : 'Tap to speak'}
-            </span>
-          </div>
-
-          <div className="w-[100px]" />
-        </div>
+        <p className="ml-auto flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)] sm:hidden">
+          <Info className="h-3.5 w-3.5" aria-hidden="true" /> Short queries
+        </p>
+        <div className="hidden w-[120px] sm:block" aria-hidden="true" />
       </div>
     </div>
   );
