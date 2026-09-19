@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import DotGrid from "../components/DotGrid";
-import VectorIcon from "../components/VectorIcon";
+import VectorIcon from "../components/VectorIcon.jsx";
 import {
   ArrowRightIcon,
   BookOpenIcon,
@@ -14,7 +14,6 @@ import {
   DownloadSimpleIcon,
 } from "@phosphor-icons/react";
 
-// ─── Vector AI landing — editorial, flat, unapologetic ───────────────────────
 const Landing = () => {
   const { isAuthenticated } = useAuth();
   const primaryHref = isAuthenticated ? "/dashboard" : "/auth";
