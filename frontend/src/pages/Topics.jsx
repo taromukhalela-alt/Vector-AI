@@ -1,4 +1,4 @@
-import { BookOpen, ArrowRight, Atom, FlaskConical } from 'lucide-react';
+import { Books, ArrowRight, Atom, Flask } from '@phosphor-icons/react';
 import { trackEvent } from '../useAnalytics';
 import { PageHeader } from '../components/ui';
 
@@ -28,13 +28,13 @@ const Topics = ({ onSelectTopic }) => (
     {TOPIC_GROUPS.map((section) => (
       <section key={section.group} aria-label={section.group}>
         <div className="mb-4 flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center border-2 border-[var(--border)] bg-[var(--surface)]"><BookOpen className="h-5 w-5 text-[var(--emerald)]" aria-hidden="true" /></span>
+          <span className="flex h-9 w-9 items-center justify-center border-2 border-[var(--border)] bg-[var(--surface)]"><Books className="h-5 w-5 text-[var(--emerald)]" aria-hidden="true" /></span>
           <h2 className="text-xl font-black uppercase tracking-tight text-[var(--ink)]">{section.group}</h2>
           <hr className="rule-heavy flex-1" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {section.items.map((topic) => {
-            const Icon = topic.tag === 'Chemistry' ? FlaskConical : Atom;
+            const Icon = topic.tag === 'Chemistry' ? Flask : Atom;
             return (
               <button key={topic.title} onClick={() => { trackEvent('topic_revision_started', { route: '/topics', topic: topic.title }); onSelectTopic(topic.prompt); }}
                 className="neo-card group flex min-h-[190px] flex-col p-5 text-left hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_var(--border)]">

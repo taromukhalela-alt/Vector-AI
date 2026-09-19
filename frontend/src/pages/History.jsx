@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { History as HistoryIcon, MessageSquare, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChatCircle, Clock, ArrowRight, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { PageHeader, EmptyState, ErrorState, VectorLoader } from '../components/ui';
 
-const History = ({ onResumeSession }) => {
+const HistoryPage = ({ onResumeSession }) => {
   const [searchParams] = useSearchParams();
   const requestedSessionId = searchParams.get('session');
   const [sessions, setSessions] = useState([]);
@@ -107,19 +107,19 @@ const History = ({ onResumeSession }) => {
       <div className="neo-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-4">
           <p className="section-label">Sessions · {sessions.length}</p>
-          <button onClick={toggleSidebar} className="neo-btn px-4 py-2 text-xs">{sidebarVisible ? 'Hide list' : 'Show list'} {sidebarVisible ? <ChevronLeft className="ml-2 h-4 w-4" aria-hidden="true" /> : <ChevronRight className="ml-2 h-4 w-4" aria-hidden="true" />}</button>
+          <button onClick={toggleSidebar} className="neo-btn px-4 py-2 text-xs">{sidebarVisible ? 'Hide list' : 'Show list'} {sidebarVisible ? <CaretLeft className="ml-2 h-4 w-4" aria-hidden="true" /> : <CaretRight className="ml-2 h-4 w-4" aria-hidden="true" />}</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[300px_1fr]">
           {sidebarVisible && (
             <aside className="border-b-[3px] border-[var(--border)] bg-[var(--surface)] md:border-b-0 md:border-r-[3px]" aria-label="Sessions">
               <div className="max-h-96 overflow-y-auto p-3 md:max-h-[560px]">
                 {loadingHistory ? (<VectorLoader label="Loading sessions" />) : historyError ? (<ErrorState title="Unable to load history" body={historyError} onRetry={fetchSessions} />) : sessions.length === 0 ? (
-                  <EmptyState icon={HistoryIcon} title="No conversations yet" body="Ask Vector something and it will appear here." />
+                  <EmptyState icon={History} title="No conversations yet" body="Ask Vector something and it will appear here." />
                 ) : (
                   <div className="flex flex-col gap-2">
                     {sessions.map((sess) => (
                       <button key={sess.chat_id} onClick={() => handleSelectSession(sess)} className={`border-2 border-[var(--border)] p-3 text-left shadow-[2px_2px_0_var(--border)] ${selectedSession?.chat_id === sess.chat_id ? 'bg-[var(--emerald)] text-white' : 'bg-[var(--paper)] hover:bg-[var(--surface-muted)]'}`}>
-                        <span className="flex items-center gap-2 text-sm font-extrabold"><MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{sess.title || 'Untitled Session'}</span></span>
+                        <span className="flex items-center gap-2 text-sm font-extrabold"><ChatCircle className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{sess.title || 'Untitled Session'}</span></span>
                         <span className={`mt-2 block text-[11px] font-bold uppercase tracking-widest ${selectedSession?.chat_id === sess.chat_id ? 'text-white' : 'text-[var(--ink-muted)]'}`}>{sess.count} messages · {sess.last_time}</span>
                       </button>
                     ))}
@@ -151,7 +151,7 @@ const History = ({ onResumeSession }) => {
               </div>
             ) : (
               <div className="p-4 md:p-6">
-                <EmptyState icon={HistoryIcon} title="Select a session" body="Choose a past discussion to review calculations and tutor explanations." actionLabel={sidebarVisible ? undefined : 'Show sessions'} onAction={sidebarVisible ? undefined : toggleSidebar} />
+                <EmptyState icon={History} title="Select a session" body="Choose a past discussion to review calculations and tutor explanations." actionLabel={sidebarVisible ? undefined : 'Show sessions'} onAction={sidebarVisible ? undefined : toggleSidebar} />
               </div>
             )}
           </div>
@@ -161,4 +161,4 @@ const History = ({ onResumeSession }) => {
     </div>
   );
 };
-export default History;
+export default HistoryPage;

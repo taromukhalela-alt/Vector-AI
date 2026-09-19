@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  X, ChevronRight, Sparkles, Zap, Brain,
-  FlaskConical, MessageSquare, LayoutDashboard,
+  X, CaretRight, Sparkle, Lightning, Brain,
+  Flask, ChatCircle, Stack,
   Target, Info, ArrowLeft
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 const Onboarding = ({ onComplete }) => {
   const navigate = useNavigate();
@@ -17,28 +17,28 @@ const Onboarding = ({ onComplete }) => {
     {
       title: "Welcome to Vector AI",
       content: "Hiee! I'm Taro Mukhalela, and I built this to help you master Physical Science. Ready for a quick tour of your new Physical Science Assistant?",
-      icon: Sparkles,
+      icon: Sparkle,
       page: "/dashboard",
       target: null // Center of screen
     },
     {
       title: "Your Command Center",
       content: "The Dashboard shows your real-time performance telemetry. It tracks your the ML model accuracy for your questions and CAPS syllabus progress as you study.",
-      icon: LayoutDashboard,
+      icon: Stack,
       page: "/dashboard",
       target: "main" // Highlight main content
     },
     {
       title: "The AI Tutor",
       content: "This is where the magic happens. You can ask anything to solve physics problems or pursue knowledge.",
-      icon: MessageSquare,
+      icon: ChatCircle,
       page: "/chat",
       target: "textarea"
     },
     {
       title: "Interactive Simulations",
       content: "The Visual Lab lets you see concepts in motion. Projectiles, waves, and more — simulated in real-time.",
-      icon: FlaskConical,
+      icon: Flask,
       page: "/lab",
       target: ".lab-canvas-container"
     },
@@ -52,7 +52,7 @@ const Onboarding = ({ onComplete }) => {
     {
       title: "Ready to Master STEM?",
       content: "That's the basics! Remember to use the Search and Code tools in the chat for deeper analysis. Good luck with your studies!",
-      icon: Zap,
+      icon: Lightning,
       page: "/chat",
       target: null
     }
@@ -211,7 +211,7 @@ const Onboarding = ({ onComplete }) => {
               className="group flex items-center gap-2 border-2 border-[var(--paper)] bg-[var(--paper)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--ink)] shadow-[3px_3px_0_var(--emerald)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_var(--emerald)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
             >
               {currentStep === tourSteps.length - 1 ? 'Finish' : 'Next'}
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <CaretRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>

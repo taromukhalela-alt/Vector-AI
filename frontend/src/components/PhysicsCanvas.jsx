@@ -36,35 +36,32 @@ const PhysicsCanvas = ({
     let pendulumState = { trail: [] };
 
     // Set configuration variables based on current props
+    // Palette. Colours are resolved from the design tokens so the canvas lives
+    // in the same visual world as the rest of the app in both themes. Reading
+    // custom properties is far too expensive to do for every frame, so the
+    // resolved palette is cached and only rebuilt when the theme class changes.
+    // Key names are unchanged so every draw site keeps working as-is.
+    let paletteCache = null;
+    let paletteTheme = null;
     const getColors = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      if (isLight) {
-        return {
-          bg: '#f4f4f5',
-          bgHard: '#fafafa',
-          fg: '#09090b',
-          dim: '#a1a1aa',
-          green: '#10b981',
-          aqua: '#06b6d4',
-          yellow: '#d97706',
-          orange: '#ea580c',
-          blue: '#2563eb',
-          red: '#dc2626',
-        };
-      } else {
-        return {
-          bg: '#121212',
-          bgHard: '#09090b',
-          fg: '#ffffff',
-          dim: '#3f3f46',
-          green: '#10b981',
-          aqua: '#06b6d4',
-          yellow: '#fbbf24',
-          orange: '#f97316',
-          blue: '#3b82f6',
-          red: '#ef4444',
-        };
-      }
+      const theme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+      if (paletteCache && paletteTheme === theme) return paletteCache;
+      const css = getComputedStyle(document.documentElement);
+      const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+      paletteTheme = theme;
+      paletteCache = {
+        bg: token('--surface-muted', '#E5E4DE'),
+        bgHard: token('--surface', '#FFFFFF'),
+        fg: token('--ink', '#111311'),
+        dim: token('--ink-muted', '#62655E'),
+        green: token('--emerald', '#087F5B'),
+        aqua: token('--lab-aqua', '#0B6E75'),
+        yellow: token('--warning', '#D9A522'),
+        orange: token('--lab-forge', '#B45309'),
+        blue: token('--lab-steel', '#1F4E79'),
+        red: token('--danger', '#C9362B'),
+      };
+      return paletteCache;
     };
 
     // Helper functions

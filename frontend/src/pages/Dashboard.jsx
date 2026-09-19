@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, MessageSquare, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowRight } from '@phosphor-icons/react';
+import { EmptyState, ErrorState, VectorLoader } from '../components/ui';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -38,22 +40,16 @@ const Dashboard = () => {
 
   if (loading && !data) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-[var(--ink)]" />
+      <div className="flex min-h-full items-center justify-center">
+        <VectorLoader label="Loading your dashboard" />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="flex min-h-full items-center justify-center p-6">
-        <div className="max-w-md text-center border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] p-8">
-          <h1 className="text-2xl font-black uppercase text-[var(--danger)]">Dashboard Error</h1>
-          <p className="mt-4 text-sm font-bold text-[var(--ink-muted)]">{error}</p>
-          <button type="button" onClick={() => setRetryCount(c => c + 1)} className="neo-btn mt-6 px-6 py-3 w-full">
-            <RefreshCw className="mr-2 h-5 w-5 inline" /> Try Again
-          </button>
-        </div>
+      <div className="mx-auto flex min-h-full max-w-md items-center justify-center p-6">
+        <ErrorState title="Dashboard unavailable" body={error} onRetry={() => setRetryCount(c => c + 1)} />
       </div>
     );
   }
@@ -67,92 +63,93 @@ const Dashboard = () => {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-0 pb-12">
+    <div className="app-page-padded pb-28 md:pb-12">
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: 'easeOut' }} className="flex flex-col gap-0">
       {/* HEADER SECTION */}
-      <div className="pt-4 pb-8 md:pt-8 md:pb-12 border-b-4 border-[var(--border)]">
-        <p className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2 md:mb-4">
+      <div className="border-b-[3px] border-[var(--border)] pb-8 pt-2 md:pb-10 md:pt-4">
+        <p className="section-label mb-2 md:mb-4">
           {greeting}{firstName ? `, ${firstName}` : ''}.
         </p>
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter text-[var(--ink)]">
+        <h1 className="font-display text-5xl font-bold uppercase leading-[0.9] tracking-tight text-[var(--ink)] md:text-7xl">
           What are we<br/>learning today?
         </h1>
       </div>
 
-      {/* CONTINUE LEARNING SECTION */}
-      <div className="py-8 border-b-4 border-[var(--border)]">
-        <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-6">Continue Learning</h2>
+      {/* CONTINUE LEARNING — green progress block */}
+      <div className="border-b-[3px] border-[var(--border)] py-8">
+        <h2 className="section-label mb-6">Continue Learning</h2>
         
         {continueLearning ? (
-          <div className="flex flex-col md:flex-row gap-6 md:items-end justify-between">
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-black uppercase text-[var(--emerald)] border-2 border-[var(--border)] px-2 py-1 inline-block w-fit shadow-[2px_2px_0_var(--border)]">
+          <div className="neo-panel flex flex-col gap-6 bg-[var(--emerald)] p-6 text-[#0B1410] md:flex-row md:items-end md:justify-between md:p-8">
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="neo-tag neo-tag-ink w-fit">
                 {continueLearning.subject || 'Saved Session'}
               </span>
-              <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tight mt-2 line-clamp-2">
+              <h3 className="mt-2 line-clamp-2 font-display text-3xl font-bold uppercase tracking-tight md:text-4xl">
                 {continueLearning.title || 'Untitled Session'}
               </h3>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => navigate(`/history?session=${encodeURIComponent(continueLearning.chat_id)}`)}
-              className="neo-btn neo-btn-primary px-8 py-4 text-xl w-full md:w-auto flex-shrink-0"
+              className="neo-btn neo-btn-ink w-full flex-shrink-0 px-8 py-4 text-xl md:w-auto"
             >
-              Continue <ArrowRight className="ml-2 h-6 w-6 inline" />
+              Continue <ArrowRight className="ml-2 inline h-6 w-6" weight="bold" />
             </button>
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row gap-6 md:items-end justify-between">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-2">
-              <h3 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-[var(--ink-muted)]">
+              <h3 className="font-display text-3xl font-bold uppercase tracking-tight text-[var(--ink-muted)] md:text-4xl">
                 No active sessions.
               </h3>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => navigate('/chat')}
-              className="neo-btn neo-btn-primary px-8 py-4 text-xl w-full md:w-auto flex-shrink-0"
+              className="neo-btn neo-btn-primary w-full flex-shrink-0 px-8 py-4 text-xl md:w-auto"
             >
-              Start Session <ArrowRight className="ml-2 h-6 w-6 inline" />
+              Start Session <ArrowRight className="ml-2 inline h-6 w-6" weight="bold" />
             </button>
           </div>
         )}
       </div>
 
       {/* MIDDLE SPLIT SECTION */}
-      <div className="grid md:grid-cols-[1.5fr_1fr] border-b-4 border-[var(--border)] divide-y-4 md:divide-y-0 md:divide-x-4 divide-[var(--border)]">
-        
+      <div className="grid divide-[var(--border)] border-b-[3px] divide-y-[3px] border-[var(--border)] md:grid-cols-[1.5fr_1fr] md:divide-x-[3px] md:divide-y-0">
+
         {/* Stats Column */}
-        <div className="py-8 md:pr-8 flex flex-col">
-          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-6">This Week</h2>
+        <div className="flex flex-col py-8 md:pr-8">
+          <h2 className="section-label mb-6">This Week</h2>
           <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-baseline border-b-2 border-[var(--border)] pb-2">
-              <span className="text-3xl font-black">{stats.questions_asked || 0}</span>
+            <div className="flex items-baseline justify-between border-b-2 border-[var(--border)] pb-2">
+              <span className="font-mono text-3xl font-bold">{stats.questions_asked || 0}</span>
               <span className="text-sm font-bold uppercase text-[var(--ink-muted)]">Questions asked</span>
             </div>
-            <div className="flex justify-between items-baseline border-b-2 border-[var(--border)] pb-2">
-              <span className="text-3xl font-black">{stats.notes_saved || 0}</span>
+            <div className="flex items-baseline justify-between border-b-2 border-[var(--border)] pb-2">
+              <span className="font-mono text-3xl font-bold">{stats.notes_saved || 0}</span>
               <span className="text-sm font-bold uppercase text-[var(--ink-muted)]">Notes saved</span>
             </div>
-            <div className="flex justify-between items-baseline border-b-2 border-[var(--border)] pb-2">
-              <span className="text-3xl font-black">{stats.sessions_count || 0}</span>
+            <div className="flex items-baseline justify-between border-b-2 border-[var(--border)] pb-2">
+              <span className="font-mono text-3xl font-bold">{stats.sessions_count || 0}</span>
               <span className="text-sm font-bold uppercase text-[var(--ink-muted)]">Total sessions</span>
             </div>
           </div>
         </div>
 
-        {/* Vector Tutor Column */}
-        <div className="py-8 md:pl-8 flex flex-col justify-between h-full bg-[var(--surface-muted)] px-4 md:bg-transparent md:px-0">
+        {/* Vector Tutor Column — magenta feature block */}
+        <div className="neo-panel flex h-full flex-col justify-between bg-[var(--magenta)] p-6 text-white md:m-8 md:ml-8 md:mt-8">
           <div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink)] mb-4">Vector AI</h2>
-            <p className="text-2xl font-black uppercase leading-tight">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] opacity-90">Vector AI</p>
+            <p className="mt-3 font-display text-2xl font-bold uppercase leading-tight">
               Stuck on a<br/>problem?<br/>Ask Vector.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/chat')}
-            className="neo-btn bg-[var(--ink)] text-white w-full px-6 py-4 text-lg mt-6 hover:bg-[var(--ink-muted)]"
+            className="neo-btn neo-btn-ink mt-6 w-full px-6 py-4 text-lg"
           >
-            Open Tutor <ArrowRight className="ml-2 h-5 w-5 inline" />
+            Open Tutor <ArrowRight className="ml-2 inline h-5 w-5" weight="bold" />
           </button>
         </div>
 
@@ -160,22 +157,22 @@ const Dashboard = () => {
 
       {/* RECENT ACTIVITY SECTION */}
       <div className="py-8">
-        <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-6">Recent Activity</h2>
-        
+        <h2 className="section-label mb-6">Recent Activity</h2>
+
         {questions.length > 0 ? (
-          <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)]">
+          <div className="neo-panel flex flex-col">
             {questions.slice(0, 5).map((q, i) => (
-              <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b-4 border-[var(--border)] last:border-b-0 hover:bg-[var(--surface-muted)] transition-colors">
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-xl font-black text-[var(--ink-muted)] w-8 flex-shrink-0">
+              <div key={i} className="flex flex-col justify-between gap-4 border-b-2 border-[var(--border)] p-4 transition-colors last:border-b-0 hover:bg-[var(--surface-muted)] sm:flex-row sm:items-center">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="w-8 flex-shrink-0 font-mono text-xl font-bold text-[var(--ink-muted)]">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <p className="text-lg font-bold truncate">
+                  <p className="truncate text-lg font-bold">
                     {q.question}
                   </p>
                 </div>
                 <div className="flex items-center gap-4 sm:flex-shrink-0">
-                  <span className="text-xs font-black uppercase tracking-widest text-[var(--ink)] border-2 border-[var(--border)] px-2 py-1 shadow-[2px_2px_0_var(--border)] bg-[var(--emerald-soft)]">
+                  <span className="neo-tag neo-tag-soft">
                     {q.time || 'RECENT'}
                   </span>
                 </div>
@@ -183,12 +180,16 @@ const Dashboard = () => {
             ))}
           </div>
         ) : (
-          <div className="border-4 border-[var(--border)] bg-[var(--surface)] p-8 text-center shadow-[6px_6px_0_var(--border)]">
-            <h3 className="text-xl font-black uppercase text-[var(--ink-muted)]">No recent activity</h3>
-          </div>
+          <EmptyState
+            title="No recent activity"
+            body="Your latest questions and study sessions will appear here once you get started."
+            actionLabel="Ask Vector a question"
+            onAction={() => navigate('/chat')}
+          />
         )}
       </div>
 
+      </motion.div>
     </div>
   );
 };

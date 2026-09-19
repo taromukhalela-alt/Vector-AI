@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import PhysicsCanvas from '../components/PhysicsCanvas';
 import {
-  Play, Pause, RotateCcw, Zap,
-  Orbit, CircleDot, Box, Clock, Activity, Rocket, Sparkles, SlidersHorizontal, BarChart2
-} from 'lucide-react';
+  Play, Pause, ArrowCounterClockwise, Lightning,
+  Planet, Circle, Cube, Clock, WaveSine, Rocket, Sparkle,
+  SlidersHorizontal, ChartBar
+} from '@phosphor-icons/react';
 
 const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   const [speed, setSpeed] = useState(1);
@@ -23,31 +25,32 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   });
 
   const labs = [
-    { id: 'idle', label: 'Idle field', icon: Sparkles },
-    { id: 'projectile', label: 'Projectile motion', icon: Rocket },
-    { id: 'wave', label: 'Wave motion', icon: Activity },
-    { id: 'pendulum', label: 'Harmonic pendulum', icon: Clock },
-    { id: 'forces', label: 'Forces & friction', icon: Box },
-    { id: 'collision', label: 'Collisions', icon: CircleDot },
-    { id: 'orbit', label: 'Orbits', icon: Orbit },
-    { id: 'electricity', label: 'Electric field', icon: Zap },
+    { id: 'idle', label: 'Idle field', icon: Sparkle, color: 'bg-[var(--surface-muted)]' },
+    { id: 'projectile', label: 'Projectile motion', icon: Rocket, color: 'bg-[var(--emerald)] text-[#0B1410]' },
+    { id: 'wave', label: 'Wave motion', icon: WaveSine, color: 'bg-[var(--lab-aqua)] text-[#111]' },
+    { id: 'pendulum', label: 'Harmonic pendulum', icon: Clock, color: 'bg-[var(--warning)] text-[#111]' },
+    { id: 'forces', label: 'Forces & friction', icon: Cube, color: 'bg-[var(--lab-forge)] text-[#111]' },
+    { id: 'collision', label: 'Collisions', icon: Circle, color: 'bg-[var(--magenta)] text-white' },
+    { id: 'orbit', label: 'Orbits', icon: Planet, color: 'bg-[var(--lab-steel)] text-white' },
+    { id: 'electricity', label: 'Electric field', icon: Lightning, color: 'bg-[var(--ink)] text-[var(--paper)]' },
   ];
 
   const handleParamChange = (key, value) => setParams(prev => ({ ...prev, [key]: value }));
   const handleReset = () => onAnimChange(activeAnim);
 
   const Slider = ({ label, unit, min, max, step, value, onChange }) => (
-    <div className="flex flex-col gap-1 mb-4">
-      <div className="flex justify-between items-end">
+    <div className="mb-4 flex flex-col gap-1">
+      <div className="flex items-end justify-between">
         <label className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">
           {label}
         </label>
-        <span className="text-xs font-bold font-mono text-[var(--ink-muted)] border-2 border-[var(--border)] px-1 shadow-[1px_1px_0_var(--border)]">{value}{unit}</span>
+        <span className="lab-readout border-2 border-[var(--border)] px-1 text-xs font-bold text-[var(--ink)] shadow-[1px_1px_0_var(--border)]">{value}{unit}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
+        aria-label={`${label}${unit ? ` in ${unit}` : ''}`}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-[var(--emerald)] h-2 border-2 border-[var(--border)] rounded-none cursor-pointer appearance-none bg-[var(--surface-muted)]"
+        className="neo-range h-2 w-full cursor-pointer appearance-none border-2 border-[var(--border)] bg-[var(--surface-muted)]"
       />
     </div>
   );
@@ -55,9 +58,10 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   const Toggle = ({ active, onClick, label }) => (
     <button
       onClick={onClick}
-      className={`w-full neo-btn py-2 text-xs flex items-center justify-center shadow-[2px_2px_0_var(--border)] mb-4 ${
+      aria-pressed={active}
+      className={`neo-btn neo-btn-sm mb-4 flex w-full items-center justify-center py-2 text-xs ${
         active
-          ? 'bg-[var(--emerald)] text-white'
+          ? 'bg-[var(--lab-steel)] text-white'
           : 'bg-[var(--surface)]'
       }`}
     >
@@ -66,30 +70,32 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-[var(--paper)] text-[var(--ink)] p-4 md:p-6 overflow-y-auto">
-      
+    <div className="app-page-padded flex h-full flex-col overflow-y-auto bg-[var(--paper)] text-[var(--ink)]">
+
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b-4 border-[var(--border)] pb-6 mb-6">
+      <div className="mb-6 flex flex-col justify-between border-b-[3px] border-[var(--border)] pb-6 md:flex-row md:items-end">
         <div>
-          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">Vector Lab Workspace</h2>
-          <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Physics Lab</h1>
+          <p className="section-label mb-2">Vector Lab Workspace · Scientific Instrumentation</p>
+          <h1 className="font-display text-4xl font-bold uppercase tracking-tight md:text-5xl">Physics Lab</h1>
         </div>
-        
-        <div className="mt-4 md:mt-0 flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+
+        <div className="hide-scrollbar mt-4 flex gap-2 overflow-x-auto pb-2 md:mt-0 md:pb-0" role="tablist" aria-label="Experiments">
           {labs.map((lab) => {
             const Icon = lab.icon;
             const isActive = activeAnim === lab.id;
             return (
               <button
                 key={lab.id}
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => onAnimChange(lab.id)}
-                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 border-2 border-[var(--border)] font-bold uppercase text-xs transition-all ${
+                className={`flex flex-shrink-0 items-center gap-2 border-2 border-[var(--border)] px-3 py-2 text-xs font-bold uppercase transition-all ${
                   isActive
-                    ? 'bg-[var(--emerald)] text-white shadow-[2px_2px_0_var(--border)] translate-y-[-2px]'
-                    : 'bg-[var(--surface)] hover:bg-[var(--surface-muted)] hover:translate-y-[-2px] hover:shadow-[2px_2px_0_var(--border)]'
+                    ? `${lab.color} shadow-[2px_2px_0_var(--border)]`
+                    : 'bg-[var(--surface)] hover:bg-[var(--surface-muted)]'
                 }`}
               >
-                <Icon className="w-4 h-4" strokeWidth={2.5} />
+                <Icon className="h-4 w-4" weight="bold" aria-hidden="true" />
                 {lab.label}
               </button>
             );
@@ -98,28 +104,28 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
       </div>
 
       {/* LAB GRID */}
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_300px] gap-6 flex-1 min-h-[500px]">
-        
+      <div className="flex min-h-[500px] flex-1 flex-col gap-6 lg:grid lg:grid-cols-[1fr_300px]">
+
         {/* CANVAS AREA */}
-        <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] relative overflow-hidden flex-1 min-h-[400px]">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: 'easeOut' }} className="neo-panel relative flex min-h-[400px] flex-1 flex-col overflow-hidden">
           {/* Internal HUD */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-10">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-4">
             <div className="border-2 border-[var(--border)] bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)]">
-              <div className="text-[10px] font-black uppercase tracking-widest text-[var(--emerald)] mb-1 flex items-center gap-2">
-                <span className="w-2 h-2 bg-[var(--emerald)] block rounded-none border border-[var(--border)]" /> HUD
+              <div className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">
+                <span className="block h-2 w-2 border border-[var(--border)] bg-[var(--lab-aqua)]" /> HUD
               </div>
               <h3 className="text-lg font-black uppercase tracking-tight">{hudTitle}</h3>
-              <p className="font-mono text-xs font-bold text-[var(--ink-muted)]">{hudFormula}</p>
+              <p className="lab-readout text-xs font-bold text-[var(--ink-muted)]">{hudFormula}</p>
             </div>
-            
-            <div className="border-2 border-[var(--border)] bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)] hidden sm:block">
-               <div className="text-[10px] font-black uppercase tracking-widest text-[var(--danger)] flex items-center gap-1">
-                 <Activity className="w-3 h-3" /> LIVE
+
+            <div className="hidden border-2 border-[var(--border)] bg-[var(--danger)] p-2 text-white shadow-[2px_2px_0_var(--border)] sm:block">
+               <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest">
+                 <WaveSine className="h-3 w-3" weight="bold" aria-hidden="true" /> LIVE
                </div>
             </div>
           </div>
 
-          <div className="flex-1 w-full relative">
+          <div className="relative w-full flex-1">
             <PhysicsCanvas
               animationId={activeAnim}
               params={params}
@@ -131,35 +137,37 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
           </div>
 
           {/* TELEMETRY BAR */}
-          <div className="border-t-4 border-[var(--border)] bg-[var(--surface-muted)] p-4 overflow-x-auto">
-            <div className="flex items-center gap-6 min-w-max">
-              <div className="text-xs font-black uppercase tracking-widest text-[var(--ink-muted)] flex items-center gap-2">
-                <BarChart2 className="w-4 h-4" /> Telemetry
+          <div className="overflow-x-auto border-t-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-4">
+            <div className="flex min-w-max items-center gap-6">
+              <div className="section-label flex items-center gap-2">
+                <ChartBar className="h-4 w-4" weight="bold" aria-hidden="true" /> Telemetry
               </div>
-              {Object.keys(readout).length > 0 ? (
-                Object.entries(readout).map(([key, val]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-[var(--ink)]">{key}</span>
-                    <span className="font-mono text-xs font-bold bg-[var(--surface)] border-2 border-[var(--border)] px-2 py-0.5 shadow-[1px_1px_0_var(--border)]">{val}</span>
+              {Object.entries(readout).length > 0 ? (
+                Object.entries(readout).map(([key, value]) => (
+                  <div key={key} className="lab-dial flex items-center gap-3 px-3 py-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-muted)]">{key}</span>
+                    <span className="lab-readout text-sm font-bold text-[var(--ink)]">{String(value)}</span>
                   </div>
                 ))
               ) : (
-                <span className="text-xs font-bold text-[var(--ink-muted)] italic">Awaiting data...</span>
+                <div className="font-mono text-xs font-bold text-[var(--ink-muted)]">AWAITING SIGNAL — RUN AN EXPERIMENT</div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* PARAMETERS PANEL */}
-        <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] flex-shrink-0">
-          <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)] flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-[var(--ink)]" />
-            <h2 className="text-sm font-black uppercase tracking-widest">Parameters</h2>
+        {/* CONTROL DECK */}
+        <div className="neo-panel flex flex-shrink-0 flex-col">
+          <div className="flex items-center gap-2 border-b-[3px] border-[var(--border)] bg-[var(--ink)] p-4 text-[var(--paper)]">
+            <SlidersHorizontal className="h-5 w-5" weight="bold" aria-hidden="true" />
+            <h3 className="text-sm font-black uppercase tracking-widest">Instrument Control</h3>
           </div>
-          
-          <div className="p-4 flex-1 overflow-y-auto">
+
+          <div className="flex-1 overflow-y-auto p-4">
             {activeAnim === 'idle' && (
-              <p className="text-xs font-bold text-[var(--ink-muted)] uppercase">Select a simulation to adjust parameters.</p>
+              <p className="p-2 text-sm font-bold leading-relaxed text-[var(--ink-muted)]">
+                Select an experiment from the workspace tabs to load its mechanical controls.
+              </p>
             )}
             
             {activeAnim === 'projectile' && (
@@ -212,19 +220,20 @@ const Lab = ({ activeAnim = 'idle', onAnimChange }) => {
             </div>
           </div>
 
-          <div className="p-4 border-t-4 border-[var(--border)] bg-[var(--surface-muted)] grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 border-t-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-4">
             <button
               onClick={() => setIsPaused(!isPaused)}
-              className="neo-btn flex items-center justify-center gap-2 py-3 shadow-[2px_2px_0_var(--border)]"
+              aria-pressed={isPaused}
+              className="neo-btn neo-btn-sm flex items-center justify-center gap-2 py-3"
             >
-              {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+              {isPaused ? <Play className="h-4 w-4" weight="fill" aria-hidden="true" /> : <Pause className="h-4 w-4" weight="fill" aria-hidden="true" />}
               {isPaused ? 'Resume' : 'Pause'}
             </button>
             <button
               onClick={handleReset}
-              className="neo-btn bg-[var(--danger)] text-white flex items-center justify-center gap-2 py-3 shadow-[2px_2px_0_var(--border)]"
+              className="neo-btn neo-btn-sm neo-btn-danger flex items-center justify-center gap-2 py-3"
             >
-              <RotateCcw className="w-4 h-4" /> Reset
+              <ArrowCounterClockwise className="h-4 w-4" weight="bold" aria-hidden="true" /> Reset
             </button>
           </div>
         </div>

@@ -18,7 +18,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Voice = lazy(() => import('./pages/Voice'));
 const Lab = lazy(() => import('./pages/Lab'));
 const Notes = lazy(() => import('./pages/Notes'));
-const History = lazy(() => import('./pages/History'));
+const HistoryPage = lazy(() => import('./pages/History'));
 const Topics = lazy(() => import('./pages/Topics'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Revision = lazy(() => import('./pages/Revision'));
@@ -180,7 +180,7 @@ function App() {
             element={(
               <>
                 <ScreenReaderTitle>Vector AI Chat History</ScreenReaderTitle>
-                <History onResumeSession={handleResumeSession} />
+                <HistoryPage onResumeSession={handleResumeSession} />
               </>
             )}
           />

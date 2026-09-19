@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import AvatarCanvas from '../components/AvatarCanvas';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
-import { Mic, MicOff, Info, Volume2 } from 'lucide-react';
+import { Microphone, MicrophoneSlash, Info, SpeakerHigh } from '@phosphor-icons/react';
 
 const Voice = ({ onMatchAnimation, csrfToken }) => {
   const { showToast } = useToast();
@@ -374,7 +374,7 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 py-4 text-[var(--ink-muted)]">
-              <Volume2 className="h-5 w-5" aria-hidden="true" />
+              <SpeakerHigh className="h-5 w-5" aria-hidden="true" />
               <span className="text-[13px] font-bold">Awaiting voice input...</span>
             </div>
           )}
@@ -406,11 +406,11 @@ const Voice = ({ onMatchAnimation, csrfToken }) => {
                 : 'bg-[var(--emerald)] text-white'
             }`}
           >
-            {isListening ? <Mic className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
-              : isSpeaking ? <MicOff className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
-              : <Mic className="h-6 w-6 fill-current" strokeWidth={2.25} aria-hidden="true" />}
+            {isListening ? <Microphone className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+              : isSpeaking ? <MicrophoneSlash className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+              : <Microphone className="h-6 w-6 fill-current" strokeWidth={2.25} aria-hidden="true" />}
           </button>
-          <span className="neo-tag mt-2 bg-[var(--paper)]">{isListening ? 'Stop' : isSpeaking ? 'Cancel' : 'Tap to speak'}</span>
+          <span className="neo-tag neo-tag-paper mt-2">{isListening ? 'Stop' : isSpeaking ? 'Cancel' : 'Tap to speak'}</span>
         </div>
 
         <p className="ml-auto flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[var(--ink-muted)] sm:hidden">
