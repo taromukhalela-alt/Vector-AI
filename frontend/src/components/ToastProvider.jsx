@@ -1,21 +1,21 @@
 // ToastProvider — flat neo-brutalist toast stack.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
+import { Warning, WarningCircle, CheckCircle, Info, X } from '@phosphor-icons/react';
 import { ToastContext } from '../context/ToastContext';
 
 const DEFAULT_ERROR = 'Something went wrong. Please try again.';
 
 const toastIcons = {
-  error:   AlertCircle,
-  warning: AlertTriangle,
+  error: WarningCircle,
+  warning: Warning,
   success: CheckCircle,
-  info:    Info,
+  info: Info,
 };
 
 const toastStyles = {
-  error: { rail: '#C9362B', ink: '#C9362B', soft: '#F9DDDA' },
-  warning: { rail: '#D9A522', ink: '#7A5A00', soft: '#F8ECC9' },
-  success: { rail: '#087F5B', ink: '#065A41', soft: '#D2EDDF' },
+  error: { rail: '#FF3B30', ink: '#B3261E', soft: '#FFE1DE' },
+  warning: { rail: '#FFB000', ink: '#7A5A00', soft: '#F8ECC9' },
+  success: { rail: '#00D95F', ink: '#063B22', soft: '#B8FFCF' },
   info: { rail: '#111311', ink: '#111311', soft: '#E5E4DE' },
 };
 
@@ -81,7 +81,7 @@ const ToastProvider = ({ children }) => {
             <div key={toast.id} role={isError ? 'alert' : 'status'} className="neo-card pointer-events-auto flex items-start gap-3 p-3.5">
               <span aria-hidden="true" className="mt-1 h-8 w-2 shrink-0 border-2 border-[var(--border)]" style={{ background: style.rail }} />
               <div className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-[var(--border)]" style={{ background: style.soft }}>
-                <Icon className="h-5 w-5" style={{ color: style.ink }} aria-hidden="true" />
+                <Icon className="h-5 w-5" weight="bold" style={{ color: style.ink }} aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--ink)]">{toast.title}</p>
@@ -91,7 +91,7 @@ const ToastProvider = ({ children }) => {
                 )}
               </div>
               <button type="button" onClick={() => dismissToast(toast.id)} className="border-2 border-[var(--border)] p-1 hover:bg-[var(--surface-muted)]" aria-label="Dismiss notification">
-                <X className="h-4 w-4 text-[var(--ink)]" aria-hidden="true" />
+                <X className="h-4 w-4" weight="bold" aria-hidden="true" />
               </button>
             </div>
             );

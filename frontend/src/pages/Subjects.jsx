@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Atom, BookOpen, FlaskConical, Layers, Sigma } from 'lucide-react';
+import { ArrowUpRightIcon, AtomIcon, BooksIcon, FlaskIcon, StackIcon, SigmaIcon } from '@phosphor-icons/react';
 import { PageHeader, ErrorState, VectorLoader } from '../components/ui';
 
 const SUBJECT_ICONS = {
-  'Physical Sciences': FlaskConical,
-  Physics: Atom,
-  Chemistry: FlaskConical,
-  Mathematics: Sigma,
-  Maths: Sigma,
-  'Mathematical Literacy': Sigma,
-  'Life Sciences': BookOpen,
-  Biology: BookOpen,
+  'Physical Sciences': FlaskIcon,
+  Physics: AtomIcon,
+  Chemistry: FlaskIcon,
+  Mathematics: SigmaIcon,
+  Maths: SigmaIcon,
+  'Mathematical Literacy': SigmaIcon,
+  'Life Sciences': BooksIcon,
+  Biology: BooksIcon,
 };
-
 // ─── Subjects: catalogue derived from the learner's saved material ───────────
 const Subjects = () => {
   const [subjects, setSubjects] = useState([]);
@@ -55,7 +54,7 @@ const Subjects = () => {
   const rows = useMemo(() => subjects.map((s) => ({
     ...s,
     noteCount: notesCount[s.name] || 0,
-    Icon: SUBJECT_ICONS[s.name] || Layers,
+    Icon: SUBJECT_ICONS[s.name] || StackIcon,
   })), [subjects, notesCount]);
 
 
@@ -84,7 +83,7 @@ const Subjects = () => {
       {rows.length === 0 ? (
         <div className="neo-card mt-8 p-8 text-center md:p-10">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center border-2 border-[var(--border)] bg-[var(--surface-muted)]">
-            <Layers className="h-7 w-7 text-[var(--ink)]" aria-hidden="true" />
+            <StackIcon className="h-7 w-7 text-[var(--ink)]" aria-hidden="true" />
           </div>
           <h3 className="text-xl font-black uppercase">No subjects available</h3>
           <p className="mx-auto mt-3 max-w-md text-[15px] font-medium text-[var(--ink-muted)]">The curriculum is still being set up. Check back soon.</p>
@@ -109,7 +108,7 @@ const Subjects = () => {
                   </p>
                 </div>
               </div>
-              <ArrowUpRight className="h-6 w-6 shrink-0 text-[var(--ink)] transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+              <ArrowUpRightIcon className="h-6 w-6 shrink-0 text-[var(--ink)] transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
             </Link>
           ))}
         </div>

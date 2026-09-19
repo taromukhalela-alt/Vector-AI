@@ -29,7 +29,7 @@ const StyledWrapper = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-    --color: #62655e;
+    --color: var(--ink-muted, #62655e);
     --animation: 2s ease-in-out infinite;
   }
 

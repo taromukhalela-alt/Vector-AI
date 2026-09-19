@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon } from '@phosphor-icons/react';
 
 const ThemeToggle = () => {
   const [theme, setTheme] = useState(() => {
@@ -29,7 +29,7 @@ const ThemeToggle = () => {
       aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-pressed={theme === 'dark'}
     >
-      {theme === 'dark' ? <Sun className="h-5 w-5" aria-hidden="true" /> : <Moon className="h-5 w-5" aria-hidden="true" />}
+      {theme === 'dark' ? <Sun className="h-5 w-5" weight="bold" aria-hidden="true" /> : <Moon className="h-5 w-5" weight="bold" aria-hidden="true" />}
     </button>
   );
 };

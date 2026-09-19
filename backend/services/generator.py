@@ -21,7 +21,7 @@ MAX_HISTORY = 10
 OFF_TOPIC_THRESHOLD = 0.4
 OFF_TOPIC_RESPONSE = (
     "That's an interesting question. I can give a quick, simple answer, then let's "
-    "switch back to CAPS physics topics like forces, waves, electricity, or energy."
+    "switch back to CAPS subjects like Physical Sciences, Mathematics, or Life Sciences."
 )
 FOLLOW_UP_PROMPTS = [
     "Does that make sense so far?",
@@ -46,6 +46,30 @@ PHYSICS_INTENTS = {
     "nuclear",
     "shm",
 }
+CHEMISTRY_INTENTS = {
+    "chemistry",
+    "chemical_bonding",
+    "chemical_reactions",
+    "stoichiometry",
+    "acids_bases",
+    "organic_chemistry",
+}
+MATHEMATICS_INTENTS = {
+    "mathematics",
+    "algebra",
+    "calculus",
+    "trigonometry",
+    "geometry",
+    "statistics",
+}
+LIFE_SCIENCES_INTENTS = {
+    "life_sciences",
+    "cells",
+    "genetics",
+    "evolution",
+    "human_biology",
+    "ecology",
+}
 ANTI_REPETITION_SUFFIX = """
 
 IMPORTANT: Check the conversation history above carefully.
@@ -61,6 +85,21 @@ PHYSICS_SNIPPETS = {
     "waves": "For waves, connect frequency, wavelength, and speed with v = f * lambda.",
     "electricity": "For electricity, use Ohm's law V = IR and check unit consistency for volts, amps, and ohms.",
     "energy": "For energy problems, identify the energy type first, then use Ek = 1/2mv^2 or Ep = mgh where appropriate.",
+}
+CHEMISTRY_SNIPPETS = {
+    "reactions": "For chemical reactions, balance the equation first, then use mole ratios.",
+    "acids_bases": "For acids and bases, identify the type, then use pH = -log[H+] or relevant formulas.",
+    "stoichiometry": "For stoichiometry, convert to moles, use the mole ratio, then convert back to desired units.",
+}
+MATHEMATICS_SNIPPETS = {
+    "algebra": "For algebra, identify the variable to solve for, then isolate it using inverse operations.",
+    "calculus": "For calculus, identify if it's differentiation or integration, then apply the appropriate rule.",
+    "trigonometry": "For trigonometry, identify the sides and angles, then choose sine, cosine, or tangent.",
+}
+LIFE_SCIENCES_SNIPPETS = {
+    "cells": "For cell biology, identify cell type and structure, then explain function.",
+    "genetics": "For genetics, determine genotype/phenotype, then use Punnett squares for predictions.",
+    "ecology": "For ecology, identify the ecosystem components and their relationships.",
 }
 
 
@@ -128,13 +167,15 @@ def normalize_confidence(confidence):
 
 
 def choose_follow_up(intent):
-    if intent in PHYSICS_INTENTS:
+    all_subject_intents = PHYSICS_INTENTS | CHEMISTRY_INTENTS | MATHEMATICS_INTENTS | LIFE_SCIENCES_INTENTS
+    if intent in all_subject_intents:
         return "Would you like a worked example from a CAPS-style exam question?"
     return random.choice(FOLLOW_UP_PROMPTS)
 
 
 def is_off_topic(intent, confidence):
-    if intent in PHYSICS_INTENTS:
+    all_subject_intents = PHYSICS_INTENTS | CHEMISTRY_INTENTS | MATHEMATICS_INTENTS | LIFE_SCIENCES_INTENTS
+    if intent in all_subject_intents:
         return False
     return normalize_confidence(confidence) < OFF_TOPIC_THRESHOLD
 
@@ -184,8 +225,30 @@ def _local_generate(prompt):
         return None
 
 
-def _pick_physics_snippet(user_message):
+def _pick_subject_snippet(user_message):
     text = (user_message or "").lower()
+    # Chemistry keywords
+    if any(word in text for word in ["chemical", "reaction", "molecule", "compound", "acid", "base", "ph", "stoichiometry", "mole", "element", "bond"]):
+        if any(word in text for word in ["acid", "base", "ph"]):
+            return CHEMISTRY_SNIPPETS["acids_bases"]
+        if any(word in text for word in ["reaction", "react", "product"]):
+            return CHEMISTRY_SNIPPETS["reactions"]
+        return CHEMISTRY_SNIPPETS["stoichiometry"]
+    # Mathematics keywords
+    if any(word in text for word in ["math", "algebra", "equation", "solve", "calculate", "function", "derivative", "integral", "trig", "sin", "cos", "tan", "geometry", "triangle", "angle", "statistics", "probability"]):
+        if any(word in text for word in ["deriv", "integr", "calculus"]):
+            return MATHEMATICS_SNIPPETS["calculus"]
+        if any(word in text for word in ["sin", "cos", "tan", "trig"]):
+            return MATHEMATICS_SNIPPETS["trigonometry"]
+        return MATHEMATICS_SNIPPETS["algebra"]
+    # Life Sciences keywords
+    if any(word in text for word in ["cell", "dna", "gene", "genetics", "evolution", "ecology", "organism", "biology", "photosynthesis", "respiration", "human", "body", "system"]):
+        if any(word in text for word in ["cell", "membrane", "organelle"]):
+            return LIFE_SCIENCES_SNIPPETS["cells"]
+        if any(word in text for word in ["dna", "gene", "genetic", "inherit", "punnett"]):
+            return LIFE_SCIENCES_SNIPPETS["genetics"]
+        return LIFE_SCIENCES_SNIPPETS["ecology"]
+    # Default to physics
     if any(word in text for word in ["wave", "wavelength", "frequency", "sound"]):
         return PHYSICS_SNIPPETS["waves"]
     if any(word in text for word in ["voltage", "current", "resistance", "circuit", "ohm"]):
@@ -196,7 +259,7 @@ def _pick_physics_snippet(user_message):
 
 
 def _rule_based_physics_reply(user_message, deterministic_hint=None):
-    base = _pick_physics_snippet(user_message)
+    base = _pick_subject_snippet(user_message)
     parts = [
         base,
         "If you want a full solution, I can walk step-by-step from known values to final answer.",
@@ -210,10 +273,10 @@ def _rule_based_non_physics_reply(intent, deterministic_hint=None):
     if intent == "unit_conversion" and deterministic_hint:
         return f"Sure. {deterministic_hint}."
     if intent == "greeting":
-        return "Hi, I am Vector AI. Ask me any CAPS physics question from mechanics, waves, electricity, or energy."
+        return "Hi, I am Vector AI. Ask me any CAPS question from Physical Sciences (physics/chemistry), Mathematics, or Life Sciences."
     if intent == "capabilities":
-        return "I can explain CAPS physics concepts, solve short numeric questions, and give worked examples."
-    return "I can help with CAPS physics topics. Ask me about mechanics, waves, electricity, or energy."
+        return "I can explain CAPS concepts across Physical Sciences, Mathematics, and Life Sciences, solve problems step-by-step, and give worked examples."
+    return "I can help with CAPS subjects. Ask me about Physical Sciences, Mathematics, or Life Sciences topics."
 
 
 def _sanitize_generated_reply(reply):

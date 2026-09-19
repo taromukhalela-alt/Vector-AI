@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -13,58 +13,128 @@
   --color-emerald: var(--emerald);
   --color-emerald-dark: var(--emerald-dark);
   --color-emerald-soft: var(--emerald-soft);
+  --color-magenta: var(--magenta);
+  --color-magenta-dark: var(--magenta-dark);
+  --color-magenta-soft: var(--magenta-soft);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-lab-aqua: var(--lab-aqua);
+  --color-lab-forge: var(--lab-forge);
+  --color-lab-steel: var(--lab-steel);
 
-  --font-sans: 'Archivo', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: "Archivo", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --shadow-neo-sm: 2px 2px 0 var(--border);
   --shadow-neo: 4px 4px 0 var(--border);
   --shadow-neo-lg: 6px 6px 0 var(--border);
+  --shadow-neo-xl: 8px 8px 0 var(--border);
 }
 
 :root {
-  --paper: #F4F3EE;
+  --paper: #FFFDF5;
   --surface: #FFFFFF;
-  --surface-muted: #E5E4DE;
-  --ink: #111311;
-  --ink-muted: #62655E;
-  --border: #111311;
-  --emerald: #087F5B;
-  --emerald-dark: #065A41;
-  --emerald-soft: #BFE7D6;
-  --danger: #C9362B;
-  --warning: #D9A522;
-  
-  --navbar-h: 64px;
-  --mobile-tab-h: 72px;
-  --sidebar-w: 272px;
-  --sidebar-w-collapsed: 84px;
+  --surface-muted: #E8E8E2;
+
+  --ink: #111111;
+  --ink-muted: #555555;
+  --border: #111111;
+
+  --emerald: #00D95F;
+  --emerald-dark: #00A947;
+  --emerald-ink: #063B22;
+  --emerald-soft: #B8FFCF;
+
+  --magenta: #FF1493;
+  --magenta-dark: #C9006D;
+  --magenta-soft: #FFB7DD;
+
+  --danger: #FF3B30;
+  --warning: #FFB000;
+
+  --lab-aqua: #00CFCF;
+  --lab-forge: #FF7A00;
+  --lab-steel: #4169FF;
+
+  --mobile-tab-h: 64px;
 }
 
 html.dark {
-  --paper: #141614;
-  --surface: #1D201D;
-  --surface-muted: #292D29;
-  --ink: #F4F3EE;
-  --ink-muted: #A8ABA2;
-  --border: #F4F3EE;
-  --emerald: #1BA37E;
-  --emerald-dark: #0E7A5C;
-  --emerald-soft: #123B2F;
+  --paper: #090A09;
+  --surface: #151715;
+  --surface-muted: #252825;
+
+  --ink: #FFFDF5;
+  --ink-muted: #B7BBB4;
+  --border: #FFFDF5;
+
+  --emerald: #00FF70;
+  --emerald-dark: #00D95F;
+  --emerald-ink: #EFFFF3;
+  --emerald-soft: #064D2A;
+
+  --magenta: #FF2BA6;
+  --magenta-dark: #E60083;
+  --magenta-soft: #5A1640;
+
+  --danger: #FF4D44;
+  --warning: #FFC21A;
+
+  --lab-aqua: #00E5E5;
+  --lab-forge: #FF8A00;
+  --lab-steel: #5275FF;
 }
 
 @layer base {
-  * { box-sizing: border-box; }
-  html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-  html, body, #root { min-height: 100%; min-height: 100dvh; }
-  body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
-  h1, h2, h3, h4 { font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-  button, input, textarea, select { font: inherit; }
-  button { cursor: pointer; }
-  :focus-visible { outline: 3px solid var(--emerald); outline-offset: 2px; }
-  ::selection { background: var(--emerald); color: #fff; }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    min-height: 100dvh;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 3px solid var(--emerald);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--emerald);
+    color: #111;
+  }
+  html.dark ::selection {
+    background: var(--magenta);
+    color: #fff;
+  }
 }
 
 .neo-container {
@@ -79,20 +149,49 @@ html.dark {
   border-radius: 0;
 }
 
+/* Large-surface tier: same 2px border, heavier 6px lift. Used for major
+   workspace containers (dashboard panels, lab canvas frame) so the card
+   hierarchy has exactly two named tiers instead of ad-hoc inline values. */
+.neo-panel {
+  border: 2px solid var(--border);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--border);
+  border-radius: 0;
+}
+
+/* Focus press-in for framed fields (the chat composer): the frame sinks 4px and
+   its lift drops to 2px while the field inside holds focus, so the control reads
+   as physically depressed. Declared here because the utility form is outranked
+   by the un-layered .neo-panel shorthand. */
+.neo-panel-focus {
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+.neo-panel-focus:focus-within {
+  box-shadow: 2px 2px 0 var(--border);
+  transform: translate(4px, 4px);
+}
+
 .neo-btn {
   border: 2px solid var(--border);
   box-shadow: 4px 4px 0 var(--border);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease,
+    background 0.12s ease,
+    color 0.12s ease;
   background-color: var(--surface);
   color: var(--ink);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
+  border-radius: 0;
   text-decoration: none;
+  min-height: 44px;
 }
 
 .neo-btn:hover:not(:disabled) {
@@ -106,53 +205,456 @@ html.dark {
 }
 
 .neo-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .neo-btn-primary {
   background-color: var(--emerald);
+  color: #0B1410;
+}
+.neo-btn-primary:hover:not(:disabled) {
+  background: var(--emerald-dark);
   color: #fff;
 }
-.neo-btn-primary:hover:not(:disabled) { background: var(--emerald-dark); }
-.neo-btn-ink { background: var(--ink); color: var(--paper); }
-html.dark .neo-btn-ink { color: #111311; }
-.neo-btn-danger { background: var(--danger); color: #fff; }
-.neo-input { border: 2px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 2px; width: 100%; }
-.neo-input::placeholder { color: var(--ink-muted); font-weight: 500; }
-.neo-input:focus { outline: 3px solid var(--emerald); outline-offset: 1px; }
-.neo-tag { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: var(--surface); color: var(--ink); line-height: 1.4; }
-.neo-tag-emerald { background: var(--emerald); border-color: var(--border); color: #fff; }
-.neo-tag-soft { background: var(--emerald-soft); color: var(--ink); }
-html.dark .neo-tag-soft { color: var(--ink); background: #23473a; }
-.section-label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-muted); }
-.rule-heavy { border: 0; border-top: 3px solid var(--border); }
-.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
+.neo-btn-magenta {
+  background-color: var(--magenta);
+  color: #fff;
+}
+.neo-btn-magenta:hover:not(:disabled) {
+  background: var(--magenta-dark);
+}
+.neo-btn-ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+html.dark .neo-btn-ink {
+  color: #111311;
+}
+.neo-btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Colour modifiers. These live here, un-layered, rather than as Tailwind
+   utilities: the .neo-* primitives are un-layered and therefore outrank
+   `@layer utilities`, so a `bg-[…]` utility written next to a .neo-* class
+   silently does nothing. Declaring the variants here keeps every colour
+   combination on neo surfaces actually applied (and matching the existing
+   .neo-btn-primary / -ink / -danger pattern). */
+.neo-btn-surface {
+  background-color: var(--surface);
+}
+.neo-btn-soft {
+  background-color: var(--emerald-soft);
+  color: var(--ink);
+}
+.neo-btn-magenta-soft {
+  background-color: var(--magenta-soft);
+  color: var(--ink);
+}
+.neo-btn-muted {
+  background-color: var(--surface-muted);
+  color: var(--ink);
+}
+.neo-btn-lab-steel {
+  background: var(--lab-steel);
+  color: #fff;
+}
+.neo-btn-lab-forge {
+  background: var(--lab-forge);
+  color: #111;
+}
+.neo-btn-lab-aqua {
+  background: var(--lab-aqua);
+  color: #111;
+}
+.neo-btn-hover-soft:hover:not(:disabled) {
+  background-color: var(--emerald-soft);
+}
+.neo-btn-ink:hover:not(:disabled) {
+  background-color: var(--ink-muted);
+}
+.neo-soft {
+  background-color: var(--emerald-soft);
+}
+.neo-magenta-soft {
+  background-color: var(--magenta-soft);
+}
+.neo-paper {
+  background-color: var(--paper);
+}
+.neo-muted {
+  background-color: var(--surface-muted);
+}
+.neo-danger {
+  background-color: var(--danger);
+  color: #fff;
+}
+.neo-emerald {
+  background-color: var(--emerald);
+  color: #0B1410;
+}
+.neo-magenta {
+  background-color: var(--magenta);
+  color: #fff;
+}
+.neo-ink {
+  background-color: var(--ink);
+  color: var(--paper);
+}
+/* Interactive-surface hover variants (un-layered for the same reason as above). */
+.neo-hover-soft:hover {
+  background-color: var(--emerald-soft);
+}
+
+/* Compact control tier. Shares every .neo-btn behaviour but sits on a shorter
+   lift so dense toolbars stay light — and, crucially, scales its own
+   hover/active shadows so the press feedback still reads. */
+.neo-btn-sm {
+  box-shadow: 2px 2px 0 var(--border);
+  min-height: 36px;
+}
+.neo-btn-sm:hover:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--border);
+}
+.neo-btn-sm:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--border);
+}
+.neo-input {
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 0;
+  width: 100%;
+  min-height: 44px;
+}
+.neo-input::placeholder {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.neo-input:hover:not(:disabled) {
+  background: var(--paper);
+}
+.neo-input:focus {
+  outline: 3px solid var(--emerald);
+  outline-offset: 1px;
+  background: var(--surface);
+}
+.neo-input[aria-invalid="true"],
+.neo-input-error {
+  border-color: var(--danger);
+  outline: 3px solid var(--danger);
+  outline-offset: 1px;
+}
+.neo-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--surface-muted);
+}
+textarea.neo-input {
+  min-height: 120px;
+  line-height: 1.6;
+}
+select.neo-input {
+  appearance: none;
+}
+.neo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid var(--border);
+  border-radius: 0;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 1.4;
+}
+.neo-tag-emerald {
+  background: var(--emerald);
+  border-color: var(--border);
+  color: #0B1410;
+}
+.neo-tag-magenta {
+  background: var(--magenta);
+  color: #fff;
+}
+.neo-tag-ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+.neo-tag-soft {
+  background: var(--emerald-soft);
+  color: var(--ink);
+}
+.neo-tag-paper {
+  background: var(--paper);
+}
+.neo-tag-magenta-soft {
+  background: var(--magenta-soft);
+  color: var(--ink);
+}
+.neo-tag-steel {
+  background: var(--lab-steel);
+  color: #fff;
+}
+.neo-tag-forge {
+  background: var(--lab-forge);
+  color: #111;
+}
+.neo-tag-aqua {
+  background: var(--lab-aqua);
+  color: #111;
+}
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-muted);
+}
+/* Emphasis variant for labels sitting on a muted/dark bar, where the default
+   muted grey would lose contrast. Un-layered so a colour utility next to it
+   cannot be silently outranked. */
+.section-label-ink {
+  color: var(--ink);
+}
+.rule-heavy {
+  border: 0;
+  border-top: 3px solid var(--border);
+}
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track { background: var(--paper); border-left: 2px solid var(--border); }
-::-webkit-scrollbar-thumb { background: var(--surface-muted); border: 2px solid var(--border); }
-::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper);
+  border-left: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-muted);
+  border: 2px solid var(--border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-muted);
+}
 
 /* Range sliders — flat technical */
-input[type="range"].neo-range { -webkit-appearance: none; appearance: none; width: 100%; height: 14px; background: var(--surface-muted); border: 2px solid var(--border); border-radius: 0; cursor: pointer; }
-input[type="range"].neo-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: var(--emerald); border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); border-radius: 0; }
-input[type="range"].neo-range::-moz-range-thumb { width: 20px; height: 20px; background: var(--emerald); border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--border); border-radius: 0; }
+input[type="range"].neo-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: var(--surface-muted);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  cursor: pointer;
+}
+input[type="range"].neo-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  background: var(--lab-steel);
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+  border-radius: 0;
+}
+input[type="range"].neo-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--lab-steel);
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+  border-radius: 0;
+}
+input[type="range"].neo-range.neo-range-emerald::-webkit-slider-thumb {
+  background: var(--emerald);
+}
+input[type="range"].neo-range.neo-range-emerald::-moz-range-thumb {
+  background: var(--emerald);
+}
 
 /* Vector dot loader (no external deps) */
-.vector-loader { display: flex; align-items: center; justify-content: center; gap: 12px; }
-.vector-loader .vl-circle { width: 18px; height: 18px; border: 2px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: transparent; animation: vl-circle 2s ease-in-out infinite; }
-.vector-loader .vl-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--emerald); animation: vl-dot 2s ease-in-out infinite; }
-.vector-loader .vl-circle:nth-child(2), .vector-loader .vl-circle:nth-child(2) .vl-dot { animation-delay: 0.25s; }
-.vector-loader .vl-circle:nth-child(3), .vector-loader .vl-circle:nth-child(3) .vl-dot { animation-delay: 0.5s; }
-.vector-loader .vl-circle:nth-child(4), .vector-loader .vl-circle:nth-child(4) .vl-dot { animation-delay: 0.75s; }
-@keyframes vl-circle { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.55; } }
-@keyframes vl-dot { 0%,100% { transform: scale(1); } 50% { transform: scale(0); } }
+.vector-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.vector-loader .vl-circle {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  animation: vl-circle 2s ease-in-out infinite;
+}
+.vector-loader .vl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: var(--emerald);
+  animation: vl-dot 2s ease-in-out infinite;
+}
+html.dark .vector-loader .vl-dot {
+  background: var(--magenta);
+}
+.vector-loader .vl-circle:nth-child(2),
+.vector-loader .vl-circle:nth-child(2) .vl-dot {
+  animation-delay: 0.25s;
+}
+.vector-loader .vl-circle:nth-child(3),
+.vector-loader .vl-circle:nth-child(3) .vl-dot {
+  animation-delay: 0.5s;
+}
+.vector-loader .vl-circle:nth-child(4),
+.vector-loader .vl-circle:nth-child(4) .vl-dot {
+  animation-delay: 0.75s;
+}
+@keyframes vl-circle {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.55;
+  }
+}
+@keyframes vl-dot {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0);
+  }
+}
 
-/* Animation */
-.page-enter { animation: page-enter 180ms ease-out both; }
-@keyframes page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
-@media print { .no-print { display: none !important; } }
+/* Page motion (Framer Motion owns the real transitions; this is the no-JS fallback) */
+.page-enter {
+  animation: page-enter 180ms ease-out both;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dot-grid drafting-paper background (flat SVG tile, no gradients).
+   Two layers: static base + parallax layer translated by rAF. */
+.dot-grid-base {
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.6' fill='%23111111' fill-opacity='0.22'/%3E%3C/svg%3E");
+  background-size: 28px 28px;
+}
+html.dark .dot-grid-base {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.6' fill='%23FFFDF5' fill-opacity='0.20'/%3E%3C/svg%3E");
+}
+.dot-grid-layer {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.6' fill='%23FF1493' fill-opacity='0.16'/%3E%3C/svg%3E");
+  background-size: 28px 28px;
+  will-change: transform;
+}
+html.dark .dot-grid-layer {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.6' fill='%2300FF70' fill-opacity='0.18'/%3E%3C/svg%3E");
+}
+
+/* Full-bleed app shell: pages own the viewport next to the sidebar */
+.app-shell-main {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+.app-page {
+  width: 100%;
+  min-height: 100%;
+}
+.app-page-padded {
+  padding: 16px;
+}
+@media (min-width: 768px) {
+  .app-page-padded {
+    padding: 24px 28px;
+  }
+}
+@media (min-width: 1280px) {
+  .app-page-padded {
+    padding: 28px 36px;
+  }
+}
+
+/* Lab instrumentation */
+.lab-readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.lab-dial {
+  border: 2px solid var(--border);
+  background: var(--surface);
+  box-shadow: 2px 2px 0 var(--border);
+}
+
+/* Chat distinction — Vector, never a GPT clone */
+.chat-user {
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+}
+.chat-ai {
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+}
+.chat-ai-accent {
+  border-left: 8px solid var(--emerald);
+}
+.chat-user-accent {
+  border-left: 8px solid var(--magenta);
+}
+
+/* KaTeX inherits Vector ink */
+.katex {
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

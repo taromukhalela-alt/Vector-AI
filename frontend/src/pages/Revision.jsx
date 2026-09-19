@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, GraduationCap, RefreshCw, Send, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, GraduationCap, ArrowsClockwise, PaperPlaneTilt, XCircle } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { PageHeader, EmptyState, ErrorState, VectorLoader } from '../components/ui';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -130,7 +130,7 @@ const Revision = () => {
             {correctCount === scored.length ? 'Flawless. Vector will bring harder questions next time.' : 'Review the corrections above, then run another set to lock the concepts in.'}
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={() => loadSession()} className="neo-btn neo-btn-primary px-6 py-3 text-sm"><RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />New session</button>
+            <button type="button" onClick={() => loadSession()} className="neo-btn neo-btn-primary px-6 py-3 text-sm"><ArrowsClockwise className="mr-2 h-4 w-4" aria-hidden="true" />New session</button>
             <button type="button" onClick={() => navigate('/dashboard')} className="neo-btn px-6 py-3 text-sm">Back to dashboard</button>
           </div>
         </div>
@@ -166,7 +166,7 @@ const Revision = () => {
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 {!assessment && (
                   <button type="button" onClick={handleCheck} disabled={!answer.trim() || checking} className="neo-btn neo-btn-primary px-6 py-3 text-sm">
-                    {checking ? 'Checking...' : (<><Send className="mr-2 h-4 w-4" aria-hidden="true" />Check answer</>)}
+                    {checking ? 'Checking...' : (<><PaperPlaneTilt className="mr-2 h-4 w-4" aria-hidden="true" />Check answer</>)}
                   </button>
                 )}
                 {assessment && (
@@ -187,14 +187,14 @@ const Revision = () => {
                   {typeof assessment.score === 'number' && assessment.max_score ? `${assessment.score}/${assessment.max_score} marks` : 'Reviewed'}
                 </h3>
                 {typeof assessment.score === 'number' && assessment.max_score && (assessment.score / assessment.max_score >= 0.6
-                  ? <CheckCircle2 className="h-7 w-7 shrink-0" aria-hidden="true" />
+                  ? <CheckCircle className="h-7 w-7 shrink-0" aria-hidden="true" />
                   : <XCircle className="h-7 w-7 shrink-0" aria-hidden="true" />)}
               </div>
               <div className="grid gap-0 bg-[var(--surface)] md:grid-cols-2">
                 <div className="border-b-2 border-[var(--border)] p-5 md:border-b-0 md:border-r-2">
                   <p className="section-label mb-3">Strengths</p>
                   {assessment.strengths?.length ? (
-                    <ul className="space-y-2">{assessment.strengths.map((s, i) => (<li key={i} className="flex gap-2 text-[14px] font-medium"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--emerald)]" aria-hidden="true" />{s}</li>))}</ul>
+                    <ul className="space-y-2">{assessment.strengths.map((s, i) => (<li key={i} className="flex gap-2 text-[14px] font-medium"><CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--emerald)]" aria-hidden="true" />{s}</li>))}</ul>
                   ) : <p className="text-[14px] font-medium text-[var(--ink-muted)]">No strengths recorded for this attempt.</p>}
                 </div>
                 <div className="p-5">

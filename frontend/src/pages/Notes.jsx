@@ -6,21 +6,18 @@ import { useToast } from '../context/ToastContext';
 import { PageHeader, EmptyState, ErrorState, VectorLoader } from '../components/ui';
 import {
   FileText,
-  Search,
+  MagnifyingGlass,
   Plus,
-  Trash2,
-  Edit3,
+  Trash,
+  Pencil,
   Eye,
   Download,
-  Sparkles,
-  Save,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  BookOpen,
+  Sparkle,
+  FloppyDisk,
+  Books,
   Clock,
-  AlignLeft,
-} from 'lucide-react';
+  TextAlignLeft,
+} from '@phosphor-icons/react';
 
 // ─── Helper: format relative date ─────────────────────────────────────────────
 const formatRelativeDate = (dateStr) => {
@@ -328,7 +325,7 @@ const Notes = () => {
             <aside className="border-b-[3px] border-[var(--border)] bg-[var(--surface)] md:border-b-0 md:border-r-[3px]" aria-label="Notes">
               <div className="border-b-2 border-[var(--border)] p-3">
                 <form onSubmit={handleSearchSubmit} className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+                  <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
                   <input type="text" placeholder="Search notes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="neo-input py-2.5 pl-10 pr-3 text-sm font-semibold" aria-label="Search notes" />
                 </form>
               </div>
@@ -352,14 +349,14 @@ const Notes = () => {
               <div className="border-t-[3px] border-[var(--border)] bg-[var(--surface-muted)] p-3">
                 <p className="section-label mb-2">AI study guide</p>
                 <input type="text" placeholder="e.g. Newton's second law" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="neo-input py-2.5 px-3 text-sm font-semibold" aria-label="AI note topic" />
-                <button onClick={handleGenerateAINote} disabled={isGenerating || !aiTopic.trim()} className="neo-btn neo-btn-primary mt-2 w-full px-4 py-2.5 text-xs">{isGenerating ? 'Generating...' : (<><Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />Generate</>)}</button>
+                <button onClick={handleGenerateAINote} disabled={isGenerating || !aiTopic.trim()} className="neo-btn neo-btn-primary mt-2 w-full px-4 py-2.5 text-xs">{isGenerating ? 'Generating...' : (<><Sparkle className="mr-2 h-4 w-4" aria-hidden="true" />Generate</>)}</button>
               </div>
             </aside>
           )}
           <div className="min-w-0">
             {selectedNote ? (<NotesReader selectedNote={selectedNote} notes={notes} isEditing={isEditing} setIsEditing={setIsEditing} editTitle={editTitle} setEditTitle={setEditTitle} editTopic={editTopic} setEditTopic={setEditTopic} editContent={editContent} textareaRef={textareaRef} wordCount={wordCount} handleSaveNote={handleSaveNote} isSavingNote={isSavingNote} handleDownloadPDF={handleDownloadPDF} isExporting={isExporting} handleDeleteNote={handleDeleteNote} />) : (
               <div className="p-4 md:p-6">
-                <EmptyState icon={BookOpen} title="Select a study note" body="Review saved chapters or generate a comprehensive CAPS study guide." actionLabel="New note" onAction={handleCreateNote} />
+                <EmptyState icon={Books} title="Select a study note" body="Review saved chapters or generate a comprehensive CAPS study guide." actionLabel="New note" onAction={handleCreateNote} />
               </div>
             )}
           </div>
@@ -398,7 +395,7 @@ const NotesReader = ({ selectedNote, isEditing, setIsEditing, editTitle, setEdit
         <div className="no-print flex shrink-0 items-stretch border-l-[3px] border-[var(--paper)]">
           <button onClick={() => setIsEditing(!isEditing)} title={isEditing ? 'Preview note' : 'Edit note'} aria-label={isEditing ? 'Preview note' : 'Edit note'}
             className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--paper)]/10 md:w-14">
-            {isEditing ? <Eye className="h-5 w-5" aria-hidden="true" /> : <Edit3 className="h-5 w-5" aria-hidden="true" />}
+            {isEditing ? <Eye className="h-5 w-5" aria-hidden="true" /> : <Pencil className="h-5 w-5" aria-hidden="true" />}
           </button>
           <button onClick={handleDownloadPDF} disabled={isExporting} title="Export as PDF" aria-label="Export as PDF"
             className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--paper)]/10 disabled:opacity-50 md:w-14">
@@ -406,7 +403,7 @@ const NotesReader = ({ selectedNote, isEditing, setIsEditing, editTitle, setEdit
           </button>
           <button onClick={() => handleDeleteNote(selectedNote.id)} title="Delete note" aria-label="Delete note"
             className="flex w-12 items-center justify-center border-l-2 border-[var(--paper)]/30 text-[var(--paper)] hover:bg-[var(--danger)] md:w-14">
-            <Trash2 className="h-5 w-5" aria-hidden="true" />
+            <Trash className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -417,11 +414,11 @@ const NotesReader = ({ selectedNote, isEditing, setIsEditing, editTitle, setEdit
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--border)] bg-[var(--surface-muted)] px-4 py-1.5">
               <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-[var(--ink-muted)]">
-                <AlignLeft className="h-3 w-3" aria-hidden="true" /> {wordCount} words
+                <TextAlignLeft className="h-3 w-3" aria-hidden="true" /> {wordCount} words
               </span>
               <span className="hidden font-mono text-[11px] font-bold text-[var(--ink-muted)] sm:inline">Markdown · $E=mc^2$ · Ctrl+S saves</span>
               <button onClick={handleSaveNote} disabled={isSavingNote} className="neo-btn neo-btn-primary px-3 py-1 text-[11px]">
-                {isSavingNote ? 'Saving…' : (<><Save className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />Save</>)}
+                {isSavingNote ? 'Saving…' : (<><FloppyDisk className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />Save</>)}
               </button>
             </div>
             <textarea ref={textareaRef} value={editContent} onChange={(e) => setEditContent(e.target.value)} spellCheck={false}

@@ -3,13 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { trackEvent } from '../useAnalytics';
 import { useToast } from '../context/ToastContext';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Send, Plus,
-  ChevronLeft, ChevronRight, Bookmark, X, Mic, MicOff,
-  Loader2, Brain, Trash2, RefreshCw, Tag,
-  TrendingUp, Target, Clock, ChevronDown, ChevronUp,
-  AlertCircle, Square, Copy, Check, ArrowRight
-} from 'lucide-react';
+  PaperPlaneTilt, Plus,
+  CaretLeft, CaretRight, BookmarkSimple, X, Microphone, MicrophoneSlash,
+  CircleNotch, Brain, Trash, ArrowsClockwise, Tag,
+  TrendUp, Target, Clock, CaretDown, CaretUp,
+  WarningCircle, StopCircle, CopySimple, Check, ArrowRight
+} from '@phosphor-icons/react';
 
 // ─── Memory Panel Component ────────────────────────────────────────────────────
 const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
@@ -17,10 +18,10 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
   if (isLoading) {
     return (
-      <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
+      <div className="border-b-4 border-[var(--border)] bg-[var(--surface-muted)] p-4">
         <div className="flex items-center gap-2 text-[var(--ink-muted)]">
-          <Brain className="w-5 h-5 animate-pulse text-[var(--emerald)]" />
-          <span className="text-xs font-bold uppercase tracking-widest">Loading memory…</span>
+          <Brain className="h-5 w-5 animate-pulse" weight="bold" aria-hidden="true" />
+          <span className="font-mono text-xs font-bold uppercase tracking-widest">Loading memory…</span>
         </div>
       </div>
     );
@@ -28,21 +29,22 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
   if (!memory) {
     return (
-      <div className="p-4 border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
-        <div className="flex items-center justify-between mb-2">
+      <div className="border-b-4 border-[var(--border)] bg-[var(--surface-muted)] p-4">
+        <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-[var(--ink)]" />
+            <Brain className="h-5 w-5" weight="bold" aria-hidden="true" />
             <span className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">Student Memory</span>
           </div>
           <button
             onClick={onRefresh}
-            className="p-1 border-2 border-[var(--border)] shadow-[2px_2px_0_var(--border)] bg-[var(--surface)] hover:bg-[var(--emerald-soft)] active:translate-y-[2px] active:shadow-none transition-all"
+            className="border-2 border-[var(--border)] bg-[var(--surface)] p-1 shadow-[2px_2px_0_var(--border)] transition-all hover:bg-[var(--surface-muted)] active:translate-y-[2px] active:shadow-none"
             title="Refresh memory"
+            aria-label="Refresh memory"
           >
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise className="h-4 w-4" weight="bold" aria-hidden="true" />
           </button>
         </div>
-        <p className="text-xs font-bold text-[var(--ink-muted)] leading-relaxed">
+        <p className="text-xs font-bold leading-relaxed text-[var(--ink-muted)]">
           No memory yet. Start chatting and the AI will remember your learning profile.
         </p>
       </div>
@@ -56,26 +58,27 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
     <div className="border-b-4 border-[var(--border)] bg-[var(--surface-muted)]">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-4 flex items-center justify-between hover:bg-[var(--surface)] transition-colors border-b-2 border-transparent"
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between border-b-2 border-transparent p-4 transition-colors hover:bg-[var(--surface)]"
       >
         <div className="flex items-center gap-2">
-          <Brain className="w-5 h-5 text-[var(--emerald)]" />
+          <Brain className="h-5 w-5" weight="bold" aria-hidden="true" />
           <span className="text-xs font-black uppercase tracking-widest text-[var(--ink)]">
             {userName ? `${userName.split(' ')[0]}'s Memory` : 'Student Memory'}
           </span>
           {hasContent && (
-            <span className="w-2 h-2 rounded-full bg-[var(--emerald)] shrink-0 border border-[var(--border)]" title="Memory active" />
+            <span className="h-2 w-2 shrink-0 border border-[var(--border)] bg-[var(--magenta)]" title="Memory active" />
           )}
         </div>
-        {expanded ? <ChevronUp className="w-5 h-5 text-[var(--ink)]" /> : <ChevronDown className="w-5 h-5 text-[var(--ink)]" />}
+        {expanded ? <CaretUp className="h-5 w-5" weight="bold" aria-hidden="true" /> : <CaretDown className="h-5 w-5" weight="bold" aria-hidden="true" />}
       </button>
 
       {expanded && (
         <div className="px-4 pb-4 space-y-4 pt-2">
           {focus_topics.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Tag className="w-4 h-4 text-[var(--emerald)]" />
+              <div className="mb-2 flex items-center gap-2">
+                <Tag className="h-4 w-4" weight="bold" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Focus Topics</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -90,8 +93,8 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {strengths.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-[var(--emerald)]" />
+              <div className="mb-2 flex items-center gap-2">
+                <TrendUp className="h-4 w-4" weight="bold" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Strengths</span>
               </div>
               <ul className="space-y-1">
@@ -106,8 +109,8 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {needs_practice.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-[var(--danger)]" />
+              <div className="mb-2 flex items-center gap-2">
+                <Target className="h-4 w-4" weight="bold" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Needs Practice</span>
               </div>
               <ul className="space-y-1">
@@ -122,8 +125,8 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
 
           {recent_context && (
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-[var(--ink-muted)]" />
+              <div className="mb-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" weight="bold" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink)]">Recent Context</span>
               </div>
               <p className="text-xs font-bold text-[var(--ink-muted)] leading-relaxed border-l-4 border-[var(--border)] pl-2">{recent_context}</p>
@@ -131,18 +134,18 @@ const MemoryPanel = ({ memory, isLoading, onClear, onRefresh, userName }) => {
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-4 pt-4 border-t-2 border-[var(--border)]">
+          <div className="flex items-center gap-4 border-t-2 border-[var(--border)] pt-4">
             <button
               onClick={onRefresh}
-              className="neo-btn flex items-center gap-2 px-3 py-2 text-[10px]"
+              className="neo-btn neo-btn-sm flex items-center gap-2 px-3 py-2 text-[10px]"
             >
-              <RefreshCw className="w-3 h-3" /> Refresh
+              <ArrowsClockwise className="h-3 w-3" weight="bold" aria-hidden="true" /> Refresh
             </button>
             <button
               onClick={onClear}
-              className="neo-btn bg-[var(--danger)] text-white flex items-center gap-2 px-3 py-2 text-[10px]"
+              className="neo-btn neo-btn-sm neo-btn-danger flex items-center gap-2 px-3 py-2 text-[10px]"
             >
-              <Trash2 className="w-3 h-3" /> Clear
+              <Trash className="h-3 w-3" weight="bold" aria-hidden="true" /> Clear
             </button>
           </div>
         </div>
@@ -650,7 +653,7 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
   };
 
   return (
-    <div className="relative flex h-full min-h-0 overflow-hidden bg-[var(--paper)] text-[var(--ink)] font-sans">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--paper)] font-sans text-[var(--ink)]">
       
       {/* Mobile overlay */}
       {sidebarVisible && !isDesktop && (
@@ -668,10 +671,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
           <div className="flex gap-2">
             <button
               onClick={handleNewSession}
-              className="neo-btn px-2 py-1 flex items-center bg-[var(--emerald-soft)] shadow-[2px_2px_0_var(--border)]"
+              aria-label="New session"
+              className="neo-btn neo-btn-sm neo-btn-soft flex items-center px-2 py-1"
               title="New session"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="h-5 w-5" weight="bold" aria-hidden="true" />
             </button>
             <button
               onClick={() => {
@@ -679,10 +683,11 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                 localStorage.setItem('vector_chat_sidebar_pinned', 'false');
                 setSidebarOpen(false);
               }}
-              className="neo-btn px-2 py-1 flex items-center shadow-[2px_2px_0_var(--border)]"
+              aria-label="Close sessions"
+              className="neo-btn neo-btn-sm flex items-center px-2 py-1"
               title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" weight="bold" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -739,21 +744,22 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
       </aside>
 
       {/* ── Main workspace ──────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[var(--paper)]">
+      <div className="flex min-w-0 flex-1 flex-col bg-[var(--paper)]">
         {/* Toolbar */}
-        <div className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 border-b-4 border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b-4 border-[var(--border)] bg-[var(--surface)] px-4 sm:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleSidebar}
-              className="neo-btn px-3 py-2 flex items-center gap-2 text-sm shadow-[2px_2px_0_var(--border)]"
+              aria-expanded={sidebarVisible}
+              className="neo-btn neo-btn-sm flex items-center gap-2 px-3 py-2 text-sm"
             >
-              {sidebarVisible ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <span className="hidden sm:inline font-bold uppercase">Sessions</span>
+              {sidebarVisible ? <CaretLeft className="h-5 w-5" weight="bold" aria-hidden="true" /> : <CaretRight className="h-5 w-5" weight="bold" aria-hidden="true" />}
+              <span className="hidden font-bold uppercase sm:inline">Sessions</span>
             </button>
 
             {memory && !sidebarVisible && (
-              <span className="hidden md:inline-flex items-center gap-2 px-3 py-2 border-2 border-[var(--border)] bg-[var(--emerald-soft)] shadow-[2px_2px_0_var(--border)] text-xs font-bold uppercase">
-                <Brain className="w-4 h-4 text-[var(--ink)]" />
+              <span className="hidden items-center gap-2 border-2 border-[var(--border)] bg-[var(--magenta-soft)] px-3 py-2 text-xs font-bold uppercase shadow-[2px_2px_0_var(--border)] md:inline-flex">
+                <Brain className="h-4 w-4" weight="bold" aria-hidden="true" />
                 Memory Active
               </span>
             )}
@@ -761,101 +767,115 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
 
           <button
             onClick={handleNewSession}
-            className="neo-btn neo-btn-primary px-4 py-2 flex items-center gap-2 text-sm shadow-[2px_2px_0_var(--border)]"
+            className="neo-btn neo-btn-sm neo-btn-primary flex items-center gap-2 px-4 py-2 text-sm"
           >
-            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            <Plus className="h-5 w-5" weight="bold" aria-hidden="true" />
             <span className="hidden sm:inline">New Chat</span>
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-8 sm:px-8 bg-[var(--paper)]">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--paper)] px-4 py-8 sm:px-8">
           {messages.length === 0 ? (
-            <div className="mx-auto flex flex-col max-w-4xl pt-8 pb-16">
-              <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">{getGreeting()}</h1>
-              <p className="text-lg font-bold text-[var(--ink-muted)] mb-12">
-                Ask a question, request a summary, or let's solve a problem step by step.
+            <div className="mx-auto flex max-w-4xl flex-col pb-16 pt-8">
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+              <p className="section-label mb-3">CAPS Physical Sciences · AI Tutor</p>
+              <h1 className="mb-4 font-display text-4xl font-bold uppercase tracking-tight md:text-6xl">{getGreeting()}</h1>
+              <p className="mb-12 text-lg font-bold text-[var(--ink-muted)]">
+                Ask a question, request a summary, or let&apos;s solve a problem step by step.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {educationalActions.map((action, idx) => (
-                  <button
+                  <motion.button
                     key={idx}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: 0.05 * idx }}
                     onClick={() => handleSendMessage(action.prompt)}
-                    className="neo-card p-6 text-left hover:bg-[var(--emerald-soft)] transition-colors group cursor-pointer active:translate-y-[4px] active:translate-x-[4px] active:shadow-none"
+                    className="neo-card group cursor-pointer p-6 text-left hover:bg-[var(--surface-muted)]"
                   >
-                    <span className="block text-lg font-black uppercase tracking-tight text-[var(--ink)] group-hover:text-[var(--emerald-dark)] mb-2">
+                    <span className="mb-2 block text-lg font-black uppercase tracking-tight text-[var(--ink)]">
                       {action.label}
                     </span>
-                    <ArrowRight className="h-6 w-6 text-[var(--ink)] group-hover:translate-x-2 transition-transform" />
-                  </button>
+                    <ArrowRight className="h-6 w-6 text-[var(--magenta)] transition-transform group-hover:translate-x-2" weight="bold" aria-hidden="true" />
+                  </motion.button>
                 ))}
               </div>
+              </motion.div>
             </div>
           ) : (
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 pb-8">
+              <AnimatePresence initial={false}>
               {messages.map((msg, index) => {
                 const isUser = msg.role === 'user';
                 if (!isUser && !msg.content) return null;
                 return (
-                  <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full sm:max-w-[85%]`}>
-                      <div className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">
+                  <motion.div
+                    key={`${index}-${msg.role}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`flex w-full flex-col ${isUser ? 'items-end' : 'items-start'} sm:max-w-[85%]`}>
+                      <div className="section-label mb-2">
                         {isUser ? (user?.name?.split(' ')[0] || 'You') : 'Vector AI'}
                       </div>
                       {isUser ? (
-                        <div className="p-6 border-4 border-[var(--border)] bg-[var(--emerald-soft)] shadow-[6px_6px_0_var(--border)] text-[var(--ink)] text-lg font-bold leading-relaxed break-words">
+                        <div className="chat-user chat-user-accent break-words p-6 text-lg font-bold leading-relaxed">
                           <p className="whitespace-pre-line">{msg.content}</p>
                         </div>
                       ) : (
-                        <div className="p-6 md:p-8 border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] text-[var(--ink)] text-base md:text-lg leading-relaxed break-words w-full">
-                          <div className="prose prose-lg max-w-none prose-headings:font-black prose-headings:uppercase prose-a:text-[var(--emerald)] prose-a:font-bold prose-strong:font-black">
+                        <div className="chat-ai chat-ai-accent w-full break-words p-6 text-base leading-relaxed md:p-8 md:text-lg">
+                          <div className="prose prose-lg max-w-none prose-headings:font-black prose-headings:uppercase prose-a:font-bold prose-strong:font-black">
                             <MarkdownRenderer content={msg.content} />
                           </div>
-                          
-                          <div className="mt-8 pt-6 border-t-2 border-[var(--border)] flex flex-wrap items-center gap-4">
+
+                          <div className="mt-8 flex flex-wrap items-center gap-4 border-t-2 border-[var(--border)] pt-6">
                             <button
                               onClick={() => handleSaveAsNote(msg.content)}
-                              className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
+                              className="neo-btn neo-btn-sm flex items-center gap-2 px-4 py-2 text-xs"
                             >
-                              <Bookmark className="w-4 h-4" /> Save as note
+                              <BookmarkSimple className="h-4 w-4" weight="bold" aria-hidden="true" /> Save as note
                             </button>
                             <button
                               onClick={() => handleCopyMessage(msg.content, index)}
-                              className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
+                              className="neo-btn neo-btn-sm flex items-center gap-2 px-4 py-2 text-xs"
                             >
                               {copiedIndex === index ? (
-                                <><Check className="w-4 h-4 text-[var(--emerald)]" /> Copied</>
+                                <><Check className="h-4 w-4" weight="bold" aria-hidden="true" /> Copied</>
                               ) : (
-                                <><Copy className="w-4 h-4" /> Copy text</>
+                                <><CopySimple className="h-4 w-4" weight="bold" aria-hidden="true" /> Copy text</>
                               )}
                             </button>
                             {index === messages.length - 1 && !isSending && (
                               <button
                                 onClick={handleRegenerate}
-                                className="neo-btn px-4 py-2 text-xs flex items-center gap-2 shadow-[2px_2px_0_var(--border)]"
+                                className="neo-btn neo-btn-sm flex items-center gap-2 px-4 py-2 text-xs"
                               >
-                                <RefreshCw className="w-4 h-4" /> Regenerate
+                                <ArrowsClockwise className="h-4 w-4" weight="bold" aria-hidden="true" /> Regenerate
                               </button>
                             )}
                           </div>
                         </div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
+              </AnimatePresence>
 
               {(isSending || isThinking) && (
                 <div className="flex justify-start">
-                  <div className="flex flex-col items-start w-full sm:max-w-[85%]">
-                    <div className="text-sm font-black uppercase tracking-widest text-[var(--ink-muted)] mb-2">Vector AI</div>
-                    <div className="p-6 border-4 border-[var(--border)] bg-[var(--surface)] shadow-[6px_6px_0_var(--border)] flex items-center gap-4">
-                      <div className="w-8 h-8 bg-[var(--emerald)] border-2 border-[var(--border)] animate-spin shadow-[2px_2px_0_var(--border)]" />
+                  <div className="flex w-full flex-col items-start sm:max-w-[85%]">
+                    <div className="section-label mb-2">Vector AI</div>
+                    <div className="neo-panel flex items-center gap-4 p-6" role="status" aria-live="polite">
+                      <CircleNotch className="h-8 w-8 animate-spin" weight="bold" aria-hidden="true" />
                       <span className="text-xl font-black uppercase tracking-tight text-[var(--ink)]">Processing...</span>
                       <button
                         onClick={handleStopGeneration}
-                        className="neo-btn bg-[var(--danger)] text-white px-4 py-2 text-xs ml-auto shadow-[2px_2px_0_var(--border)]"
+                        className="neo-btn neo-btn-sm neo-btn-danger ml-auto px-4 py-2 text-xs"
                       >
                         Stop
                       </button>
@@ -869,23 +889,25 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
         </div>
 
         {/* ── Composer ──────────────────────────────────────────────────────── */}
-        <div className="shrink-0 p-4 md:p-6 bg-[var(--surface)] border-t-4 border-[var(--border)]">
+        <div className="shrink-0 border-t-[3px] border-[var(--border)] bg-[var(--surface)] p-4 md:p-6">
           <div className="mx-auto max-w-4xl">
             {failedRequest && (
-              <div className="mb-4 flex items-start gap-4 p-4 border-4 border-[var(--border)] bg-[var(--danger)] text-white shadow-[4px_4px_0_var(--border)]">
-                <AlertCircle className="mt-1 h-6 w-6 shrink-0" />
+              <div className="neo-card neo-danger mb-4 flex items-start gap-4 p-4">
+                <WarningCircle className="mt-1 h-6 w-6 shrink-0" weight="bold" aria-hidden="true" />
                 <div className="flex-1">
-                  <p className="font-black uppercase text-lg">Error processing request</p>
-                  <p className="mt-1 font-bold">Your question was kept.</p>
+                  <p className="text-lg font-black uppercase">Error processing request</p>
+                  <p className="mt-1 font-bold">Your question was kept. Nothing was lost.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleRetryFailed} disabled={isSending} className="neo-btn bg-[var(--surface)] px-4 py-2 text-sm shadow-[2px_2px_0_var(--border)]">Retry</button>
-                  <button onClick={() => setFailedRequest(null)} className="neo-btn bg-[var(--surface)] p-2 shadow-[2px_2px_0_var(--border)]"><X className="h-5 w-5" /></button>
+                  <button onClick={handleRetryFailed} disabled={isSending} className="neo-btn neo-btn-sm neo-btn-surface px-4 py-2 text-sm">Retry</button>
+                  <button onClick={() => setFailedRequest(null)} aria-label="Dismiss error" className="neo-btn neo-btn-sm neo-btn-surface p-2"><X className="h-5 w-5" weight="bold" aria-hidden="true" /></button>
                 </div>
               </div>
             )}
-            <div className="flex flex-col border-4 border-[var(--border)] bg-[var(--paper)] shadow-[6px_6px_0_var(--border)] focus-within:shadow-[2px_2px_0_var(--border)] focus-within:translate-x-[4px] focus-within:translate-y-[4px] transition-all">
+            <div className="neo-panel neo-paper neo-panel-focus flex flex-col">
+              <label htmlFor="vector-composer" className="sr-only">Ask Vector a question</label>
               <textarea
+                id="vector-composer"
                 ref={textareaRef}
                 rows={1}
                 value={inputValue}
@@ -897,38 +919,38 @@ const Chat = ({ onMatchAnimation, initialPrompt, resumeChatId }) => {
                   }
                 }}
                 placeholder="Ask Vector..."
-                className="w-full resize-none text-lg md:text-xl font-bold p-6 bg-transparent text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none"
+                aria-label="Ask Vector a question"
+                className="w-full resize-none bg-transparent p-6 text-lg font-bold text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] md:text-xl"
                 style={{ minHeight: '80px', maxHeight: '200px' }}
               />
-              <div className="flex items-center justify-between px-4 pb-4 bg-[var(--surface-muted)] pt-4 border-t-2 border-[var(--border)]">
+              <div className="flex items-center justify-between border-t-2 border-[var(--border)] bg-[var(--surface-muted)] px-4 pb-4 pt-4">
                 <div className="flex gap-2">
                   <button
                     onClick={toggleDictation}
                     disabled={isProcessingAudio}
-                    className={`neo-btn px-4 py-2 flex items-center shadow-[2px_2px_0_var(--border)] ${
-                      isRecording ? 'bg-[var(--danger)] text-white animate-pulse' : 'bg-[var(--surface)]'
+                    aria-label={isRecording ? 'Stop dictation' : 'Start dictation'}
+                    className={`neo-btn neo-btn-sm flex items-center px-4 py-2 ${
+                      isRecording ? 'neo-btn-danger animate-pulse' : 'neo-btn-surface'
                     }`}
                   >
-                    {isProcessingAudio ? <Loader2 className="w-5 h-5 animate-spin" /> : isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    {isProcessingAudio ? <CircleNotch className="h-5 w-5 animate-spin" weight="bold" aria-hidden="true" /> : isRecording ? <MicrophoneSlash className="h-5 w-5" weight="bold" aria-hidden="true" /> : <Microphone className="h-5 w-5" weight="bold" aria-hidden="true" />}
                   </button>
                 </div>
-                
+
                 {isSending ? (
                   <button
                     onClick={handleStopGeneration}
-                    className="neo-btn bg-[var(--danger)] text-white px-6 py-2 shadow-[2px_2px_0_var(--border)] flex items-center gap-2"
+                    className="neo-btn neo-btn-sm neo-btn-danger flex items-center gap-2 px-6 py-2"
                   >
-                    <Square className="w-5 h-5 fill-current" /> Stop
+                    <StopCircle className="h-5 w-5" weight="fill" aria-hidden="true" /> Stop
                   </button>
                 ) : (
                   <button
                     onClick={() => handleSendMessage()}
                     disabled={!inputValue.trim()}
-                    className={`neo-btn px-8 py-3 text-lg flex items-center shadow-[4px_4px_0_var(--border)] ${
-                      inputValue.trim() ? 'bg-[var(--emerald)] text-white' : 'bg-[var(--surface-muted)] text-[var(--ink-muted)] opacity-50 cursor-not-allowed shadow-none'
-                    }`}
+                    className="neo-btn neo-btn-primary flex items-center px-8 py-3 text-lg"
                   >
-                    Send <Send className="ml-2 w-5 h-5" />
+                    Send <PaperPlaneTilt className="ml-2 h-5 w-5" weight="bold" aria-hidden="true" />
                   </button>
                 )}
               </div>

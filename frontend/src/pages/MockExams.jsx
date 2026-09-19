@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Timer, XCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Timer, XCircle, CheckCircle } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { PageHeader, ErrorState, VectorLoader } from '../components/ui';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -163,7 +163,7 @@ const MockExams = () => {
             <div className={`mt-6 border-2 border-[var(--border)] p-4 ${typeof assessment.score === 'number' && assessment.max_score && assessment.score / assessment.max_score >= 0.6 ? 'bg-[var(--emerald-soft)]' : 'bg-[var(--surface-muted)]'}`} aria-live="polite">
               <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wide">
                 {typeof assessment.score === 'number' && assessment.max_score && assessment.score / assessment.max_score >= 0.6
-                  ? <CheckCircle2 className="h-5 w-5 text-[var(--emerald)]" aria-hidden="true" />
+                  ? <CheckCircle className="h-5 w-5 text-[var(--emerald)]" aria-hidden="true" />
                   : <XCircle className="h-5 w-5 text-[var(--danger)]" aria-hidden="true" />}
                 {typeof assessment.score === 'number' && assessment.max_score ? `${assessment.score}/${assessment.max_score} marks` : 'Reviewed'}
               </p>
