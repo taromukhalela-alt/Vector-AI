@@ -114,19 +114,10 @@ const Layout = ({ children }) => {
     window.addEventListener("resize", onR);
     return () => window.removeEventListener("resize", onR);
   }, []);
-  useEffect(() => {
-    setUserMenu(false);
-    setMoreOpen(false);
-  }, [location.pathname]);
-  const go = (p) => {
-    navigate(p);
-    setMoreOpen(false);
-  };
-  const moreActive = FLAT.filter(
-    (t) => !MOBILE.some((m) => m.path === t.path),
-  ).some((t) => location.pathname === t.path);
-  const initial =
-    (user?.name || user?.email || "V").trim().charAt(0).toUpperCase() || "V";
+  useEffect(() => { setUserMenu(false); setMoreOpen(false); }, [location.pathname]);
+  const go = (p) => { navigate(p); setMoreOpen(false); };
+  FLAT.filter((t) => !MOBILE.some((m) => m.path === t.path)).some((t) => location.pathname === t.path);
+  const initial = (user?.name || user?.email || 'V').trim().charAt(0).toUpperCase() || 'V';
   return (
     <div className="flex h-dvh overflow-hidden bg-[var(--paper)] font-sans text-[var(--ink)]">
       <aside
