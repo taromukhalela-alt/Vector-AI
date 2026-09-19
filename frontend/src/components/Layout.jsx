@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
-import VectorIcon from "./VectorIcon";
+import VectorIcon from "./VectorIcon.jsx";
 import {
   ChatCircleIcon,
   FlaskIcon,
